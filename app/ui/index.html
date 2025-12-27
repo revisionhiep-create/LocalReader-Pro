@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalReader - Pro Edition</title>
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(240 3.7% 15.9%)",
+                        background: "#000000",
+                        foreground: "#d1d5db",
+                        card: "#09090b",
+                        accent: "#3b82f6",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #000000; color: #d1d5db; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #09090b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        
+        .active-sentence { background-color: rgba(59, 130, 246, 0.2); border-left: 3px solid #3b82f6; border-radius: 2px; }
+        .sentence { transition: all 0.2s; padding: 4px 8px; cursor: pointer; display: block; margin-bottom: 0.5rem; }
+        .sentence:hover { background-color: rgba(255, 255, 255, 0.05); }
+    </style>
+</head>
+<body class="min-h-screen selection:bg-blue-500/30 overflow-hidden">
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-80 bg-card border-r border-border flex flex-col shrink-0">
+            <div class="p-6 border-b border-border">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-600 rounded-lg text-white">
+                            <i data-lucide="book-open" class="w-5 h-5"></i>
+                        </div>
+                        <h1 class="font-bold text-lg tracking-tight text-white">LocalReader</h1>
+                    </div>
+                    <div id="engineStatusDot" class="w-2.5 h-2.5 rounded-full bg-zinc-700 shadow-[0_0_8px_rgba(0,0,0,0.5)]" title="Engine Status"></div>
+                </div>
+                
+                <div id="setupArea" class="hidden mb-4">
+                    <button id="setupBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20">
+                        <i data-lucide="download-cloud" class="w-4 h-4"></i>
+                        <span class="text-sm font-bold">Setup Voice Engine</span>
+                    </button>
+                    <p class="text-[10px] text-zinc-500 mt-2 text-center">Required for first run (approx. 400MB)</p>
+                </div>
+
+                <label class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg cursor-pointer transition-all border border-zinc-700">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span class="text-sm font-semibold">Upload PDF</span>
+                    <input type="file" id="pdfUpload" class="hidden" accept=".pdf">
+                </label>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-border">
+                <button id="tabLibrary" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5">Library</button>
+                <button id="tabRules" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300">Rules</button>
+                <button id="tabIgnore" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300">Ignore</button>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 overflow-hidden flex flex-col">
+                <div id="libraryPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2"></div>
+                <div id="rulesPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Custom Rules</h3>
+                        <button id="addRuleBtn" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    <div id="rulesList" class="space-y-3"></div>
+                </div>
+                <div id="ignorePanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Ignore List</h3>
+                        <button id="addIgnoreBtn" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    <p class="text-[9px] text-zinc-500 italic">Words or symbols here will be skipped during reading.</p>
+                    <div id="ignoreListUI" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="p-6 border-t border-border bg-black/20 space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Voice Selection</label>
+                    <select id="voiceSelect" class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500">
+                        <option value="af_sky">AF Sky (Female)</option>
+                        <option value="af_bella" selected>AF Bella (Female)</option>
+                        <option value="af_nicole">AF Nicole (Female)</option>
+                        <option value="af_sarah">AF Sarah (Female)</option>
+                        <option value="am_adam">AM Adam (Male)</option>
+                        <option value="am_michael">AM Michael (Male)</option>
+                        <option value="bf_isabella">BF Isabella (British Female)</option>
+                        <option value="bm_lewis">BM Lewis (British Male)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Speed (<span id="speedVal">1.0</span>x)</label>
+                    <input type="range" id="speedRange" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-black relative">
+            <header class="h-16 border-b border-border flex items-center px-6 bg-card/80 backdrop-blur-md shrink-0">
+                <span id="docTitle" class="font-semibold text-sm truncate text-zinc-300 italic flex-1 mr-4">No document selected</span>
+                <div id="pageNav" class="hidden flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800 text-xs shrink-0">
+                    <button id="prevPage" class="hover:text-blue-400 p-1"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                    <div class="flex items-center gap-1.5 px-1">
+                        <span class="text-zinc-500 font-medium">Pg</span>
+                        <input type="number" id="pageInput" class="w-10 bg-zinc-800 border-none rounded text-center text-zinc-200 outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" min="1" value="1">
+                        <span class="text-zinc-500">/ <span id="pageTotal">1</span></span>
+                    </div>
+                    <button id="nextPage" class="hover:text-blue-400 p-1"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                </div>
+            </header>
+
+            <div id="readerContent" class="flex-1 overflow-y-auto custom-scrollbar p-8 lg:px-24 xl:px-48 pb-32">
+                <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center space-y-4">
+                    <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-700">
+                        <i data-lucide="file-text" class="w-10 h-10"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-zinc-300">Welcome to LocalReader</h2>
+                    <p class="text-zinc-500 text-sm max-w-sm">Select a document or upload a new PDF.</p>
+                </div>
+                <div id="textContent" class="hidden"></div>
+            </div>
+
+            <!-- Controls -->
+            <div id="controls" class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-4 rounded-2xl shadow-2xl flex items-center gap-6 hidden min-w-[400px]">
+                <button id="playBtn" class="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-900/40 shrink-0">
+                    <i data-lucide="play" id="playIcon" class="w-6 h-6 fill-current"></i>
+                </button>
+                
+                <div class="flex flex-col flex-1 min-w-0">
+                    <span id="currentSentencePreview" class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest truncate">Ready</span>
+                    <div class="flex items-center gap-4 mt-1.5">
+                        <button id="skipBack" class="text-zinc-500 hover:text-white p-1"><i data-lucide="skip-back" class="w-5 h-5"></i></button>
+                        <button id="skipForward" class="text-zinc-500 hover:text-white p-1"><i data-lucide="skip-forward" class="w-5 h-5"></i></button>
+                        <div class="h-4 w-px bg-zinc-800 mx-1"></div>
+                        <span id="bookmarkStatus" class="text-[9px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5">
+                            <i data-lucide="bookmark" class="w-3 h-3"></i> Auto-Saving
+                        </span>
+                    </div>
+                </div>
+                <audio id="audioPlayer" class="hidden"></audio>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-4 right-4 bg-red-900/95 border border-red-700 text-white px-6 py-4 rounded-xl shadow-2xl hidden z-50">
+        <div class="flex items-center gap-3">
+            <i data-lucide="alert-circle" class="w-5 h-5 text-red-300"></i>
+            <span id="toastMsg" class="text-sm font-semibold"></span>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // SERVER-SIDE PERSISTENCE
+        let currentDoc = null;
+        let currentPages = [];
+        let currentPageIndex = 0;
+        let currentSentenceIndex = 0;
+        let sentences = [];
+        let isPlaying = false;
+        let rules = [];
+        let ignoreList = [];
+        const API_URL = 'http://127.0.0.1:8000';
+
+        // Local settings (Non-critical)
+        const db = new Dexie('LocalReaderSettings');
+        db.version(2).stores({ settings: 'key' });
+
+        const pdfUpload = document.getElementById('pdfUpload');
+        const libraryPanel = document.getElementById('libraryPanel');
+        const rulesPanel = document.getElementById('rulesPanel');
+        const ignorePanel = document.getElementById('ignorePanel');
+        const rulesList = document.getElementById('rulesList');
+        const ignoreListUI = document.getElementById('ignoreListUI');
+        const tabLibrary = document.getElementById('tabLibrary');
+        const tabRules = document.getElementById('tabRules');
+        const tabIgnore = document.getElementById('tabIgnore');
+        const textContent = document.getElementById('textContent');
+        const readerContent = document.getElementById('readerContent');
+        const emptyState = document.getElementById('emptyState');
+        const docTitle = document.getElementById('docTitle');
+        const pageInput = document.getElementById('pageInput');
+        const pageTotal = document.getElementById('pageTotal');
+        const pageNav = document.getElementById('pageNav');
+        const controls = document.getElementById('controls');
+        const playBtn = document.getElementById('playBtn');
+        const playIcon = document.getElementById('playIcon');
+        const currentSentencePreview = document.getElementById('currentSentencePreview');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const speedRange = document.getElementById('speedRange');
+        const speedVal = document.getElementById('speedVal');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const addRuleBtn = document.getElementById('addRuleBtn');
+        const setupArea = document.getElementById('setupArea');
+        const setupBtn = document.getElementById('setupBtn');
+        const engineStatusDot = document.getElementById('engineStatusDot');
+        const toast = document.getElementById('toast');
+
+        lucide.createIcons();
+
+        async function init() {
+            const savedRules = await db.settings.get('pronunciationRules');
+            if (savedRules) rules = savedRules.value;
+            const savedIgnore = await db.settings.get('ignoreList');
+            if (savedIgnore) ignoreList = savedIgnore.value;
+            await loadLibrary();
+            renderRules();
+            renderIgnoreList();
+            startStatusPolling();
+        }
+
+        let isEngineReady = false;
+        async function startStatusPolling() {
+            const poll = async () => {
+                try {
+                    const res = await fetch(`${API_URL}/api/system/status`);
+                    const status = await res.json();
+                    updateStatusUI(status);
+                } catch (e) {
+                    engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse";
+                    engineStatusDot.title = "Offline: Cannot connect to backend";
+                }
+                setTimeout(poll, 2000);
+            };
+            poll();
+        }
+
+        function updateStatusUI(status) {
+            isEngineReady = status.model_loaded;
+            if (status.is_downloading) {
+                engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse";
+                engineStatusDot.title = "Downloading models...";
+                setupArea.classList.add('hidden');
+            } else if (status.is_loading) {
+                engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse";
+                engineStatusDot.title = "Loading engine...";
+                setupArea.classList.add('hidden');
+            } else if (status.model_loaded) {
+                engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]";
+                engineStatusDot.title = "Ready to speak";
+                setupArea.classList.add('hidden');
+            } else {
+                engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-red-600";
+                engineStatusDot.title = status.last_error || "Engine offline";
+                setupArea.classList.remove('hidden');
+            }
+        }
+
+        setupBtn.onclick = async () => {
+            try { await fetch(`${API_URL}/api/system/setup`, { method: 'POST' }); }
+            catch (e) { showToast("Failed to start setup"); }
+        };
+
+        function showToast(msg) {
+            document.getElementById('toastMsg').textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 5000);
+        }
+
+        tabLibrary.onclick = () => {
+            tabLibrary.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5";
+            tabRules.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
+            tabIgnore.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
+            libraryPanel.classList.remove('hidden');
+            rulesPanel.classList.add('hidden');
+            ignorePanel.classList.add('hidden');
+        };
+
+        tabRules.onclick = () => {
+            tabRules.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5";
+            tabLibrary.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
+            tabIgnore.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
+            rulesPanel.classList.remove('hidden');
+            libraryPanel.classList.add('hidden');
+            ignorePanel.classList.add('hidden');
+        };
+
+        tabIgnore.onclick = () => {
+            tabIgnore.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5";
+            tabLibrary.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
+            tabRules.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
+            ignorePanel.classList.remove('hidden');
+            libraryPanel.classList.add('hidden');
+            rulesPanel.classList.add('hidden');
+        };
+
+        const addIgnoreBtn = document.getElementById('addIgnoreBtn');
+        addIgnoreBtn.onclick = () => {
+            ignoreList.push('');
+            renderIgnoreList();
+            db.settings.put({ key: 'ignoreList', value: ignoreList });
+        };
+
+        function renderIgnoreList() {
+            ignoreListUI.innerHTML = '';
+            ignoreList.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center gap-2 bg-zinc-900/80 p-2 rounded-lg border border-zinc-800';
+                div.innerHTML = `
+                    <input type="text" placeholder="Symbol or word" value="${item}" 
+                        class="flex-1 bg-black text-[10px] p-1.5 border border-zinc-800 rounded outline-none focus:border-blue-500 text-zinc-300"
+                        onchange="updateIgnore(${index}, this.value)">
+                    <button onclick="deleteIgnore(${index})" class="text-zinc-600 hover:text-red-500 p-1"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>`;
+                ignoreListUI.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        window.updateIgnore = (index, value) => {
+            ignoreList[index] = value;
+            db.settings.put({ key: 'ignoreList', value: ignoreList });
+        };
+
+        window.deleteIgnore = (index) => {
+            ignoreList.splice(index, 1);
+            renderIgnoreList();
+            db.settings.put({ key: 'ignoreList', value: ignoreList });
+        };
+
+        addRuleBtn.onclick = () => {
+            rules.push({ id: crypto.randomUUID(), original: '', replacement: '', match_case: false, word_boundary: true });
+            renderRules();
+            db.settings.put({ key: 'pronunciationRules', value: rules });
+        };
+
+        function renderRules() {
+            rulesList.innerHTML = '';
+            rules.forEach(rule => {
+                const div = document.createElement('div');
+                div.className = 'bg-zinc-900/80 p-3 rounded-xl border border-zinc-800 space-y-2';
+                div.innerHTML = `
+                    <div class="grid grid-cols-1 gap-1.5">
+                        <input type="text" placeholder="Original" value="${rule.original}" class="bg-black text-[10px] p-2 border border-zinc-800 rounded-md outline-none focus:border-blue-500 text-zinc-300" onchange="updateRule('${rule.id}', {original: this.value})">
+                        <input type="text" placeholder="Replacement" value="${rule.replacement}" class="bg-black text-[10px] p-2 border border-zinc-800 rounded-md outline-none focus:border-blue-500 text-zinc-300" onchange="updateRule('${rule.id}', {replacement: this.value})">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex gap-2">
+                            <button onclick="updateRule('${rule.id}', {match_case: ${!rule.match_case}})" 
+                                title="Match Case: Exactly match capital and lowercase letters"
+                                class="p-1 rounded-md ${rule.match_case ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-500'}">
+                                <i data-lucide="case-sensitive" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="updateRule('${rule.id}', {word_boundary: ${!rule.word_boundary}})" 
+                                title="Whole Word: Match the exact word only (ignores matches inside other words)"
+                                class="p-1 rounded-md ${rule.word_boundary ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-500'}">
+                                <i data-lucide="whole-word" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <button onclick="deleteRule('${rule.id}')" class="text-zinc-600 hover:text-red-500"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                    </div>`;
+                rulesList.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        window.updateRule = (id, updates) => {
+            rules = rules.map(r => r.id === id ? { ...r, ...updates } : r);
+            renderRules();
+            db.settings.put({ key: 'pronunciationRules', value: rules });
+        };
+
+        window.deleteRule = (id) => {
+            rules = rules.filter(r => r.id !== id);
+            renderRules();
+            db.settings.put({ key: 'pronunciationRules', value: rules });
+        };
+
+        async function loadLibrary() {
+            try {
+                const res = await fetch(`${API_URL}/api/library`);
+                const items = await res.json();
+                items.sort((a, b) => b.lastAccessed - a.lastAccessed);
+                libraryPanel.innerHTML = '';
+                items.forEach(item => {
+                    const active = currentDoc?.id === item.id;
+                    const div = document.createElement('div');
+                    div.className = `group relative p-3 rounded-xl cursor-pointer transition-all border ${active ? 'bg-blue-600/10 border-blue-600/50 text-blue-400' : 'bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'}`;
+                    div.innerHTML = `
+                        <div class="flex items-start gap-3 pr-6">
+                            <i data-lucide="file" class="w-4 h-4 mt-0.5 shrink-0"></i>
+                            <div class="overflow-hidden">
+                                <p class="text-xs font-bold truncate">${item.fileName}</p>
+                                <p class="text-[10px] mt-1 opacity-60">Page ${item.currentPage + 1} of ${item.totalPages}</p>
+                            </div>
+                        </div>
+                        <button onclick="event.stopPropagation(); deleteDocument('${item.id}')" 
+                            class="absolute top-2 right-2 p-1 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>`;
+                    div.onclick = () => selectDocument(item);
+                    libraryPanel.appendChild(div);
+                });
+                lucide.createIcons();
+            } catch (e) { console.error("Library load error", e); }
+        }
+
+        async function deleteDocument(id) {
+            if (!confirm("Are you sure you want to delete this document?")) return;
+            try {
+                const res = await fetch(`${API_URL}/api/library/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    if (currentDoc?.id === id) {
+                        currentDoc = null;
+                        currentPages = [];
+                        textContent.classList.add('hidden');
+                        emptyState.classList.remove('hidden');
+                        pageNav.classList.add('hidden');
+                        controls.classList.add('hidden');
+                        docTitle.textContent = "No document selected";
+                        stopPlayback();
+                    }
+                    loadLibrary();
+                }
+            } catch (e) { showToast("Failed to delete document"); }
+        }
+
+        async function selectDocument(item) {
+            try {
+                currentDoc = item;
+                const res = await fetch(`${API_URL}/api/library/content/${item.id}`);
+                const data = await res.json();
+                currentPages = data.pages;
+                currentPageIndex = item.currentPage || 0;
+                currentSentenceIndex = item.lastSentenceIndex || 0;
+                docTitle.textContent = item.fileName;
+                pageNav.classList.remove('hidden');
+                controls.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                textContent.classList.remove('hidden');
+                renderPage();
+                loadLibrary();
+                setTimeout(() => {
+                    const el = document.querySelector(`[data-idx="${currentSentenceIndex}"]`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 200);
+            } catch (e) { showToast("Failed to load document content"); }
+        }
+
+        function renderPage() {
+            const text = currentPages[currentPageIndex];
+            sentences = text.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g) || [text];
+            textContent.innerHTML = '';
+            sentences.forEach((s, i) => {
+                const span = document.createElement('span');
+                span.className = 'sentence';
+                span.dataset.idx = i;
+                span.textContent = s;
+                span.onclick = () => jumpToSentence(i);
+                if (i === currentSentenceIndex) span.classList.add('active-sentence');
+                textContent.appendChild(span);
+            });
+            pageInput.value = currentPageIndex + 1;
+            pageTotal.textContent = currentPages.length;
+            readerContent.scrollTop = 0;
+            updatePreview();
+        }
+
+        function updatePreview() {
+            currentSentencePreview.textContent = sentences[currentSentenceIndex]?.substring(0, 50) + "...";
+        }
+
+        function jumpToSentence(i) {
+            currentSentenceIndex = i;
+            document.querySelectorAll('.sentence').forEach(el => el.classList.remove('active-sentence'));
+            const active = document.querySelector(`[data-idx="${i}"]`);
+            if (active) active.classList.add('active-sentence');
+            updatePreview();
+            saveProgress();
+            
+            // Force auto-play when a new sentence is clicked
+            if (!isPlaying) {
+                isPlaying = true;
+                document.getElementById('playIcon').setAttribute('data-lucide', 'pause');
+                lucide.createIcons();
+            }
+            playNext();
+        }
+
+        async function saveProgress() {
+            if (!currentDoc) return;
+            const updated = { ...currentDoc, currentPage: currentPageIndex, lastSentenceIndex: currentSentenceIndex, lastAccessed: Date.now() };
+            try { await fetch(`${API_URL}/api/library`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) }); }
+            catch (e) { console.error("Save error", e); }
+        }
+
+        pdfUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            showToast("Processing PDF...");
+            const reader = new FileReader();
+            reader.onload = async function() {
+                try {
+                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                    const pagesText = [];
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        pagesText.push(content.items.map(item => item.str).join(' '));
+                    }
+                    const docId = crypto.randomUUID();
+                    const startPage = pdf.numPages >= 3 ? 2 : 0;
+                    const newDoc = { id: docId, fileName: file.name, totalPages: pdf.numPages, currentPage: startPage, lastSentenceIndex: 0, lastAccessed: Date.now() };
+                    await fetch(`${API_URL}/api/library`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newDoc) });
+                    await fetch(`${API_URL}/api/library/content`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: docId, pages: pagesText }) });
+                    selectDocument(newDoc);
+                } catch (err) { showToast("Error: " + err.message); }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        async function playNext() {
+            if (!isPlaying) return;
+            if (!isEngineReady) { showToast("Engine not ready"); stopPlayback(); return; }
+            const text = sentences[currentSentenceIndex];
+            if (!text) {
+                if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; renderPage(); playNext(); }
+                else { stopPlayback(); }
+                return;
+            }
+            document.querySelectorAll('.sentence').forEach(el => el.classList.remove('active-sentence'));
+            const active = document.querySelector(`[data-idx="${currentSentenceIndex}"]`);
+            if (active) { active.classList.add('active-sentence'); active.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            updatePreview();
+            saveProgress();
+            try {
+                const res = await fetch(`${API_URL}/api/synthesize`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        text, 
+                        voice: voiceSelect.value, 
+                        speed: parseFloat(speedRange.value), 
+                        rules,
+                        ignore_list: ignoreList.filter(item => item.trim() !== '')
+                    }) 
+                });
+                if (!res.ok) throw new Error("Synthesis failed");
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                audioPlayer.src = url;
+                audioPlayer.play();
+                audioPlayer.onended = () => { URL.revokeObjectURL(url); currentSentenceIndex++; playNext(); };
+            } catch (e) { showToast("Error: " + e.message); stopPlayback(); }
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            const icon = document.getElementById('playIcon');
+            icon.setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+            audioPlayer.pause();
+        }
+
+        playBtn.onclick = () => {
+            if (isPlaying) stopPlayback();
+            else { isPlaying = true; document.getElementById('playIcon').setAttribute('data-lucide', 'pause'); lucide.createIcons(); playNext(); }
+        };
+
+        speedRange.oninput = (e) => speedVal.textContent = e.target.value;
+
+        document.getElementById('prevPage').onclick = () => { if (currentPageIndex > 0) { currentPageIndex--; currentSentenceIndex = 0; renderPage(); saveProgress(); if (isPlaying) playNext(); } };
+        document.getElementById('nextPage').onclick = () => { if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; renderPage(); saveProgress(); if (isPlaying) playNext(); } };
+
+        document.getElementById('skipBack').onclick = () => {
+            if (currentSentenceIndex > 0) jumpToSentence(currentSentenceIndex - 1);
+            else if (currentPageIndex > 0) { currentPageIndex--; renderPage(); currentSentenceIndex = sentences.length - 1; renderPage(); saveProgress(); if (isPlaying) playNext(); }
+        };
+
+        document.getElementById('skipForward').onclick = () => {
+            if (currentSentenceIndex < sentences.length - 1) jumpToSentence(currentSentenceIndex + 1);
+            else if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; renderPage(); saveProgress(); if (isPlaying) playNext(); }
+        };
+
+        pageInput.onchange = () => {
+            let val = parseInt(pageInput.value) - 1;
+            if (isNaN(val) || val < 0 || val >= currentPages.length) { pageInput.value = currentPageIndex + 1; return; }
+            currentPageIndex = val; currentSentenceIndex = 0; renderPage(); saveProgress(); if (isPlaying) playNext();
+        };
+
+        init();
+    </script>
+</body>
+</html>
