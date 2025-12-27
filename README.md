@@ -11,13 +11,13 @@ Standalone, privacy-focused PDF Text-to-Speech desktop application.
      - ⚠️ **CRITICAL:** On the first screen of the installer, you **MUST** check the box that says **"Add Python to PATH"** before clicking Install. This enables the `pip` command to work in your terminal.
 
 2. **Setup:**
-   Open your terminal (Command Prompt or PowerShell) and run:
+   Open your terminal (Command Prompt or PowerShell) and navigate to the Localreader_Pro folder with the CD command:
    ```bash
-   cd LocalReader_Pro
+   
    pip install -r requirements.txt
 
 3. **RUN:**
-   In the LocalReader_Pro folder run the command below:
+   While still in the same folder in the command or terminal windows run command:
    ```bash
    python main.py
 
@@ -53,3 +53,4 @@ To run the application without opening a terminal:
 ```
 
 ```
+
