@@ -1,1 +1,1 @@
-{"pronunciationRules": [{"id": "8af0f8a9-2310-479c-a02d-834f20c89436", "original": "-", "replacement": ".", "match_case": false, "word_boundary": true}], "ignoreList": ["~"]}
+{"pronunciationRules": [{"id": "8af0f8a9-2310-479c-a02d-834f20c89436", "original": "-", "replacement": " ", "match_case": false, "word_boundary": true}], "ignoreList": ["~", "*"], "voice_id": "am_adam", "speed": 1.0}

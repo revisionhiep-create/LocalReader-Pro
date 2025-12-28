@@ -9,7 +9,11 @@ import io
 import json
 import re
 import soundfile as sf
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+import ebooklib
+from ebooklib import epub
+from xhtml2pdf import pisa
+from bs4 import BeautifulSoup
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -36,8 +40,12 @@ def safe_init_json(path: Path, default_data: Any):
         with open(path, "w") as f:
             json.dump(default_data, f)
 
-safe_init_json(library_file, [])
-safe_init_json(settings_file, {"pronunciationRules": [], "ignoreList": []})
+safe_init_json(settings_file, {
+    "pronunciationRules": [], 
+    "ignoreList": [],
+    "voice_id": "af_bella",
+    "speed": 1.0
+})
 
 class LibraryItem(BaseModel):
     id: str
@@ -61,6 +69,8 @@ class PronunciationRule(BaseModel):
 class AppSettings(BaseModel):
     pronunciationRules: List[PronunciationRule]
     ignoreList: List[str]
+    voice_id: Optional[str] = "af_bella"
+    speed: Optional[float] = 1.0
 
 # Import logic
 try:
@@ -106,7 +116,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     threading.Thread(target=load_engine, daemon=True).start()
     yield
 
-app = FastAPI(title="LocalReader Pro v1.2 API", lifespan=lifespan)
+app = FastAPI(title="LocalReader Pro v1.3 API", lifespan=lifespan)
 
 # Mount local lib folder for self-hosted dependencies
 ui_lib_path = base_dir / "ui" / "lib"
@@ -138,6 +148,56 @@ async def save_settings(settings: AppSettings):
     return {"status": "ok"}
 
 # Library API
+@app.post("/api/convert/epub")
+async def convert_epub(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".epub"):
+        raise HTTPException(status_code=400, detail="Not an EPUB file")
+    
+    temp_epub = content_dir / f"temp_{os.getpid()}.epub"
+    temp_pdf = content_dir / f"converted_{os.getpid()}.pdf"
+    
+    try:
+        with open(temp_epub, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        
+        # Check for DRM (very basic check: ebooklib will throw if it can't parse)
+        try:
+            book = epub.read_epub(str(temp_epub))
+        except Exception:
+            raise HTTPException(status_code=400, detail="Cannot read protected file (DRM)")
+
+        html_content = "<html><body>"
+        for item in book.get_items():
+            if item.get_type() == ebooklib.ITEM_DOCUMENT:
+                soup = BeautifulSoup(item.get_content(), 'html.parser')
+                body = soup.find('body')
+                if body:
+                    html_content += str(body)
+                else:
+                    html_content += str(soup)
+        html_content += "</body></html>"
+        
+        # Convert to PDF
+        with open(temp_pdf, "wb") as f:
+            pisa_status = pisa.CreatePDF(html_content, dest=f)
+        
+        if pisa_status.err:
+            raise HTTPException(status_code=500, detail="PDF conversion failed")
+            
+        return FileResponse(temp_pdf, media_type="application/pdf", filename=temp_pdf.name)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if temp_epub.exists(): temp_epub.unlink()
+        # Note: We keep the PDF for a bit or until next conversion? 
+        # Actually, the user's browser will download it. 
+        # We should probably delete it after response is sent if we want to be clean.
+        # But for now, we leave it in userdata/content as requested by spec.
+
 @app.get("/api/library")
 async def get_library():
     try:

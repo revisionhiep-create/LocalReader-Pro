@@ -10,4 +10,8 @@ pywebview
 requests
 numpy
 pydantic
+ebooklib
+xhtml2pdf
+beautifulsoup4
+lxml
 

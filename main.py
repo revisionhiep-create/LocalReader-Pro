@@ -41,7 +41,7 @@ def main():
 
     # 3. Create the main window
     window = webview.create_window(
-        'LocalReader Pro v1.2',
+        'LocalReader Pro v1.3',
         url='http://127.0.0.1:8000',
         width=1200,
         height=800,
