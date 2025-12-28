@@ -31,21 +31,6 @@ LocalReader Pro is a standalone, privacy-focused desktop application designed fo
 
 ---
 
-## 🚀 How to Use LocalReader
-
-1.  **Launch the App:** Double-click `LocalReader.bat` or run `python main.py`.
-2.  **Initial Setup:** If you are running the app for the first time, click the **"Setup Voice Engine"** button. The app will download the necessary AI models (approx. 350MB).
-3.  **Upload a PDF:** Once the engine is ready, the **"Upload PDF"** button will appear. Select any PDF from your computer.
-4.  **Start Reading:**
-    *   Click any sentence to start reading from that point.
-    *   Use the **Play/Pause** button at the bottom to control playback.
-    *   Use the **Skip Back/Forward** buttons to move between sentences.
-5.  **Manage Settings:**
-    *   Use the **Rules** tab to add pronunciation fixes.
-    *   Use the **Ignore** tab to skip recurring text you don't want to hear.
-    *   Switch **Voices** or adjust **Speed** using the controls in the sidebar.
-
----
 
 ## 🐍 Python & Pip Setup Instructions
 
@@ -75,6 +60,22 @@ pip install -r requirements.txt
 
 ---
 
+## 🚀 How to Use LocalReader
+
+1.  **Launch the App:** Double-click `LocalReader.bat` or run `python main.py`.
+2.  **Initial Setup:** If you are running the app for the first time, click the **"Setup Voice Engine"** button. The app will download the necessary AI models (approx. 350MB).
+3.  **Upload a PDF:** Once the engine is ready, the **"Upload PDF"** button will appear. Select any PDF from your computer.
+4.  **Start Reading:**
+    *   Click any sentence to start reading from that point.
+    *   Use the **Play/Pause** button at the bottom to control playback.
+    *   Use the **Skip Back/Forward** buttons to move between sentences.
+5.  **Manage Settings:**
+    *   Use the **Rules** tab to add pronunciation fixes.
+    *   Use the **Ignore** tab to skip recurring text you don't want to hear.
+    *   Switch **Voices** or adjust **Speed** using the controls in the sidebar.
+
+---
+
 ## 🏗️ Architecture
 - **Wrapper:** `pywebview` (for a native desktop window)
 - **Backend:** FastAPI (Python)
@@ -86,3 +87,4 @@ pip install -r requirements.txt
 
 ## 📜 Privacy
 LocalReader Pro is built with privacy as a first principle. All PDF processing and voice synthesis occur entirely on your local machine. No analytics, no tracking, and no cloud dependencies.
+
