@@ -104,7 +104,7 @@ python main.py
 - ✅ Shortcut-friendly (works from Desktop/Start Menu)
 
 ### First Run
-1. Click **"Setup Voice Engine"** to download Kokoro-82M model (~200MB)
+1. Click **"Setup Voice Engine"** to download Kokoro-82M model (~309MB)
 2. Wait for green status indicator
 3. Upload your first PDF/EPUB
 
@@ -176,14 +176,14 @@ LocalReader-Pro-main/
 │   ├── settings.json
 │   ├── content/           # Document pages (cached)
 │   └── *.mp3             # Exported audio files
-└── models/                # Kokoro-82M (auto-downloaded ~200MB)
+└── models/                # Kokoro-82M (auto-downloaded ~309MB)
 ```
 
 ### Performance
 - **Synthesis Speed**: ~5x real-time (Kokoro-82M)
 - **Export Speed**: ~15 seconds per 1,000 characters
 - **Memory Usage**: ~500MB (model loaded, stable with leak prevention)
-- **Storage**: ~200MB for models + ~100MB for FFMPEG + document cache
+- **Storage**: ~309MB for models + ~100MB for FFMPEG + document cache
 - **UI Responsiveness**: 70% faster sentence highlighting (DOM caching)
 - **Startup Time**: <5 seconds on modern hardware
 
@@ -245,5 +245,6 @@ This project uses:
 **Version**: 1.4  
 **Engine**: Kokoro-82M (ONNX)  
 **Last Updated**: December 2025
+
 
 
