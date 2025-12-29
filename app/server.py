@@ -162,7 +162,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     ffmpeg_status["is_installed"] = installer.check_installed()
     yield
 
-app = FastAPI(title="LocalReader Pro v1.5 API", lifespan=lifespan)
+app = FastAPI(title="LocalReader Pro API", lifespan=lifespan)
 
 # Mount local lib folder for self-hosted dependencies
 ui_lib_path = base_dir / "ui" / "lib"

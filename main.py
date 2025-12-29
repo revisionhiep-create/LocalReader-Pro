@@ -50,7 +50,7 @@ def run_server():
 
 def main():
     print("╔════════════════════════════════════════╗")
-    print("║   LocalReader Pro v1.5 - Starting     ║")
+    print("║   LocalReader Pro - Starting          ║")
     print("╔════════════════════════════════════════╗")
     print(f"📂 Project root: {base_dir}")
     
@@ -85,7 +85,7 @@ def main():
     
     try:
         window = webview.create_window(
-            'LocalReader Pro v1.5',
+            'LocalReader Pro',
             url='http://127.0.0.1:8000',
             width=1200,
             height=800,
@@ -95,7 +95,7 @@ def main():
         
         print("✅ Window created successfully")
         print("╔════════════════════════════════════════╗")
-        print("║   LocalReader Pro v1.5 - Ready! ✅    ║")
+        print("║   LocalReader Pro - Ready! ✅         ║")
         print("╚════════════════════════════════════════╝")
         print()
         
