@@ -110,15 +110,18 @@ try:
     from logic.downloader import download_kokoro_model
     from logic.dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
     from logic.smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
+    from logic.dialogue_flow_manager import DialogueFlowManager
 except ImportError:
     sys.path.append(str(base_dir / "logic"))
     from text_normalizer import apply_custom_pronunciations
     from downloader import download_kokoro_model
     from dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
     from smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
+    from dialogue_flow_manager import DialogueFlowManager
 
 # Global engine
 kokoro = None
+dialogue_manager = DialogueFlowManager(use_ssml=False)  # Initialize dialogue flow manager
 system_status = {"is_loading": False, "last_error": None, "is_downloading": False}
 export_status = {"is_exporting": False, "progress": 0, "total": 0, "error": None, "output_file": None}
 ffmpeg_status = {"is_installed": False, "is_downloading": False, "progress": 0, "total": 0, "error": None, "message": ""}
@@ -579,27 +582,38 @@ async def export_audio(request: ExportRequest, background_tasks: BackgroundTasks
                 export_status["error"] = "Document metadata not found"
                 return
             
-            # 3. Combine all pages into paragraphs
+            # 3. Combine all pages and process with DialogueFlowManager
             full_text = "\n\n".join(doc_data.get("pages", []))
-            paragraphs = [p.strip() for p in full_text.split("\n\n") if p.strip()]
             
-            export_status["total"] = len(paragraphs)
+            # Use DialogueFlowManager to intelligently split text
+            segments = dialogue_manager.process_chapter(full_text)
             
-            # 4. Process each paragraph
+            export_status["total"] = len(segments)
+            
+            # 4. Process each segment with smart pausing
             audio_segments = []
             rules_data = [r.model_dump() for r in request.rules]
             
-            for i, paragraph in enumerate(paragraphs):
+            for i, segment in enumerate(segments):
                 if not export_status["is_exporting"]:  # Check for cancellation
                     export_status["error"] = "Export cancelled"
                     return
                 
                 try:
+                    # Get text from segment
+                    text = segment["text"]
+                    pause_duration = segment["pause_after"]
+                    
                     # First filter out dimmed text (headers/footers)
-                    filtered_paragraph = filter_text_for_tts(paragraph)
+                    filtered_text = filter_text_for_tts(text)
+                    
+                    # Skip empty segments
+                    if not filtered_text.strip():
+                        export_status["progress"] = i + 1
+                        continue
                     
                     # Then apply pronunciation rules
-                    processed_text = apply_custom_pronunciations(filtered_paragraph, rules_data, request.ignore_list)
+                    processed_text = apply_custom_pronunciations(filtered_text, rules_data, request.ignore_list)
                     
                     # Generate audio
                     samples, sample_rate = kokoro.create(
@@ -616,13 +630,16 @@ async def export_audio(request: ExportRequest, background_tasks: BackgroundTasks
                     audio_segment = AudioSegment.from_wav(buffer)
                     audio_segments.append(audio_segment)
                     
-                    # Add small pause between paragraphs (500ms)
-                    silence = AudioSegment.silent(duration=500)
-                    audio_segments.append(silence)
+                    # Add smart pause based on segment type (DialogueFlowManager logic)
+                    # Convert seconds to milliseconds
+                    pause_ms = int(pause_duration * 1000)
+                    if pause_ms > 0:
+                        silence = AudioSegment.silent(duration=pause_ms)
+                        audio_segments.append(silence)
                     
                 except Exception as e:
-                    print(f"Warning: Failed to process paragraph {i}: {e}")
-                    # Continue with next paragraph
+                    print(f"Warning: Failed to process segment {i}: {e}")
+                    # Continue with next segment
                 
                 export_status["progress"] = i + 1
             
