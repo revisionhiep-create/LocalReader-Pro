@@ -84,7 +84,7 @@ pip install -r requirements.txt
 ### Setup
 ```bash
 # 1. Clone or extract to your desired location
-cd LocalReader_Pro_v1.4
+cd LocalReader-Pro-main
 
 # 2. Install dependencies
 pip install -r requirements.txt
@@ -155,7 +155,7 @@ When you first try to export audio:
 
 ### File Structure
 ```
-LocalReader_Pro_v1.4/
+LocalReader-Pro-main/
 ├── launch.vbs             # Silent launcher (double-click)
 ├── main.py                # Entry point (CLI)
 ├── requirements.txt       # Python dependencies
@@ -245,4 +245,5 @@ This project uses:
 **Version**: 1.4  
 **Engine**: Kokoro-82M (ONNX)  
 **Last Updated**: December 2025
+
 
