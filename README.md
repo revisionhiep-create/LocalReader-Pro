@@ -125,7 +125,7 @@ When you first try to export audio:
 4. **Jump**: Click any sentence to start reading from there
 
 ### Pronunciation Rules
-1. Switch to **Rules** tab in sidebar
+1. Switch to **Pronunciation** tab in sidebar
 2. Click **+** to add a new rule
 3. Enter:
    - **Original Text**: The text to replace (e.g., "ChatGPT")
@@ -245,6 +245,7 @@ This project uses:
 **Version**: 1.4  
 **Engine**: Kokoro-82M (ONNX)  
 **Last Updated**: December 2025
+
 
 
 
