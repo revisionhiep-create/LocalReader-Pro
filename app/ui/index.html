@@ -590,6 +590,7 @@
 
         let currentDoc = null, currentPages = [], currentPageIndex = 0, currentSentenceIndex = 0, sentences = [], sentenceElements = [], isPlaying = false, rules = [], ignoreList = [];
         let activeAudioURL = null; // Track active audio URL for cleanup
+        let smartPauseTimeout = null; // Track smart pause timeout for cancellation
         let headerFooterMode = 'off'; // Track header/footer filter mode
         let smartStartPage = 0; // Track the smart start page
         let currentSearchQuery = ''; // Track current search query for highlighting
@@ -1326,11 +1327,32 @@
             saveProgress();
             console.log(`Synthesizing sentence ${currentSentenceIndex}: "${text.substring(0, 30)}..."`);
             try {
-                const res = await fetch(`${API_URL}/api/synthesize`, { 
+                // Collect context sentences for smart pause calculation
+                const contextBefore = [];
+                const contextAfter = [];
+                
+                // Get up to 2 sentences before
+                for (let i = Math.max(0, currentSentenceIndex - 2); i < currentSentenceIndex; i++) {
+                    if (sentences[i] && typeof sentences[i] === 'string') {
+                        contextBefore.push(sentences[i]);
+                    }
+                }
+                
+                // Get up to 2 sentences after
+                for (let i = currentSentenceIndex + 1; i < Math.min(sentences.length, currentSentenceIndex + 3); i++) {
+                    if (sentences[i] && typeof sentences[i] === 'string') {
+                        contextAfter.push(sentences[i]);
+                    }
+                }
+                
+                // Use context-aware endpoint for smart pausing
+                const res = await fetch(`${API_URL}/api/synthesize/with-context`, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ 
                         text, 
+                        context_before: contextBefore,
+                        context_after: contextAfter,
                         voice: voiceSelect.value, 
                         speed: parseFloat(speedRange.value), 
                         rules, 
@@ -1342,6 +1364,14 @@
                     const err = await res.json();
                     throw new Error(err.detail || "Synthesis failed");
                 }
+                
+                // Read smart pause duration from response header
+                let pauseAfter = parseFloat(res.headers.get('X-Pause-After') || '0.5');
+                if (isNaN(pauseAfter) || pauseAfter < 0) {
+                    console.warn('Invalid pause duration, using default 0.5s');
+                    pauseAfter = 0.5;
+                }
+                console.log(`Smart pause duration: ${pauseAfter}s`);
                 
                 const blob = await res.blob();
                 console.log(`Audio blob received: ${blob.size} bytes`);
@@ -1362,8 +1392,15 @@
                     URL.revokeObjectURL(url); 
                     activeAudioURL = null;
                     currentSentenceIndex++; 
-                    console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
-                    playNext(); 
+                    console.log(`Sentence ended, waiting ${pauseAfter}s before next...`);
+                    
+                    // Clear any existing timeout before setting new one
+                    if (smartPauseTimeout) clearTimeout(smartPauseTimeout);
+                    
+                    // Apply smart pause before playing next sentence
+                    smartPauseTimeout = setTimeout(() => {
+                        playNext(); 
+                    }, pauseAfter * 1000);
                 };
 
                 const playPromise = audioPlayer.play();
@@ -1395,6 +1432,12 @@
             setPlayIcon('play');
             audioPlayer.pause(); 
             audioPlayer.src = "";
+            
+            // Cancel any pending smart pause
+            if (smartPauseTimeout) {
+                clearTimeout(smartPauseTimeout);
+                smartPauseTimeout = null;
+            }
             
             // Clean up object URL to prevent memory leak
             if (activeAudioURL) {

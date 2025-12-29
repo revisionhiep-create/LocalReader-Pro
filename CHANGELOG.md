@@ -32,9 +32,13 @@ New `DialogueFlowManager` class intelligently classifies every paragraph into:
 - Optional SSML support: `<break time="300ms"/>` for compatible engines
 
 **Integration:**
-- Fully integrated into `/api/export/audio` MP3 export pipeline
+- **Live Playback:** New `/api/synthesize/with-context` endpoint for sentence-by-sentence playback
+  - Frontend sends current sentence + 2 sentences before/after for context
+  - Backend classifies segment type and returns smart pause duration via `X-Pause-After` header
+  - Frontend applies calculated pause before playing next sentence
+- **MP3 Export:** Fully integrated into `/api/export/audio` pipeline
 - Zero breaking changes to existing API endpoints
-- Drop-in replacement for naive paragraph splitting
+- Works automatically—no user configuration required
 
 **Technical Implementation:**
 - **Module:** `app/logic/dialogue_flow_manager.py`
@@ -52,7 +56,10 @@ New `DialogueFlowManager` class intelligently classifies every paragraph into:
 **Code Changes:**
 - **server.py (Line 113, 120):** Added `DialogueFlowManager` import
 - **server.py (Line 124):** Global `dialogue_manager` instance initialization
-- **server.py (Lines 585-644):** Export pipeline now uses `process_chapter()` for smart segmentation
+- **server.py (Lines 448-455):** New `SynthesisWithContextRequest` model for context-aware synthesis
+- **server.py (Lines 488-543):** New `/api/synthesize/with-context` endpoint for live playback
+- **server.py (Lines 585-644):** Export pipeline uses `process_chapter()` for smart segmentation
+- **index.html (Lines 1329-1396):** Frontend collects context and applies smart pauses
 - **logic/__init__.py:** Proper module exports for clean imports
 
 **Benefits:**
@@ -60,19 +67,26 @@ New `DialogueFlowManager` class intelligently classifies every paragraph into:
 - ✅ **Context-Aware:** Different pause lengths based on content type
 - ✅ **Web Novel Optimized:** Handles rapid dialogue exchanges common in translated fiction
 - ✅ **Professional Quality:** Matches human narrator pacing
-- ✅ **Zero Config:** Works automatically with existing exports
+- ✅ **Works Everywhere:** Live playback AND MP3 export
+- ✅ **Zero Config:** Automatic detection, no user settings needed
 - ✅ **Extensible:** Easy to add new pause rules or segment types
 
 **Before vs After:**
 - **Before:** "Who are you?" [500ms] "I am your nightmare." [500ms] "Don't trust him."
 - **After:** "Who are you?" [400ms - speaker change] "I am your nightmare." [100ms - action beat] He stepped back. [200ms] "Don't trust him."
 
-**Verification:**
-1. Import a dialogue-heavy chapter (e.g., conversation between 2+ characters)
-2. Export as MP3 using `/api/export/audio`
-3. Listen for natural pauses between speaker turns
-4. Confirm 400ms gaps between consecutive dialogue lines
-5. Confirm shorter 100ms gaps between dialogue and action
+**Verification (Live Playback):**
+1. Open a dialogue-heavy chapter (e.g., conversation between 2+ characters)
+2. Click Play and listen to TTS
+3. Console logs show: `Smart pause duration: 0.4s` (or similar)
+4. Hear natural pauses between speaker changes
+5. Shorter pauses between dialogue and narration
+
+**Verification (MP3 Export):**
+1. Export the same dialogue-heavy chapter
+2. Listen for natural pauses between speaker turns
+3. Confirm 400ms gaps between consecutive dialogue lines
+4. Confirm shorter 100ms gaps between dialogue and action
 
 **Research-Backed Standards:**
 - **400ms Speaker Change:** Film/TV industry standard for dialogue editing

@@ -10,16 +10,13 @@
 - **Natural Speaker Turns:** TTS now pauses naturally between dialogue exchanges (400ms industry-standard pause)
 - **Action Beats:** Shorter pauses (100ms) when narration interrupts dialogue, maintaining narrative flow
 - **Context-Aware:** Automatically detects dialogue vs narration and adjusts pacing accordingly
-- **No Configuration:** Works automatically on all MP3 exports—zero setup required
+- **Live Playback:** Works during real-time sentence-by-sentence reading
+- **MP3 Export:** Applies to exported audiobooks as well
+- **No Configuration:** Zero setup required—works automatically everywhere
 - **Screenplay-Style Pacing:** Eliminates the "rushed dialogue" problem in conversation-heavy chapters
 
 **Before:** "Who are you?" "I am your nightmare." "Don't trust him." *(runs together)*  
 **After:** "Who are you?" [400ms pause] "I am your nightmare." [100ms pause] *He stepped back.* [200ms pause] "Don't trust him."
-
-
-# LocalReader Pro v1.5
-
-**A modern, privacy-focused PDF/EPUB reader with AI-powered text-to-speech, smart content detection, and MP3 export.**
 
 ---
 
@@ -70,6 +67,13 @@
 - **Smart Pagination:** Auto-scroll to next/previous page at boundaries
 
 ### 🎙️ TTS & Voice Control
+- **Dialogue Flow Manager (v1.6):** Industry-standard pause injection for natural dialogue pacing
+  - Works in live playback AND MP3 export
+  - Speaker changes: 400ms pause (natural turn-taking)
+  - Action beats: 100ms pause (connected flow)
+  - Chapter headers: 1000ms pause (clear transitions)
+  - Auto-detects dialogue vs narration (zero config)
+  - Context-aware: Uses surrounding sentences to classify content type
 - **Speed Control:** 0.5x to 3.0x playback speed
 - **Custom Pronunciation Rules:** 
   - Fix mispronunciations (e.g., "ChatGPT" → "Chat G P T")
@@ -363,6 +367,7 @@ LocalReader_Pro_v1.5/
 ├── app/
 │   ├── server.py               # FastAPI backend + API routes
 │   ├── logic/
+│   │   ├── dialogue_flow_manager.py  # Smart dialogue pacing engine (v1.6)
 │   │   ├── text_normalizer.py        # Pronunciation rule engine
 │   │   ├── smart_content_detector.py # Smart Start & Header/Footer filter
 │   │   ├── downloader.py             # Model downloader
@@ -655,6 +660,13 @@ See `requirements.txt` and library documentation for full license details.
 
 ## 🔄 Version History
 
+### v1.6 (December 2025)
+- ✨ **Dialogue Flow Manager:** Natural TTS pacing for dialogue-heavy chapters
+- ✨ Industry-standard pause injection (400ms speaker turns, 100ms action beats)
+- ✨ Automatic dialogue vs narration detection
+- 🎭 Eliminates "rushed dialogue" problem in Web Novels
+- 🚀 Zero configuration—works automatically on all exports
+
 ### v1.5 (December 2025)
 - ✨ Smart Start (auto-skip intro pages)
 - ✨ Smart Header/Footer Filter (3 modes)
@@ -696,7 +708,7 @@ See `requirements.txt` and library documentation for full license details.
 
 ---
 
-**Version:** 1.5  
+**Version:** 1.6  
 **Engine:** Kokoro-82M (ONNX)  
 **Last Updated:** December 2025  
 **Status:** ✅ Stable Release
@@ -704,4 +716,3 @@ See `requirements.txt` and library documentation for full license details.
 ---
 
 **Enjoy your reading! 📚✨**
-

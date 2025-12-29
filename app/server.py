@@ -445,6 +445,15 @@ class SynthesisRequest(BaseModel):
     rules: List[PronunciationRule]
     ignore_list: List[str] = []
 
+class SynthesisWithContextRequest(BaseModel):
+    text: str
+    context_before: List[str] = []  # Up to 2 sentences before
+    context_after: List[str] = []   # Up to 2 sentences after
+    voice: str = "af_sky"
+    speed: float = 1.0
+    rules: List[PronunciationRule]
+    ignore_list: List[str] = []
+
 @app.post("/api/synthesize")
 async def synthesize(request: SynthesisRequest):
     if kokoro is None: raise HTTPException(status_code=503, detail="TTS Engine not initialized.")
@@ -475,6 +484,76 @@ async def synthesize(request: SynthesisRequest):
         buffer.seek(0)
         return StreamingResponse(buffer, media_type="audio/wav")
     except Exception as e: raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/synthesize/with-context")
+async def synthesize_with_context(request: SynthesisWithContextRequest):
+    """
+    Enhanced synthesis endpoint with context-aware pause calculation.
+    Uses DialogueFlowManager to determine natural pause duration.
+    """
+    if kokoro is None:
+        raise HTTPException(status_code=503, detail="TTS Engine not initialized.")
+    
+    try:
+        # Process text (remove [DIM] markers and apply pronunciation rules)
+        text = filter_text_for_tts(request.text)
+        rules_data = [r.model_dump() for r in request.rules]
+        processed_text = apply_custom_pronunciations(text, rules_data, request.ignore_list)
+    except Exception as e:
+        print(f"Warning: Text processing failed: {e}")
+        processed_text = filter_text_for_tts(request.text)
+    
+    # Build context for classification (use original text to preserve quotes/formatting)
+    context_paragraphs = []
+    context_paragraphs.extend(request.context_before)
+    context_paragraphs.append(request.text)  # Original text needed for accurate dialogue detection
+    context_paragraphs.extend(request.context_after)
+    
+    # Use DialogueFlowManager to classify and calculate pause
+    context_text = "\n\n".join(context_paragraphs)
+    segments = dialogue_manager.process_chapter(context_text)
+    
+    # Find the current sentence segment (should be at index len(context_before))
+    target_index = len(request.context_before)
+    pause_after = 0.5  # Default fallback
+    
+    if target_index < len(segments):
+        pause_after = segments[target_index]["pause_after"]
+    
+    # Generate audio
+    try:
+        voices = kokoro.get_voices()
+        selected_voice = request.voice if request.voice in voices else "af_sky"
+        
+        # Heuristic: If text has no alphanumeric characters, return tiny silence
+        if not re.search(r'[a-zA-Z0-9]', processed_text):
+            samples = np.zeros(int(24000 * 0.1), dtype=np.float32)
+            sample_rate = 24000
+        else:
+            samples, sample_rate = kokoro.create(
+                processed_text,
+                voice=selected_voice,
+                speed=float(request.speed or 1.0),
+                lang="en-us"
+            )
+        
+        # Encode audio
+        buffer = io.BytesIO()
+        sf.write(buffer, samples.flatten(), sample_rate, format='WAV', subtype='PCM_16')
+        buffer.seek(0)
+        
+        # Return audio stream with pause metadata in custom header
+        return StreamingResponse(
+            buffer, 
+            media_type="audio/wav",
+            headers={
+                "X-Pause-After": str(pause_after),  # Custom header for pause duration
+                "X-Sample-Rate": str(sample_rate)
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # MP3 Export API
 class ExportRequest(BaseModel):

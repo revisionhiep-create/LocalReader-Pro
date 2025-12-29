@@ -4,7 +4,7 @@ Fixes "rushed" dialogue by inserting industry-standard pauses.
 """
 
 import re
-from typing import List, Dict, Literal
+from typing import List, Dict, Literal, Any
 
 
 class DialogueFlowManager:
@@ -126,7 +126,7 @@ class DialogueFlowManager:
         
         return self.PAUSE_DIALOGUE_DEFAULT
     
-    def process_chapter(self, text: str) -> List[Dict[str, any]]:
+    def process_chapter(self, text: str) -> List[Dict[str, Any]]:
         """
         Processes raw chapter text into structured audio segments.
         
@@ -180,7 +180,7 @@ class DialogueFlowManager:
         
         return segments
     
-    def process_chapter_with_metadata(self, text: str) -> Dict[str, any]:
+    def process_chapter_with_metadata(self, text: str) -> Dict[str, Any]:
         """
         Enhanced version that returns segments + metadata.
         
