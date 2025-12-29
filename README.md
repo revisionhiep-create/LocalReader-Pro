@@ -52,11 +52,35 @@
 
 ## 📦 Installation
 
-### Prerequisites
-- Python 3.10+
-- Windows 10/11 (Linux/Mac compatible with minor tweaks)
-- Internet connection (for first-time setup)
+---
 
+## 🐍 Python & Pip Setup Instructions
+
+To run LocalReader Pro, you need Python installed on your Windows machine. Follow these steps to get everything ready:
+
+### 1. Download and Install Python
+- **Link:** [Download Python 3.12 (Recommended)](https://www.python.org/downloads/windows/)
+- **Installation Steps:**
+    1.  Run the downloaded installer.
+    2.  **CRITICAL:** Check the box that says **"Add Python to PATH"** at the bottom of the first screen.
+    3.  Select "Install Now".
+
+### 2. Verify Installation
+Open a terminal (Press `Win + R`, type `cmd`, and hit Enter) and type:
+```bash
+python --version
+pip --version
+```
+If you see version numbers, you are ready!
+
+### 3. Install Dependencies
+Navigate to the project folder in your terminal and run:
+```bash
+pip install -r requirements.txt
+```
+*Note: If `pip` is not recognized, try `python -m pip install -r requirements.txt`.*
+
+---
 ### Setup
 ```bash
 # 1. Clone or extract to your desired location
@@ -221,3 +245,4 @@ This project uses:
 **Version**: 1.4  
 **Engine**: Kokoro-82M (ONNX)  
 **Last Updated**: December 2025
+
