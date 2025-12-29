@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LocalReader - Pro Edition v1.3</title>
+    <title>LocalReader - Pro Edition v1.4</title>
     <!-- Local Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="lib/lucide.min.js"></script>
@@ -27,22 +27,166 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        /* RESPONSIVE VARIABLES */
+        :root {
+          /* Sidebar: Minimum 250px, Preferred 20vw, Maximum 400px */
+          --sidebar-width: clamp(250px, 20vw, 400px);
+          
+          /* Player Padding: Scales between 1rem and 3rem */
+          --player-padding: clamp(1rem, 5vw, 3rem);
+        }
+
         body { font-family: 'Inter', sans-serif; background-color: #000000; color: #d1d5db; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #09090b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
         
+        /* LAYOUT CONTAINER */
+        .main-container {
+          display: flex;
+          height: 100vh;
+          overflow: hidden;
+          background-color: #0a0a0a;
+        }
+
+        /* SMART SIDEBAR */
+        .sidebar {
+          width: var(--sidebar-width);
+          flex-shrink: 0;
+          transition: width 0.3s ease;
+          border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Mobile: Collapse to icon width */
+        @media (max-width: 768px) {
+          .sidebar {
+            width: 70px;
+          }
+        }
+
+        /* THE CONTAINER (Right of Sidebar) */
+        .content-area {
+          flex-grow: 1;
+          height: 100vh;
+          overflow-y: auto;
+          display: grid;
+          place-items: start center;
+          padding: 2rem;
+          padding-bottom: 150px;
+          margin: 0;
+          width: auto;
+          background-color: #000000;
+          position: relative;
+        }
+
+        /* THE TEXT ITSELF */
+        .chapter-text {
+          width: 100%;
+          max-width: 900px;
+          font-size: 1.25rem;
+          line-height: 1.8;
+          color: #e0e0e0;
+          text-align: left;
+          column-count: 1 !important;
+          height: auto !important;
+          column-gap: 0;
+        }
+
+        /* SMART PLAYER (Floating) */
+        .player-bar {
+          position: fixed;
+          bottom: 2rem;
+          left: 50%;
+          transform: translateX(-50%);
+          width: min(90%, 800px);
+          padding: 1rem var(--player-padding);
+          background: rgba(30, 30, 30, 0.85);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,0.05);
+          border-radius: 20px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+          z-index: 100;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+        }
+
+        /* Player Text Element (The Sentence Preview) */
+        .player-text {
+          flex-grow: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          margin-left: 1rem;
+          margin-right: 1rem;
+          font-size: 0.9rem;
+          color: #ccc;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        
         .active-sentence { background-color: rgba(59, 130, 246, 0.2); border-left: 3px solid #3b82f6; border-radius: 2px; }
         .sentence { transition: all 0.2s; padding: 4px 8px; cursor: pointer; display: block; margin-bottom: 0.5rem; }
         .sentence:hover { background-color: rgba(255, 255, 255, 0.05); }
+        
+        /* Pronunciation Rules Accordion */
+        .rule-item { transition: all 0.3s ease; overflow: hidden; }
+        .rule-collapsed { cursor: pointer; }
+        .rule-collapsed:hover { background-color: rgba(255, 255, 255, 0.03); }
+        .rule-expanded { background-color: rgba(59, 130, 246, 0.05); border-color: rgba(59, 130, 246, 0.3) !important; }
+        .rule-content { max-height: 0; opacity: 0; transition: max-height 0.3s ease, opacity 0.2s ease; }
+        .rule-content.expanded { max-height: 500px; opacity: 1; }
+        
+        /* Collapsed Rule Layout */
+        .rule-original { 
+            flex: 0 1 40%; 
+            min-width: 0;
+            font-weight: 600;
+            color: #ffffff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .rule-arrow { 
+            flex-shrink: 0;
+            margin: 0 8px;
+            color: #52525b;
+        }
+        .rule-replacement { 
+            flex: 0 1 40%; 
+            min-width: 0;
+            color: #60a5fa;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .rule-meta {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+        }
+        .rule-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .rule-empty {
+            font-style: italic;
+            color: #71717a;
+        }
     </style>
 </head>
 <body class="min-h-screen selection:bg-blue-500/30 overflow-hidden">
 
-    <div class="flex h-screen">
+    <div class="main-container">
         <!-- Sidebar -->
-        <aside class="w-80 bg-card border-r border-border flex flex-col shrink-0">
+        <aside class="sidebar bg-card flex flex-col">
             <div class="p-6 border-b border-border">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center gap-3">
@@ -68,12 +212,19 @@
                         <input type="file" id="pdfUpload" class="hidden" accept=".pdf,.epub">
                     </label>
                 </div>
+
+                <div id="exportArea" class="mb-4" style="display: none;">
+                    <button id="exportBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all shadow-lg shadow-purple-900/20">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span class="text-sm font-bold">Export Audio (MP3)</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Tabs -->
             <div class="flex border-b border-border">
                 <button id="tabLibrary" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5">Library</button>
-                <button id="tabRules" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300">Rules</button>
+                <button id="tabRules" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300">Pronunciation</button>
                 <button id="tabIgnore" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300">Ignore</button>
             </div>
 
@@ -82,7 +233,7 @@
                 <div id="libraryPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2"></div>
                 <div id="rulesPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden">
                     <div class="flex justify-between items-center">
-                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Custom Rules</h3>
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Pronunciation Rules</h3>
                         <button id="addRuleBtn" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
                     </div>
                     <div id="rulesList" class="space-y-3"></div>
@@ -118,7 +269,7 @@
             </div>
         </aside>
 
-        <main class="flex-1 flex flex-col bg-black relative">
+        <main class="content-area">
             <header class="h-16 border-b border-border flex items-center px-6 bg-card/80 backdrop-blur-md shrink-0">
                 <span id="docTitle" class="font-semibold text-sm truncate text-zinc-300 italic flex-1 mr-4">No document selected</span>
                 <div id="pageNav" class="hidden flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800 text-xs shrink-0">
@@ -138,16 +289,16 @@
                     <h2 class="text-xl font-bold text-zinc-300">Welcome to LocalReader</h2>
                     <p class="text-zinc-500 text-sm max-w-sm">Select a document or upload a new PDF.</p>
                 </div>
-                <div id="textContent" class="hidden"></div>
+                <div id="textContent" class="chapter-text hidden"></div>
             </div>
 
             <!-- Controls -->
-            <div id="controls" class="absolute bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900/95 backdrop-blur-xl border border-zinc-800 p-4 rounded-2xl shadow-2xl flex items-center gap-6 hidden min-w-[400px]">
+            <div id="controls" class="player-bar hidden">
                 <button id="playBtn" class="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-900/40 shrink-0">
                     <i data-lucide="play" id="playIcon" class="w-6 h-6 fill-current"></i>
                 </button>
                 <div class="flex flex-col flex-1 min-w-0">
-                    <span id="currentSentencePreview" class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest truncate">Ready</span>
+                    <span id="currentSentencePreview" class="player-text">Ready</span>
                     <div class="flex items-center gap-4 mt-1.5">
                         <button id="skipBack" class="text-zinc-500 hover:text-white p-1"><i data-lucide="skip-back" class="w-5 h-5"></i></button>
                         <button id="skipForward" class="text-zinc-500 hover:text-white p-1"><i data-lucide="skip-forward" class="w-5 h-5"></i></button>
@@ -161,10 +312,109 @@
     </div>
 
     <!-- Toast -->
-    <div id="toast" class="fixed top-4 right-4 bg-red-900/95 border border-red-700 text-white px-6 py-4 rounded-xl shadow-2xl hidden z-50">
+    <div id="toast" class="fixed top-4 right-4 bg-red-900/95 border border-red-700 text-white px-6 py-4 rounded-xl shadow-2xl hidden z-[9999]">
         <div class="flex items-center gap-3">
             <i data-lucide="alert-circle" class="w-5 h-5 text-red-300"></i>
             <span id="toastMsg" class="text-sm font-semibold"></span>
+        </div>
+    </div>
+
+    <!-- FFMPEG Download Modal -->
+    <div id="ffmpegModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold text-white">Download Required</h3>
+                <button id="cancelFFMPEGBtn" class="text-zinc-500 hover:text-red-500 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <p class="text-sm text-zinc-400">
+                    To export audio to MP3, we need to download the FFMPEG encoder (~100MB).
+                </p>
+                
+                <div id="ffmpegDownloadSection" class="hidden">
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="text-zinc-400">Progress</span>
+                            <span id="ffmpegProgress" class="text-blue-400 font-mono">0%</span>
+                        </div>
+                        <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div id="ffmpegProgressBar" class="h-full bg-gradient-to-r from-blue-600 to-green-600 transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-xs text-zinc-500 text-center">
+                        <span id="ffmpegStatus">Downloading...</span>
+                    </div>
+                </div>
+                
+                <div id="ffmpegComplete" class="hidden bg-green-900/50 border border-green-700 text-green-300 px-4 py-3 rounded-lg text-sm">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
+                        <span>Download complete! Starting export...</span>
+                    </div>
+                </div>
+                
+                <div id="ffmpegError" class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0"></i>
+                        <span id="ffmpegErrorMsg"></span>
+                    </div>
+                </div>
+                
+                <button id="startFFMPEGDownload" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-semibold">
+                    <i data-lucide="download-cloud" class="w-4 h-4"></i>
+                    <span>Download FFMPEG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Progress Modal -->
+    <div id="exportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold text-white">Exporting Audio</h3>
+                <button id="cancelExportBtn" class="text-zinc-500 hover:text-red-500 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="text-zinc-400">Progress</span>
+                        <span id="exportProgress" class="text-blue-400 font-mono">0%</span>
+                    </div>
+                    <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div id="exportProgressBar" class="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div class="text-xs text-zinc-500 text-center">
+                    <span id="exportStatus">Processing paragraphs...</span>
+                </div>
+                
+                <div id="exportComplete" class="hidden space-y-3">
+                    <div class="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3">
+                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Saved to:</div>
+                        <div id="exportFilePath" class="text-xs text-zinc-400 font-mono break-all"></div>
+                    </div>
+                    <button id="openFileLocationBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all font-semibold">
+                        <i data-lucide="folder-open" class="w-4 h-4"></i>
+                        <span>📂 Open Folder</span>
+                    </button>
+                </div>
+                
+                <div id="exportError" class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0"></i>
+                        <span id="exportErrorMsg"></span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -173,10 +423,12 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
 
-        let currentDoc = null, currentPages = [], currentPageIndex = 0, currentSentenceIndex = 0, sentences = [], isPlaying = false, rules = [], ignoreList = [];
+        let currentDoc = null, currentPages = [], currentPageIndex = 0, currentSentenceIndex = 0, sentences = [], sentenceElements = [], isPlaying = false, rules = [], ignoreList = [];
+        let activeAudioURL = null; // Track active audio URL for cleanup
         const API_URL = 'http://127.0.0.1:8000';
 
-        const pdfUpload = document.getElementById('pdfUpload'), uploadArea = document.getElementById('uploadArea'), libraryPanel = document.getElementById('libraryPanel'), rulesPanel = document.getElementById('rulesPanel'), 
+        const pdfUpload = document.getElementById('pdfUpload'), uploadArea = document.getElementById('uploadArea'), exportArea = document.getElementById('exportArea'),
+              libraryPanel = document.getElementById('libraryPanel'), rulesPanel = document.getElementById('rulesPanel'), 
               ignorePanel = document.getElementById('ignorePanel'), rulesList = document.getElementById('rulesList'), ignoreListUI = document.getElementById('ignoreListUI'), 
               tabLibrary = document.getElementById('tabLibrary'), tabRules = document.getElementById('tabRules'), tabIgnore = document.getElementById('tabIgnore'), 
               textContent = document.getElementById('textContent'), readerContent = document.getElementById('readerContent'), emptyState = document.getElementById('emptyState'), 
@@ -185,9 +437,34 @@
               playIcon = document.getElementById('playIcon'), currentSentencePreview = document.getElementById('currentSentencePreview'), 
               audioPlayer = document.getElementById('audioPlayer'), speedRange = document.getElementById('speedRange'), speedVal = document.getElementById('speedVal'), 
               voiceSelect = document.getElementById('voiceSelect'), addRuleBtn = document.getElementById('addRuleBtn'), setupArea = document.getElementById('setupArea'), 
-              setupBtn = document.getElementById('setupBtn'), engineStatusDot = document.getElementById('engineStatusDot'), toast = document.getElementById('toast');
+              setupBtn = document.getElementById('setupBtn'), engineStatusDot = document.getElementById('engineStatusDot'), toast = document.getElementById('toast'),
+              exportBtn = document.getElementById('exportBtn'), exportModal = document.getElementById('exportModal'),
+              exportProgress = document.getElementById('exportProgress'), exportProgressBar = document.getElementById('exportProgressBar'),
+              exportStatus = document.getElementById('exportStatus'), exportComplete = document.getElementById('exportComplete'),
+              exportError = document.getElementById('exportError'), exportErrorMsg = document.getElementById('exportErrorMsg'),
+              exportFilePath = document.getElementById('exportFilePath'),
+              cancelExportBtn = document.getElementById('cancelExportBtn'), openFileLocationBtn = document.getElementById('openFileLocationBtn'),
+              ffmpegModal = document.getElementById('ffmpegModal'), ffmpegProgress = document.getElementById('ffmpegProgress'),
+              ffmpegProgressBar = document.getElementById('ffmpegProgressBar'), ffmpegStatus = document.getElementById('ffmpegStatus'),
+              ffmpegDownloadSection = document.getElementById('ffmpegDownloadSection'), ffmpegComplete = document.getElementById('ffmpegComplete'),
+              ffmpegError = document.getElementById('ffmpegError'), ffmpegErrorMsg = document.getElementById('ffmpegErrorMsg'),
+              startFFMPEGDownload = document.getElementById('startFFMPEGDownload'), cancelFFMPEGBtn = document.getElementById('cancelFFMPEGBtn');
 
         lucide.createIcons();
+
+        // Debounced icon rendering to batch multiple rapid calls
+        let iconRenderTimeout = null;
+        function renderIcons() {
+            clearTimeout(iconRenderTimeout);
+            iconRenderTimeout = setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (exportPollInterval) clearInterval(exportPollInterval);
+            if (ffmpegPollInterval) clearInterval(ffmpegPollInterval);
+            if (activeAudioURL) URL.revokeObjectURL(activeAudioURL);
+        });
 
         async function init() {
             try {
@@ -288,7 +565,7 @@
                             uploadArea.style.display = 'none';
                             setupBtn.disabled = true;
                             setupBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span class="text-sm font-bold">Downloading...</span>';
-                            lucide.createIcons();
+                            renderIcons();
                         } else if (status.is_loading) { 
                             engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse"; 
                             setupArea.style.display = 'none';
@@ -298,6 +575,7 @@
                             engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"; 
                             setupArea.style.display = 'none';
                             uploadArea.style.display = 'block';
+                            if (currentDoc) exportArea.style.display = 'block';
                         }
                         else { 
                             engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-red-600"; 
@@ -305,7 +583,7 @@
                             uploadArea.style.display = 'none';
                             setupBtn.disabled = false;
                             setupBtn.innerHTML = '<i data-lucide="download-cloud" class="w-4 h-4"></i><span class="text-sm font-bold">Setup Voice Engine</span>';
-                            lucide.createIcons();
+                            renderIcons();
                         }
                     }
                 } catch (e) { engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-zinc-700"; }
@@ -317,9 +595,20 @@
         setupBtn.onclick = () => fetch(`${API_URL}/api/system/setup`, { method: 'POST' });
         function showToast(msg) { document.getElementById('toastMsg').textContent = msg; toast.classList.remove('hidden'); setTimeout(() => toast.classList.add('hidden'), 5000); }
 
-        tabLibrary.onclick = () => { tabLibrary.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5"; tabRules.className = tabIgnore.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300"; libraryPanel.classList.remove('hidden'); rulesPanel.classList.add('hidden'); ignorePanel.classList.add('hidden'); };
-        tabRules.onclick = () => { tabRules.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5"; tabLibrary.className = tabIgnore.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300"; rulesPanel.classList.remove('hidden'); libraryPanel.classList.add('hidden'); ignorePanel.classList.add('hidden'); };
-        tabIgnore.onclick = () => { tabIgnore.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5"; tabLibrary.className = tabRules.className = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300"; ignorePanel.classList.remove('hidden'); libraryPanel.classList.add('hidden'); rulesPanel.classList.add('hidden'); };
+        // Reusable tab switcher to reduce code duplication
+        function switchTab(activeTab, activePanel) {
+            const tabs = [tabLibrary, tabRules, tabIgnore];
+            const panels = [libraryPanel, rulesPanel, ignorePanel];
+            const activeClass = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5";
+            const inactiveClass = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
+            
+            tabs.forEach(tab => tab.className = tab === activeTab ? activeClass : inactiveClass);
+            panels.forEach(panel => panel.classList.toggle('hidden', panel !== activePanel));
+        }
+
+        tabLibrary.onclick = () => switchTab(tabLibrary, libraryPanel);
+        tabRules.onclick = () => switchTab(tabRules, rulesPanel);
+        tabIgnore.onclick = () => switchTab(tabIgnore, ignorePanel);
 
         document.getElementById('addIgnoreBtn').onclick = () => { ignoreList.push(''); renderIgnoreList(); saveSettings(); };
         function renderIgnoreList() {
@@ -332,26 +621,113 @@
             });
             ignoreListUI.innerHTML = '';
             ignoreListUI.appendChild(fragment);
-            lucide.createIcons();
+            renderIcons();
         }
 
-        addRuleBtn.onclick = () => { rules.push({ id: crypto.randomUUID(), original: '', replacement: '', match_case: false, word_boundary: true }); renderRules(); saveSettings(); };
-        window.updateRule = (id, upd) => { rules = rules.map(r => r.id === id ? {...r, ...upd} : r); renderRules(); saveSettings(); };
+        addRuleBtn.onclick = () => { 
+            rules.push({ 
+                id: crypto.randomUUID(), 
+                original: '', 
+                replacement: '', 
+                match_case: false, 
+                word_boundary: true, 
+                is_regex: false, 
+                isExpanded: true  // New rules start expanded for immediate editing
+            }); 
+            renderRules(); 
+            saveSettings(); 
+        };
+        
+        window.updateRule = (id, upd) => { 
+            rules = rules.map(r => r.id === id ? {...r, ...upd} : r); 
+            renderRules(); 
+            saveSettings(); 
+        };
+        
+        window.toggleRule = (id) => {
+            rules = rules.map(r => r.id === id ? {...r, isExpanded: !r.isExpanded} : r);
+            renderRules();
+        };
+        
         function renderRules() {
             const fragment = document.createDocumentFragment();
             rules.forEach(r => {
-                const div = document.createElement('div'); div.className = 'bg-zinc-900/80 p-3 rounded-xl border border-zinc-800 space-y-2';
-                div.innerHTML = `<div class="grid grid-cols-1 gap-1.5"><input type="text" placeholder="Original" value="${r.original}" class="bg-black text-[10px] p-2 border border-zinc-800 rounded-md text-zinc-300" onchange="updateRule('${r.id}',{original:this.value})">
-                                <input type="text" placeholder="Replacement" value="${r.replacement}" class="bg-black text-[10px] p-2 border border-zinc-800 rounded-md text-zinc-300" onchange="updateRule('${r.id}',{replacement:this.value})"></div>
-                                <div class="flex items-center justify-between"><div class="flex gap-2">
-                                <button onclick="updateRule('${r.id}',{match_case:${!r.match_case}})" class="p-1 rounded-md ${r.match_case?'bg-blue-600':'bg-zinc-800'}"><i data-lucide="case-sensitive" class="w-3.5 h-3.5"></i></button>
-                                <button onclick="updateRule('${r.id}',{word_boundary:${!r.word_boundary}})" class="p-1 rounded-md ${r.word_boundary?'bg-blue-600':'bg-zinc-800'}"><i data-lucide="whole-word" class="w-3.5 h-3.5"></i></button></div>
-                                <button onclick="rules=rules.filter(x=>x.id!=='${r.id}');renderRules();saveSettings()" class="text-zinc-600 hover:text-red-500"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`;
+                const isExpanded = r.isExpanded || false;
+                const div = document.createElement('div');
+                div.className = `rule-item bg-zinc-900/80 rounded-xl border border-zinc-800 ${isExpanded ? 'rule-expanded' : ''}`;
+                
+                // Collapsed header (always visible)
+                const hasOriginal = r.original && r.original.trim();
+                const hasReplacement = r.replacement && r.replacement.trim();
+                const isEmpty = !hasOriginal && !hasReplacement;
+                
+                // Escape HTML to prevent injection
+                const escapeHtml = (text) => {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                };
+                
+                const originalText = hasOriginal ? escapeHtml(r.original) : '<span class="rule-empty">(Empty)</span>';
+                const replacementText = hasReplacement ? escapeHtml(r.replacement) : '<span class="rule-empty">(Empty)</span>';
+                
+                div.innerHTML = `
+                    <div class="rule-collapsed p-3 flex items-center" onclick="toggleRule('${r.id}')">
+                        ${isEmpty ? 
+                            '<div class="flex-1"><span class="text-xs rule-empty">Empty rule - click to edit</span></div>' :
+                            `<div class="rule-original text-xs">${originalText}</div>
+                             <div class="rule-arrow">
+                                 <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                             </div>
+                             <div class="rule-replacement text-xs">${replacementText}</div>`
+                        }
+                        <div class="rule-meta">
+                            ${r.match_case ? '<span class="rule-badge bg-blue-600/20 text-blue-400">Case</span>' : ''}
+                            ${r.word_boundary ? '<span class="rule-badge bg-green-600/20 text-green-400">Word</span>' : ''}
+                            ${r.is_regex ? '<span class="rule-badge bg-purple-600/20 text-purple-400">Regex</span>' : ''}
+                            <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 text-zinc-500 ml-2"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Expanded content (editing form) -->
+                    <div class="rule-content ${isExpanded ? 'expanded' : ''}" onclick="event.stopPropagation()">
+                        <div class="px-3 pb-3 space-y-3">
+                            <div class="h-px bg-zinc-800"></div>
+                            <div class="grid grid-cols-1 gap-2">
+                                <input type="text" placeholder="Original Text" value="${r.original}" class="bg-black text-xs p-2.5 border border-zinc-800 rounded-md text-zinc-300 placeholder-zinc-600" onchange="updateRule('${r.id}',{original:this.value})" onclick="event.stopPropagation()">
+                                <input type="text" placeholder="Replacement Text" value="${r.replacement}" class="bg-black text-xs p-2.5 border border-zinc-800 rounded-md text-zinc-300 placeholder-zinc-600" onchange="updateRule('${r.id}',{replacement:this.value})" onclick="event.stopPropagation()">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer hover:text-zinc-300" onclick="event.stopPropagation()">
+                                    <input type="checkbox" ${r.match_case?'checked':''} onchange="updateRule('${r.id}',{match_case:this.checked})" class="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-600 focus:ring-offset-0">
+                                    <span>Match Case</span>
+                                </label>
+                                <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer hover:text-zinc-300" onclick="event.stopPropagation()">
+                                    <input type="checkbox" ${r.word_boundary?'checked':''} onchange="updateRule('${r.id}',{word_boundary:this.checked})" class="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-600 focus:ring-offset-0">
+                                    <span>Whole Word</span>
+                                </label>
+                                <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer hover:text-zinc-300" onclick="event.stopPropagation()">
+                                    <input type="checkbox" ${r.is_regex?'checked':''} onchange="updateRule('${r.id}',{is_regex:this.checked})" class="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-600 focus:ring-offset-0">
+                                    <span>Use Pattern Matching</span>
+                                </label>
+                            </div>
+                            <div class="flex justify-between items-center pt-2">
+                                <button onclick="toggleRule('${r.id}');event.stopPropagation()" class="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1">
+                                    <i data-lucide="check" class="w-3 h-3"></i>
+                                    <span>Done</span>
+                                </button>
+                                <button onclick="rules=rules.filter(x=>x.id!=='${r.id}');renderRules();saveSettings();event.stopPropagation()" class="text-zinc-600 hover:text-red-500 p-1.5">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
                 fragment.appendChild(div);
             });
             rulesList.innerHTML = '';
             rulesList.appendChild(fragment);
-            lucide.createIcons();
+            renderIcons();
         }
 
         async function loadLibrary() {
@@ -387,7 +763,7 @@
                     fragment.appendChild(div);
                 });
                 libraryPanel.appendChild(fragment);
-                lucide.createIcons();
+                renderIcons();
             } catch (e) {
                 console.error("Load library error:", e);
                 libraryPanel.innerHTML = '<div class="p-4 text-xs text-red-500 italic">Failed to load library.</div>';
@@ -395,10 +771,23 @@
         }
 
         window.selectDocById = async (id) => {
-            const res = await fetch(`${API_URL}/api/library`);
-            const items = await res.json();
-            const item = items.find(i => i.id === id);
-            if (item) selectDocument(item);
+            try {
+                const res = await fetch(`${API_URL}/api/library`);
+                if (!res.ok) throw new Error('Failed to fetch library');
+                
+                const items = await res.json();
+                const item = items.find(i => i.id === id);
+                
+                if (item) {
+                    selectDocument(item);
+                } else {
+                    console.warn(`Document not found: ${id}`);
+                    showToast("Document not found in library");
+                }
+            } catch (e) {
+                console.error("selectDocById error:", e);
+                showToast("Failed to load document");
+            }
         };
 
         window.deleteDocument = async (e, id) => {
@@ -414,6 +803,7 @@
                         docTitle.textContent = 'No document selected';
                         pageNav.classList.add('hidden');
                         controls.classList.add('hidden');
+                        exportArea.style.display = 'none';
                         emptyState.classList.remove('hidden');
                         textContent.classList.add('hidden');
                         stopPlayback();
@@ -429,10 +819,18 @@
             const data = await res.json();
             currentPages = data.pages; currentPageIndex = item.currentPage || 0; currentSentenceIndex = item.lastSentenceIndex || 0;
             docTitle.textContent = item.fileName; pageNav.classList.remove('hidden'); controls.classList.remove('hidden'); emptyState.classList.add('hidden'); textContent.classList.remove('hidden');
+            if (isEngineReady) exportArea.style.display = 'block';
             renderPage(); loadLibrary();
         }
 
         function renderPage() {
+            // Add safety check for valid page
+            if (!currentPages || !currentPages[currentPageIndex]) {
+                console.error(`Invalid page index: ${currentPageIndex}`);
+                textContent.innerHTML = '<div class="text-zinc-500 p-4">Error: Page not found</div>';
+                return;
+            }
+            
             const text = currentPages[currentPageIndex];
             // Split by sentence but keep trailing quotes
             const rawSentences = text.match(/[^.!?]+[.!?]+[\"\'\u201c\u2018\u201d\u2019]*(?:\s|$)|[^.!?]+$/g) || [text];
@@ -463,8 +861,17 @@
             });
             textContent.innerHTML = '';
             textContent.appendChild(fragment);
+            
+            // Cache sentence elements for performance (avoid repeated queries)
+            sentenceElements = Array.from(textContent.querySelectorAll('.sentence'));
+            
             pageInput.value = currentPageIndex + 1; pageTotal.textContent = currentPages.length; readerContent.scrollTop = 0;
-            currentSentencePreview.textContent = (sentences[currentSentenceIndex] || "").substring(0, 50) + "...";
+            
+            // Safe sentence preview with bounds check
+            const currentSentence = sentences[currentSentenceIndex];
+            currentSentencePreview.textContent = (currentSentence && typeof currentSentence === 'string') 
+                ? currentSentence.substring(0, 50) + "..." 
+                : "Ready";
         }
 
         async function extractTextFromPage(page) {
@@ -589,13 +996,17 @@
         async function playNext() {
             if (!isPlaying || !isEngineReady) { stopPlayback(); return; }
             const text = sentences[currentSentenceIndex];
-            if (!text) {
+            if (!text || typeof text !== 'string') {
                 if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; renderPage(); playNext(); }
                 else stopPlayback();
                 return;
             }
-            document.querySelectorAll('.sentence').forEach((el, i) => el.className = `sentence ${i===currentSentenceIndex?'active-sentence':''}`);
-            const active = document.querySelector('.active-sentence'); if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Use cached elements instead of querying DOM
+            sentenceElements.forEach((el, i) => el.className = `sentence ${i===currentSentenceIndex?'active-sentence':''}`);
+            const active = sentenceElements[currentSentenceIndex];
+            if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
             currentSentencePreview.textContent = text.substring(0, 50) + "...";
             saveProgress();
             console.log(`Synthesizing sentence ${currentSentenceIndex}: "${text.substring(0, 30)}..."`);
@@ -623,11 +1034,18 @@
                     console.warn("Audio blob is suspiciously small.");
                 }
                 
+                // Revoke previous URL to prevent memory leak
+                if (activeAudioURL) {
+                    URL.revokeObjectURL(activeAudioURL);
+                }
+                
                 const url = URL.createObjectURL(blob);
+                activeAudioURL = url;
                 audioPlayer.src = url;
                 
                 audioPlayer.onended = () => { 
                     URL.revokeObjectURL(url); 
+                    activeAudioURL = null;
                     currentSentenceIndex++; 
                     console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
                     playNext(); 
@@ -648,15 +1066,26 @@
             }
         }
 
-        function stopPlayback() { 
-            isPlaying = false; 
+        // Helper to set play/pause icon
+        function setPlayIcon(iconName) {
             const icon = document.getElementById('playIcon');
             if (icon) {
-                icon.setAttribute('data-lucide', 'play');
-                lucide.createIcons();
+                icon.setAttribute('data-lucide', iconName);
+                renderIcons();
             }
+        }
+
+        function stopPlayback() { 
+            isPlaying = false; 
+            setPlayIcon('play');
             audioPlayer.pause(); 
-            audioPlayer.src = ""; 
+            audioPlayer.src = "";
+            
+            // Clean up object URL to prevent memory leak
+            if (activeAudioURL) {
+                URL.revokeObjectURL(activeAudioURL);
+                activeAudioURL = null;
+            }
         }
 
         function togglePlayback() {
@@ -664,11 +1093,7 @@
                 stopPlayback(); 
             } else { 
                 isPlaying = true; 
-                const icon = document.getElementById('playIcon');
-                if (icon) {
-                    icon.setAttribute('data-lucide', 'pause');
-                    lucide.createIcons();
-                }
+                setPlayIcon('pause');
                 playNext(); 
             }
         }
@@ -721,15 +1146,24 @@
             renderPage(); 
             if (!isPlaying) { 
                 isPlaying = true; 
-                const icon = document.getElementById('playIcon');
-                if (icon) {
-                    icon.setAttribute('data-lucide', 'pause');
-                    lucide.createIcons();
-                }
+                setPlayIcon('pause');
             } 
             playNext(); 
         }
-        async function saveProgress() { if (currentDoc) await fetch(`${API_URL}/api/library`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...currentDoc, currentPage: currentPageIndex, lastSentenceIndex: currentSentenceIndex, lastAccessed: Date.now() }) }); }
+        async function saveProgress() { 
+            if (currentDoc) {
+                await fetch(`${API_URL}/api/library`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        ...currentDoc, 
+                        currentPage: currentPageIndex, 
+                        lastSentenceIndex: currentSentenceIndex, 
+                        lastAccessed: Date.now() 
+                    }) 
+                });
+            }
+        }
         
         // Bidirectional Smart Scroll
         let isAutoFlipping = false;
@@ -769,7 +1203,257 @@
         document.getElementById('nextPage').onclick = () => { if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; renderPage(); if (isPlaying) playNext(); } };
         pageInput.onchange = () => { let v = parseInt(pageInput.value)-1; if (v >= 0 && v < currentPages.length) { currentPageIndex = v; currentSentenceIndex = 0; renderPage(); if (isPlaying) playNext(); } };
 
+        // === MP3 EXPORT FUNCTIONALITY ===
+        let exportPollInterval = null;
+        let exportOutputFile = null;
+        let ffmpegPollInterval = null;
+
+        exportBtn.onclick = async () => {
+            if (!currentDoc) {
+                showToast("No document selected");
+                return;
+            }
+            if (!isEngineReady) {
+                showToast("Voice engine not ready");
+                return;
+            }
+
+            // Check if FFMPEG is installed
+            try {
+                const statusRes = await fetch(`${API_URL}/api/ffmpeg/status?t=${Date.now()}`);
+                const status = await statusRes.json();
+
+                if (!status.is_installed) {
+                    // Show FFMPEG download modal
+                    showFFMPEGDownloadModal();
+                    return;
+                }
+
+                // FFMPEG installed, proceed with export
+                startExport();
+
+            } catch (e) {
+                showToast("Failed to check FFMPEG status");
+            }
+        };
+
+        function showFFMPEGDownloadModal() {
+            ffmpegModal.classList.remove('hidden');
+            ffmpegDownloadSection.classList.add('hidden');
+            ffmpegComplete.classList.add('hidden');
+            ffmpegError.classList.add('hidden');
+            startFFMPEGDownload.classList.remove('hidden');
+            renderIcons();
+        }
+
+        startFFMPEGDownload.onclick = async () => {
+            try {
+                const res = await fetch(`${API_URL}/api/ffmpeg/install`, { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || "Failed to start download");
+                }
+
+                // Hide button, show progress
+                startFFMPEGDownload.classList.add('hidden');
+                ffmpegDownloadSection.classList.remove('hidden');
+                ffmpegProgress.textContent = '0%';
+                ffmpegProgressBar.style.width = '0%';
+                ffmpegStatus.textContent = 'Starting download...';
+
+                startFFMPEGPolling();
+
+            } catch (e) {
+                ffmpegError.classList.remove('hidden');
+                ffmpegErrorMsg.textContent = e.message;
+            }
+        };
+
+        function startFFMPEGPolling() {
+            if (ffmpegPollInterval) clearInterval(ffmpegPollInterval);
+
+            ffmpegPollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_URL}/api/ffmpeg/status?t=${Date.now()}`);
+                    const status = await res.json();
+
+                    if (status.error) {
+                        clearInterval(ffmpegPollInterval);
+                        ffmpegError.classList.remove('hidden');
+                        ffmpegErrorMsg.textContent = status.error;
+                        return;
+                    }
+
+                    if (status.is_downloading) {
+                        // Update progress
+                        const percent = status.total > 0 ? Math.round((status.progress / status.total) * 100) : 0;
+                        ffmpegProgress.textContent = `${percent}%`;
+                        ffmpegProgressBar.style.width = `${percent}%`;
+                        ffmpegStatus.textContent = status.message || 'Downloading...';
+                    } else if (status.is_installed) {
+                        // Download complete
+                        clearInterval(ffmpegPollInterval);
+                        ffmpegDownloadSection.classList.add('hidden');
+                        ffmpegComplete.classList.remove('hidden');
+                        renderIcons();
+                        
+                        // Auto-close modal and start export after 1 second
+                        setTimeout(() => {
+                            ffmpegModal.classList.add('hidden');
+                            startExport();
+                        }, 1000);
+                    }
+                } catch (e) {
+                    console.error("FFMPEG polling error:", e);
+                }
+            }, 500);
+        }
+
+        cancelFFMPEGBtn.onclick = async () => {
+            if (ffmpegPollInterval) clearInterval(ffmpegPollInterval);
+            
+            try {
+                await fetch(`${API_URL}/api/ffmpeg/cancel`, { method: 'POST' });
+            } catch (e) {
+                console.error("Cancel error:", e);
+            }
+            
+            ffmpegModal.classList.add('hidden');
+        };
+
+        async function startExport() {
+            // Calculate estimated time
+            const totalChars = currentPages.join('').length;
+            const estimatedSeconds = Math.ceil((totalChars / 1000) * 15);
+            const estimatedMins = Math.ceil(estimatedSeconds / 60);
+
+            if (!confirm(`This will export the entire document to MP3.\n\nEstimated time: ~${estimatedMins} minute${estimatedMins !== 1 ? 's' : ''}\n\nContinue?`)) {
+                return;
+            }
+
+            // Start export
+            try {
+                const res = await fetch(`${API_URL}/api/export/audio`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        doc_id: currentDoc.id,
+                        voice: voiceSelect.value,
+                        speed: parseFloat(speedRange.value),
+                        rules: rules,
+                        ignore_list: ignoreList
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    showToast(err.detail || err.error || "Failed to start export");
+                    return;
+                }
+
+                // Show modal and start polling
+                exportModal.classList.remove('hidden');
+                exportComplete.classList.add('hidden');
+                exportError.classList.add('hidden');
+                exportProgress.textContent = '0%';
+                exportProgressBar.style.width = '0%';
+                exportStatus.textContent = 'Initializing export...';
+                playBtn.disabled = true;
+
+                startExportPolling();
+
+            } catch (e) {
+                showToast("Export failed: " + e.message);
+            }
+        }
+
+        function startExportPolling() {
+            if (exportPollInterval) clearInterval(exportPollInterval);
+            
+            exportPollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_URL}/api/export/status?t=${Date.now()}`);
+                    const status = await res.json();
+
+                    if (status.error) {
+                        // Error occurred
+                        clearInterval(exportPollInterval);
+                        exportError.classList.remove('hidden');
+                        exportErrorMsg.textContent = status.error;
+                        exportStatus.textContent = 'Export failed';
+                        playBtn.disabled = false;
+                        return;
+                    }
+
+                    if (status.is_exporting) {
+                        // Update progress
+                        const percent = status.total > 0 ? Math.round((status.progress / status.total) * 100) : 0;
+                        exportProgress.textContent = `${percent}%`;
+                        exportProgressBar.style.width = `${percent}%`;
+                        exportStatus.textContent = `Processing paragraph ${status.progress} of ${status.total}...`;
+                    } else if (status.output_file) {
+                        // Export complete
+                        clearInterval(exportPollInterval);
+                        exportProgress.textContent = '100%';
+                        exportProgressBar.style.width = '100%';
+                        exportStatus.textContent = 'Export complete!';
+                        
+                        // Show file path (user-friendly relative path)
+                        exportFilePath.textContent = `./userdata/${status.output_file}`;
+                        
+                        exportComplete.classList.remove('hidden');
+                        exportOutputFile = status.output_file;
+                        playBtn.disabled = false;
+                        renderIcons(); // Re-render folder-open icon
+                    }
+                } catch (e) {
+                    console.error("Export polling error:", e);
+                }
+            }, 1000);
+        }
+
+        cancelExportBtn.onclick = async () => {
+            if (exportPollInterval) clearInterval(exportPollInterval);
+            
+            try {
+                await fetch(`${API_URL}/api/export/cancel`, { method: 'POST' });
+            } catch (e) {
+                console.error("Cancel error:", e);
+            }
+            
+            exportModal.classList.add('hidden');
+            playBtn.disabled = false;
+        };
+
+        openFileLocationBtn.onclick = async () => {
+            if (exportOutputFile) {
+                try {
+                    const res = await fetch(`${API_URL}/api/export/open-location/${exportOutputFile}`, { 
+                        method: 'POST' 
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        // Show quick confirmation toast
+                        showToast("Opening folder...");
+                        
+                        // Close modal after a brief delay
+                        setTimeout(() => {
+                            exportModal.classList.add('hidden');
+                        }, 1000);
+                    } else {
+                        const err = await res.json();
+                        showToast(err.detail || "Failed to open folder");
+                    }
+                } catch (e) {
+                    console.error("Failed to open folder:", e);
+                    showToast("Error: " + e.message);
+                }
+            }
+        };
+
         init();
     </script>
 </body>
 </html>
+
