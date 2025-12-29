@@ -1,3 +1,22 @@
+# LocalReader Pro v1.6
+
+**A modern, privacy-focused PDF/EPUB reader with AI-powered text-to-speech, smart dialogue pacing, and MP3 export.**
+
+---
+
+## 🚀 What's New in v1.6
+
+### 🎭 Dialogue Flow Manager (Smart TTS Pacing)
+- **Natural Speaker Turns:** TTS now pauses naturally between dialogue exchanges (400ms industry-standard pause)
+- **Action Beats:** Shorter pauses (100ms) when narration interrupts dialogue, maintaining narrative flow
+- **Context-Aware:** Automatically detects dialogue vs narration and adjusts pacing accordingly
+- **No Configuration:** Works automatically on all MP3 exports—zero setup required
+- **Screenplay-Style Pacing:** Eliminates the "rushed dialogue" problem in conversation-heavy chapters
+
+**Before:** "Who are you?" "I am your nightmare." "Don't trust him." *(runs together)*  
+**After:** "Who are you?" [400ms pause] "I am your nightmare." [100ms pause] *He stepped back.* [200ms pause] "Don't trust him."
+
+
 # LocalReader Pro v1.5
 
 **A modern, privacy-focused PDF/EPUB reader with AI-powered text-to-speech, smart content detection, and MP3 export.**
@@ -685,3 +704,4 @@ See `requirements.txt` and library documentation for full license details.
 ---
 
 **Enjoy your reading! 📚✨**
+
