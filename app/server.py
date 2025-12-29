@@ -73,7 +73,8 @@ safe_init_json(settings_file, {
     "pronunciationRules": [], 
     "ignoreList": [],
     "voice_id": "af_bella",
-    "speed": 1.0
+    "speed": 1.0,
+    "header_footer_mode": "off"  # Options: "off", "clean", "dim"
 })
 
 class LibraryItem(BaseModel):
@@ -101,17 +102,20 @@ class AppSettings(BaseModel):
     ignoreList: List[str]
     voice_id: Optional[str] = "af_bella"
     speed: Optional[float] = 1.0
+    header_footer_mode: Optional[str] = "off"  # "off", "clean", or "dim"
 
 # Import logic
 try:
     from logic.text_normalizer import apply_custom_pronunciations
     from logic.downloader import download_kokoro_model
     from logic.dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
+    from logic.smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
 except ImportError:
     sys.path.append(str(base_dir / "logic"))
     from text_normalizer import apply_custom_pronunciations
     from downloader import download_kokoro_model
     from dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
+    from smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
 
 # Global engine
 kokoro = None
@@ -155,7 +159,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     ffmpeg_status["is_installed"] = installer.check_installed()
     yield
 
-app = FastAPI(title="LocalReader Pro v1.4 API", lifespan=lifespan)
+app = FastAPI(title="LocalReader Pro v1.5 API", lifespan=lifespan)
 
 # Mount local lib folder for self-hosted dependencies
 ui_lib_path = base_dir / "ui" / "lib"
@@ -267,12 +271,132 @@ async def get_content(doc_id: str):
     file_path = content_dir / f"{doc_id}.json"
     if not file_path.exists(): raise HTTPException(status_code=404)
     with open(file_path, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+    
+    # Add smart start page info
+    pages = data.get('pages', [])
+    if pages:
+        smart_start = find_content_start_page(pages)
+        data['smart_start_page'] = smart_start
+    
+    return data
 
 @app.post("/api/library/content")
 async def save_content(item: ContentItem):
     safe_save_json(content_dir / f"{item.id}.json", item.model_dump())
     return {"status": "ok"}
+
+@app.get("/api/library/content/{doc_id}/page/{page_index}")
+async def get_page_with_filter(doc_id: str, page_index: int):
+    """Get a specific page with smart header/footer filtering applied."""
+    file_path = content_dir / f"{doc_id}.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    with open(file_path, "r") as f:
+        data = json.load(f)
+    
+    pages = data.get('pages', [])
+    if page_index < 0 or page_index >= len(pages):
+        raise HTTPException(status_code=400, detail="Invalid page index")
+    
+    # Load user settings for header/footer mode
+    with open(settings_file, "r") as f:
+        settings = json.load(f)
+    
+    mode = settings.get('header_footer_mode', 'off')
+    
+    # Get the original page text
+    page_text = pages[page_index]
+    
+    # Detect headers/footers
+    noise = detect_headers_footers(pages, page_index)
+    
+    # Apply filter if mode is not "off"
+    if mode in ['clean', 'dim']:
+        filtered_text = apply_header_footer_filter(
+            page_text, 
+            noise['headers'], 
+            noise['footers'], 
+            mode
+        )
+    else:
+        filtered_text = page_text
+    
+    return {
+        "page_index": page_index,
+        "original_text": page_text,
+        "filtered_text": filtered_text,
+        "headers": noise['headers'],
+        "footers": noise['footers'],
+        "mode": mode
+    }
+
+@app.get("/api/library/search/{doc_id}")
+async def search_book(doc_id: str, q: str):
+    """Search for text across all pages in a document."""
+    if not q or len(q) < 2:
+        return {"results": [], "total_matches": 0, "query": q}
+    
+    file_path = content_dir / f"{doc_id}.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    with open(file_path, "r") as f:
+        data = json.load(f)
+    
+    pages = data.get('pages', [])
+    query_lower = q.lower()
+    results = []
+    total_matches = 0
+    
+    for page_index, page_text in enumerate(pages):
+        page_lower = page_text.lower()
+        
+        # Count occurrences on this page
+        match_count = page_lower.count(query_lower)
+        
+        if match_count > 0:
+            # Find all match positions
+            matches = []
+            start = 0
+            while True:
+                pos = page_lower.find(query_lower, start)
+                if pos == -1:
+                    break
+                
+                # Extract context (50 chars before/after)
+                context_start = max(0, pos - 50)
+                context_end = min(len(page_text), pos + len(q) + 50)
+                snippet = page_text[context_start:context_end]
+                
+                # Add ellipsis if truncated
+                if context_start > 0:
+                    snippet = "..." + snippet
+                if context_end < len(page_text):
+                    snippet = snippet + "..."
+                
+                matches.append({
+                    "position": pos,
+                    "snippet": snippet
+                })
+                
+                start = pos + 1
+            
+            results.append({
+                "page_index": page_index,
+                "match_count": match_count,
+                "matches": matches[:3]  # Limit to first 3 matches per page
+            })
+            
+            total_matches += match_count
+    
+    return {
+        "results": results,
+        "total_matches": total_matches,
+        "query": q,
+        "pages_with_matches": len(results)
+    }
 
 @app.delete("/api/library/{doc_id}")
 async def delete_library_item(doc_id: str):
@@ -322,9 +446,15 @@ class SynthesisRequest(BaseModel):
 async def synthesize(request: SynthesisRequest):
     if kokoro is None: raise HTTPException(status_code=503, detail="TTS Engine not initialized.")
     try:
+        # First, remove any [DIM] markers for TTS (don't read headers/footers)
+        text = filter_text_for_tts(request.text)
+        
+        # Then apply pronunciation rules
         rules_data = [r.model_dump() for r in request.rules]
-        text = apply_custom_pronunciations(request.text, rules_data, request.ignore_list)
-    except Exception: text = request.text
+        text = apply_custom_pronunciations(text, rules_data, request.ignore_list)
+    except Exception: 
+        text = filter_text_for_tts(request.text)
+    
     try:
         voices = kokoro.get_voices()
         selected_voice = request.voice if request.voice in voices else "af_sky"
@@ -465,8 +595,11 @@ async def export_audio(request: ExportRequest, background_tasks: BackgroundTasks
                     return
                 
                 try:
-                    # Apply pronunciation rules
-                    processed_text = apply_custom_pronunciations(paragraph, rules_data, request.ignore_list)
+                    # First filter out dimmed text (headers/footers)
+                    filtered_paragraph = filter_text_for_tts(paragraph)
+                    
+                    # Then apply pronunciation rules
+                    processed_text = apply_custom_pronunciations(filtered_paragraph, rules_data, request.ignore_list)
                     
                     # Generate audio
                     samples, sample_rate = kokoro.create(

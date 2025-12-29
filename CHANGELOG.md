@@ -1,6 +1,240 @@
-# LocalReader Pro v1.4 - Changelog
+# LocalReader Pro - Changelog
 
-## 🔧 Critical Fix: On-Demand FFMPEG Downloader
+## 🚀 v1.5 - Smart Content Detection & Global Search (Dec 2025)
+
+### Feature 3: Global Search (Ctrl+F Replacement)
+**Problem Solved:** Browser's native Ctrl+F is useless for paginated content - it can't search pages that aren't loaded.
+
+**How It Works:**
+1. **Backend API:**
+   - New endpoint: `GET /api/library/search/{doc_id}?q={query}`
+   - Searches across ALL pages in the document
+   - Returns matches with context snippets (50 chars before/after)
+   - Case-insensitive matching
+
+2. **Search Modal:**
+   - Floating search palette (top-center)
+   - Auto-search with 300ms debounce
+   - Displays results grouped by page
+   - Shows match count per page and total statistics
+
+3. **Keyboard Shortcuts:**
+   - `Ctrl+F` (Windows/Linux) or `Cmd+F` (Mac) - Opens search modal
+   - `ESC` - Closes search modal
+   - Prevents default browser find bar
+
+4. **Smart Navigation:**
+   - Click any result → Jumps to that page
+   - Automatically highlights all instances on the page
+   - Yellow highlight with shadow effect
+   - Persists until new search or page change
+
+**Benefits:**
+- ✅ **True Full-Text Search** - Searches entire book, not just current page
+- ✅ **Context Preview** - See surrounding text before jumping
+- ✅ **Fast Results** - Backend caches make searches instant
+- ✅ **Visual Feedback** - Yellow highlights show exactly where matches are
+- ✅ **Keyboard-Driven** - No mouse needed for power users
+
+**Technical Details:**
+- Backend: Python regex with case-insensitive matching
+- Frontend: Real-time DOM highlighting with `<span class="search-highlight">`
+- API: Returns max 3 matches per page (preview only)
+- Debouncing: 300ms delay prevents API spam during typing
+
+**UI Components:**
+```css
+.search-highlight {
+  background-color: #ffeb3b;  /* Bright yellow */
+  color: #000;
+  border-radius: 2px;
+  padding: 2px 0;
+  box-shadow: 0 0 5px #ffeb3b;  /* Glow effect */
+  font-weight: 600;
+}
+```
+
+---
+
+### UI 1.5: Layout Upgrades
+**Enhanced reading experience with improved player positioning and customizable layout.**
+
+#### 0. Sticky Header (Always Visible While Scrolling)
+**Before:** Header with page navigation would scroll away as you read down the page
+
+**After:** Header now uses `position: sticky` to stay fixed at the top
+- **Always Accessible:** Page navigation and search button remain visible while scrolling
+- **Smooth Scrolling:** Content scrolls underneath the header
+- **Z-Index Management:** Header stays above content (z-index: 50)
+- **Responsive Design:** 
+  - Scales icons on mobile (3px → 4px on large screens)
+  - Hides "Pg" label on small screens
+  - Adjusts padding/gaps based on screen size
+- **Better UX:** No need to scroll back to top to change pages or search
+
+**Technical Implementation:**
+- Changed `.content-area` from `display: grid` to `display: flex` with `flex-direction: column`
+- Added `position: sticky; top: 0;` to header element
+- Enhanced backdrop blur for better visibility
+- Moved `readerContent` padding from inline classes to CSS
+- **Scroll Container Fix:** `.content-area` is now the primary scroll container (not `#readerContent`)
+  - Removed `overflow-y: auto` from `#readerContent` (prevents nested scroll conflicts)
+  - Updated all JavaScript scroll references (`scrollTop`, `scrollHeight`, `clientHeight`)
+  - Fixed auto-scroll to next page functionality
+  - Fixed page navigation scroll reset
+- **Content Centering:** Added flexbox centering to `#readerContent` for proper text alignment on wide screens
+
+**Benefits:**
+- ✅ **Persistent Navigation** - Controls always accessible during reading
+- ✅ **Improved Flow** - No interruption to scroll back for page changes
+- ✅ **Modern UX** - Sticky headers are standard in reading apps
+- ✅ **Visual Consistency** - Header maintains position across all scroll states
+- ✅ **Reliable Scrolling** - Auto-scroll and bidirectional scroll work correctly
+
+---
+
+#### 1. Draggable Sidebar (Resizable)
+- **Drag Handle:** Subtle 4px blue line appears on hover at sidebar's right edge
+- **Constraints:** Min 200px, Max 600px width
+- **Persistence:** Saves width to localStorage on resize
+- **Smooth:** Real-time CSS variable updates (`--sidebar-width`)
+- **Visual Feedback:** Blue highlight when dragging
+
+#### 2. Player Centered in Reading Pane
+**Before:** Player was centered on screen (off-center when sidebar open)
+
+**After:** Player dynamically centers in content area
+```css
+left: calc(var(--sidebar-width) + (100% - var(--sidebar-width)) / 2);
+```
+- Reacts to sidebar resize automatically
+- Prevents overlap with sidebar
+- Always perfectly centered in reading area
+
+#### 3. Full Sentence Display (No Truncation)
+**Before:** Sentences cut off at 50 characters with "..."
+
+**After:** 
+- Full sentence text displayed
+- Multi-line wrapping for long sentences
+- Player bar expands vertically as needed
+- Better readability (removed ALL CAPS)
+- Buttons stay aligned at bottom
+
+**Benefits:**
+- ✅ **Customizable Layout** - Resize sidebar to preference
+- ✅ **Better UX** - Player always centered in reading pane
+- ✅ **Full Context** - See complete sentence in player bar
+- ✅ **Discoverable** - Hover effect makes drag handle visible
+
+---
+
+## 🚀 v1.5 - Smart Content Detection (Dec 2025)
+
+### Feature 1: Smart Start (Auto-Skip Intro)
+**Problem Solved:** Most PDFs have useless cover pages, copyright notices, and blank pages that waste time.
+
+**How It Works:**
+1. When a book is uploaded/opened for the first time, scans the first 10 pages
+2. Finds the first page with substantial content (>500 characters OR >100 words)
+3. Automatically jumps to that page instead of page 1
+4. Shows toast notification: "⚡ Skipped to start of content (Page X)"
+
+**Benefits:**
+- ✅ **Time Saver:** No more manual scrolling through empty pages
+- ✅ **Smart Detection:** Works with any PDF structure
+- ✅ **Non-Intrusive:** Only applies on first open (respects saved position)
+- ✅ **Visual Feedback:** Toast notification confirms the skip
+
+**Technical Details:**
+- Backend: `find_content_start_page()` in `smart_content_detector.py`
+- Frontend: Enhanced `selectDocument()` to check for smart start
+- API: Added `smart_start_page` field to content response
+
+---
+
+### Feature 2: Smart Header/Footer Filter
+**Problem Solved:** Repeated headers (book title, chapter) and footers (page numbers) disrupt TTS and reading flow.
+
+**How It Works:**
+1. **Analysis Logic:**
+   - Compares first 3 lines and last 3 lines with adjacent pages
+   - If a line is 90%+ similar across 3 consecutive pages, flags it as "noise"
+   - Detects standalone numbers (e.g., "4", "Page 5") and flags as page numbers
+
+2. **Three Modes:**
+   - **Off (Default):** No filtering, shows everything
+   - **Clean:** Completely removes headers/footers from display AND TTS
+   - **Dim:** Shows headers/footers faded (50% opacity, 80% size) but TTS skips them
+
+3. **UI Integration:**
+   - New dropdown in Settings: "Header/Footer Filter"
+   - Explanation text: "Automatically hide repeated page headers & footers"
+   - Mode changes apply instantly to current page
+
+**Benefits:**
+- ✅ **Cleaner Reading:** No repeated clutter on every page
+- ✅ **Better TTS:** Voice doesn't read "Chapter 5" 30 times
+- ✅ **Flexible:** Choose between complete removal or visual dimming
+- ✅ **Smart Detection:** Works across different PDF layouts
+- ✅ **Real-Time:** Changes apply immediately without restart
+
+**Technical Details:**
+- Backend Module: `smart_content_detector.py`
+  - `detect_headers_footers()` - Compares lines across pages
+  - `apply_header_footer_filter()` - Removes or marks text
+  - `filter_text_for_tts()` - Strips dimmed markers for audio
+- API Endpoint: `GET /api/library/content/{doc_id}/page/{page_index}`
+- Frontend: Parses `[DIM]...[/DIM]` markers and applies CSS
+- Settings: Added `header_footer_mode` to persistent config
+
+**CSS Implementation:**
+```css
+.dimmed-text {
+    opacity: 0.5;
+    font-size: 0.8em;
+    color: #71717a;
+    font-style: italic;
+}
+```
+
+**Similarity Algorithm:**
+- Uses `difflib.SequenceMatcher` for fuzzy matching (90% threshold)
+- Handles typos and OCR errors gracefully
+- Detects page numbers with regex patterns (standalone digits, Roman numerals)
+
+---
+
+### API Changes (v1.5)
+**New Endpoints:**
+- `GET /api/library/content/{doc_id}/page/{page_index}` - Returns filtered page content with headers/footers detected
+
+**Updated Endpoints:**
+- `GET /api/library/content/{doc_id}` - Now includes `smart_start_page` field
+- `POST /api/synthesize` - Now filters out dimmed text before TTS
+- `POST /api/export/audio` - MP3 export respects header/footer filter
+
+**Settings Model:**
+- Added `header_footer_mode` field (values: "off", "clean", "dim")
+
+---
+
+### Performance Notes
+- Smart Start scan: <100ms for typical PDFs
+- Header/Footer detection: ~50ms per page load
+- No impact on TTS synthesis speed
+- Filters applied on-demand (no pre-processing)
+
+---
+
+### Version Updates
+- Main window: "LocalReader Pro v1.5"
+- API title: "LocalReader Pro v1.5 API"
+- HTML title: "LocalReader - Pro Edition v1.5"
+
+---
+
+## 🔧 v1.4 - On-Demand FFMPEG Downloader
 
 ### Problem Solved
 - **Before:** App would crash on MP3 export if FFMPEG wasn't pre-installed

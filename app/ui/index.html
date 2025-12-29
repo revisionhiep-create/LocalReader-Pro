@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LocalReader - Pro Edition v1.4</title>
+    <title>LocalReader - Pro Edition v1.5</title>
     <!-- Local Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="lib/lucide.min.js"></script>
@@ -30,8 +30,10 @@
         
         /* RESPONSIVE VARIABLES */
         :root {
-          /* Sidebar: Minimum 250px, Preferred 20vw, Maximum 400px */
-          --sidebar-width: clamp(250px, 20vw, 400px);
+          /* Sidebar: User-resizable (JavaScript controlled) */
+          --sidebar-width: 320px;
+          --sidebar-min-width: 200px;
+          --sidebar-max-width: 600px;
           
           /* Player Padding: Scales between 1rem and 3rem */
           --player-padding: clamp(1rem, 5vw, 3rem);
@@ -55,14 +57,40 @@
         .sidebar {
           width: var(--sidebar-width);
           flex-shrink: 0;
-          transition: width 0.3s ease;
           border-right: 1px solid rgba(255,255,255,0.1);
+          position: relative;
+          min-width: var(--sidebar-min-width);
+          max-width: var(--sidebar-max-width);
+        }
+
+        /* Drag Handle */
+        .sidebar-drag-handle {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 4px;
+          height: 100%;
+          cursor: ew-resize;
+          background: transparent;
+          z-index: 1000;
+          transition: background 0.2s ease;
+        }
+
+        .sidebar-drag-handle:hover {
+          background: rgba(59, 130, 246, 0.5);
+        }
+
+        .sidebar-drag-handle.dragging {
+          background: rgba(59, 130, 246, 0.8);
         }
 
         /* Mobile: Collapse to icon width */
         @media (max-width: 768px) {
           .sidebar {
             width: 70px;
+          }
+          .sidebar-drag-handle {
+            display: none;
           }
         }
 
@@ -71,14 +99,45 @@
           flex-grow: 1;
           height: 100vh;
           overflow-y: auto;
-          display: grid;
-          place-items: start center;
-          padding: 2rem;
-          padding-bottom: 150px;
+          display: flex;
+          flex-direction: column;
           margin: 0;
           width: auto;
           background-color: #000000;
           position: relative;
+        }
+        
+        /* Sticky Header */
+        .content-area > header {
+          position: sticky;
+          top: 0;
+          z-index: 50;
+          background-color: rgba(9, 9, 11, 0.95);
+          backdrop-filter: blur(12px);
+        }
+        
+        /* Reader Content Area */
+        #readerContent {
+          flex: 1;
+          padding: 2rem;
+          padding-bottom: 150px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        
+        @media (min-width: 1024px) {
+          #readerContent {
+            padding-left: 6rem;
+            padding-right: 6rem;
+          }
+        }
+        
+        @media (min-width: 1280px) {
+          #readerContent {
+            padding-left: 12rem;
+            padding-right: 12rem;
+          }
         }
 
         /* THE TEXT ITSELF */
@@ -94,13 +153,16 @@
           column-gap: 0;
         }
 
-        /* SMART PLAYER (Floating) */
+        /* SMART PLAYER (Floating - Centered in Reading Pane) */
         .player-bar {
           position: fixed;
           bottom: 2rem;
-          left: 50%;
+          /* Center relative to content area (reading pane) */
+          left: calc(var(--sidebar-width) + (100% - var(--sidebar-width)) / 2);
           transform: translateX(-50%);
           width: min(90%, 800px);
+          max-width: calc(100% - var(--sidebar-width) - 4rem);
+          min-height: 70px;
           padding: 1rem var(--player-padding);
           background: rgba(30, 30, 30, 0.85);
           backdrop-filter: blur(12px);
@@ -109,28 +171,79 @@
           box-shadow: 0 10px 40px rgba(0,0,0,0.6);
           z-index: 100;
           display: flex;
+          flex-wrap: nowrap;
           align-items: center;
           justify-content: space-between;
           gap: 1rem;
+          transition: left 0.1s ease;
         }
 
-        /* Player Text Element (The Sentence Preview) */
+        /* Player Text Element (The Sentence Preview) - Full Display */
         .player-text {
-          flex-grow: 1;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          flex: 1 1 auto;
+          white-space: normal;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
           margin-left: 1rem;
           margin-right: 1rem;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           color: #ccc;
-          text-transform: uppercase;
-          letter-spacing: 1px;
+          text-transform: none;
+          letter-spacing: 0.5px;
+          line-height: 1.5;
+          min-width: 0;
         }
         
         .active-sentence { background-color: rgba(59, 130, 246, 0.2); border-left: 3px solid #3b82f6; border-radius: 2px; }
         .sentence { transition: all 0.2s; padding: 4px 8px; cursor: pointer; display: block; margin-bottom: 0.5rem; }
         .sentence:hover { background-color: rgba(255, 255, 255, 0.05); }
+        
+        /* Dimmed Text (Headers/Footers) */
+        .dimmed-text {
+            opacity: 0.5;
+            font-size: 0.8em;
+            color: #71717a;
+            font-style: italic;
+        }
+
+        /* Search Highlight */
+        .search-highlight {
+            background-color: #ffeb3b;
+            color: #000;
+            border-radius: 2px;
+            padding: 2px 0;
+            box-shadow: 0 0 5px #ffeb3b;
+            font-weight: 600;
+        }
+
+        /* Search Result Item */
+        .search-result-item {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #27272a;
+            background: #18181b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-result-item:hover {
+            background: #27272a;
+            border-color: #3b82f6;
+        }
+
+        .search-result-snippet {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: #a1a1aa;
+        }
+
+        .search-result-snippet mark {
+            background-color: #3b82f6;
+            color: #fff;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-weight: 600;
+        }
         
         /* Pronunciation Rules Accordion */
         .rule-item { transition: all 0.3s ease; overflow: hidden; }
@@ -187,6 +300,8 @@
     <div class="main-container">
         <!-- Sidebar -->
         <aside class="sidebar bg-card flex flex-col">
+            <!-- Drag Handle -->
+            <div class="sidebar-drag-handle" id="sidebarDragHandle"></div>
             <div class="p-6 border-b border-border">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center gap-3">
@@ -266,24 +381,36 @@
                     <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Speed (<span id="speedVal">1.00</span>x)</label>
                     <input type="range" id="speedRange" min="0.5" max="3.0" step="0.05" value="1.00" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
                 </div>
+                <div>
+                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Header/Footer Filter</label>
+                    <select id="headerFooterMode" class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500">
+                        <option value="off">Off</option>
+                        <option value="clean">Clean (Remove)</option>
+                        <option value="dim">Dim (Show Faded)</option>
+                    </select>
+                    <p class="text-[9px] text-zinc-600 mt-1">Automatically hide repeated page headers & footers</p>
+                </div>
             </div>
         </aside>
 
         <main class="content-area">
-            <header class="h-16 border-b border-border flex items-center px-6 bg-card/80 backdrop-blur-md shrink-0">
-                <span id="docTitle" class="font-semibold text-sm truncate text-zinc-300 italic flex-1 mr-4">No document selected</span>
-                <div id="pageNav" class="hidden flex items-center gap-2 px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800 text-xs shrink-0">
-                    <button id="prevPage" class="hover:text-blue-400 p-1"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                    <div class="flex items-center gap-1.5 px-1">
-                        <span class="text-zinc-500 font-medium">Pg</span>
-                        <input type="number" id="pageInput" class="w-10 bg-zinc-800 border-none rounded text-center text-zinc-200 outline-none focus:ring-1 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" min="1" value="1">
-                        <span class="text-zinc-500">/ <span id="pageTotal">1</span></span>
+            <header class="h-16 border-b border-border flex items-center px-4 lg:px-6 bg-card/80 backdrop-blur-md shrink-0 gap-2">
+                <span id="docTitle" class="font-semibold text-xs lg:text-sm truncate text-zinc-300 italic flex-1 min-w-0 mr-2">No document selected</span>
+                <button id="searchBtn" class="hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors shrink-0" title="Search in book (Ctrl+F)">
+                    <i data-lucide="search" class="w-4 h-4 text-zinc-400 hover:text-blue-400"></i>
+                </button>
+                <div id="pageNav" class="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800 text-xs shrink-0 opacity-50 pointer-events-none" data-inactive="true">
+                    <button id="prevPage" class="hover:text-blue-400 p-1 disabled:opacity-30 disabled:cursor-not-allowed" disabled><i data-lucide="chevron-left" class="w-3 h-3 lg:w-4 lg:h-4"></i></button>
+                    <div class="flex items-center gap-1 lg:gap-1.5 px-0.5 lg:px-1">
+                        <span class="text-zinc-500 font-medium hidden sm:inline">Pg</span>
+                        <input type="number" id="pageInput" class="w-8 lg:w-10 bg-zinc-800 border-none rounded text-center text-zinc-200 outline-none focus:ring-1 focus:ring-blue-500 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" min="1" value="1" disabled>
+                        <span class="text-zinc-500 text-xs">/ <span id="pageTotal">1</span></span>
                     </div>
-                    <button id="nextPage" class="hover:text-blue-400 p-1"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    <button id="nextPage" class="hover:text-blue-400 p-1 disabled:opacity-30 disabled:cursor-not-allowed" disabled><i data-lucide="chevron-right" class="w-3 h-3 lg:w-4 lg:h-4"></i></button>
                 </div>
             </header>
 
-            <div id="readerContent" class="flex-1 overflow-y-auto custom-scrollbar p-8 lg:px-24 xl:px-48 pb-32">
+            <div id="readerContent" class="custom-scrollbar">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center space-y-4">
                     <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-700"><i data-lucide="file-text" class="w-10 h-10"></i></div>
                     <h2 class="text-xl font-bold text-zinc-300">Welcome to LocalReader</h2>
@@ -418,20 +545,63 @@
         </div>
     </div>
 
-    <!-- Visual Debugger Overlay REMOVED -->
+    <!-- Search Modal -->
+    <div id="searchModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 z-[2000] hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+            <!-- Search Input -->
+            <div class="p-4 border-b border-zinc-800">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="search" class="w-5 h-5 text-zinc-500"></i>
+                    <input type="text" id="searchInput" placeholder="Search in book..." class="flex-1 bg-transparent text-white text-lg outline-none placeholder-zinc-500" autocomplete="off">
+                    <button id="closeSearchBtn" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                        <i data-lucide="x" class="w-5 h-5 text-zinc-500"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Results -->
+            <div id="searchResults" class="max-h-96 overflow-y-auto custom-scrollbar">
+                <div id="searchResultsList" class="p-4 space-y-2">
+                    <!-- Results will be inserted here -->
+                </div>
+                <div id="searchEmpty" class="hidden p-8 text-center text-zinc-500 text-sm">
+                    <i data-lucide="search-x" class="w-12 h-12 mx-auto mb-3 text-zinc-700"></i>
+                    <p>No results found</p>
+                </div>
+                <div id="searchPlaceholder" class="p-8 text-center text-zinc-600 text-sm">
+                    <i data-lucide="search" class="w-12 h-12 mx-auto mb-3 text-zinc-700"></i>
+                    <p>Type to search across all pages</p>
+                    <p class="text-xs mt-2 text-zinc-700">Minimum 2 characters</p>
+                </div>
+            </div>
+
+            <!-- Search Footer (Stats) -->
+            <div id="searchFooter" class="hidden px-4 py-3 border-t border-zinc-800 bg-zinc-900/50">
+                <div class="flex items-center justify-between text-xs text-zinc-500">
+                    <span id="searchStats"></span>
+                    <span class="text-zinc-700">Press ESC to close</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
 
         let currentDoc = null, currentPages = [], currentPageIndex = 0, currentSentenceIndex = 0, sentences = [], sentenceElements = [], isPlaying = false, rules = [], ignoreList = [];
         let activeAudioURL = null; // Track active audio URL for cleanup
+        let headerFooterMode = 'off'; // Track header/footer filter mode
+        let smartStartPage = 0; // Track the smart start page
+        let currentSearchQuery = ''; // Track current search query for highlighting
+        let searchDebounceTimer = null; // Debounce timer for search
         const API_URL = 'http://127.0.0.1:8000';
 
         const pdfUpload = document.getElementById('pdfUpload'), uploadArea = document.getElementById('uploadArea'), exportArea = document.getElementById('exportArea'),
               libraryPanel = document.getElementById('libraryPanel'), rulesPanel = document.getElementById('rulesPanel'), 
               ignorePanel = document.getElementById('ignorePanel'), rulesList = document.getElementById('rulesList'), ignoreListUI = document.getElementById('ignoreListUI'), 
               tabLibrary = document.getElementById('tabLibrary'), tabRules = document.getElementById('tabRules'), tabIgnore = document.getElementById('tabIgnore'), 
-              textContent = document.getElementById('textContent'), readerContent = document.getElementById('readerContent'), emptyState = document.getElementById('emptyState'), 
+              textContent = document.getElementById('textContent'), readerContent = document.getElementById('readerContent'), 
+              scrollContainer = document.querySelector('.content-area'), emptyState = document.getElementById('emptyState'), 
               docTitle = document.getElementById('docTitle'), pageInput = document.getElementById('pageInput'), pageTotal = document.getElementById('pageTotal'), 
               pageNav = document.getElementById('pageNav'), controls = document.getElementById('controls'), playBtn = document.getElementById('playBtn'), 
               playIcon = document.getElementById('playIcon'), currentSentencePreview = document.getElementById('currentSentencePreview'), 
@@ -448,7 +618,13 @@
               ffmpegProgressBar = document.getElementById('ffmpegProgressBar'), ffmpegStatus = document.getElementById('ffmpegStatus'),
               ffmpegDownloadSection = document.getElementById('ffmpegDownloadSection'), ffmpegComplete = document.getElementById('ffmpegComplete'),
               ffmpegError = document.getElementById('ffmpegError'), ffmpegErrorMsg = document.getElementById('ffmpegErrorMsg'),
-              startFFMPEGDownload = document.getElementById('startFFMPEGDownload'), cancelFFMPEGBtn = document.getElementById('cancelFFMPEGBtn');
+              startFFMPEGDownload = document.getElementById('startFFMPEGDownload'), cancelFFMPEGBtn = document.getElementById('cancelFFMPEGBtn'),
+              headerFooterModeSelect = document.getElementById('headerFooterMode'),
+              searchBtn = document.getElementById('searchBtn'), searchModal = document.getElementById('searchModal'),
+              searchInput = document.getElementById('searchInput'), closeSearchBtn = document.getElementById('closeSearchBtn'),
+              searchResultsList = document.getElementById('searchResultsList'), searchEmpty = document.getElementById('searchEmpty'),
+              searchPlaceholder = document.getElementById('searchPlaceholder'), searchFooter = document.getElementById('searchFooter'),
+              searchStats = document.getElementById('searchStats');
 
         lucide.createIcons();
 
@@ -457,6 +633,58 @@
         function renderIcons() {
             clearTimeout(iconRenderTimeout);
             iconRenderTimeout = setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        // ============================================
+        // FEATURE: Resizable Sidebar (Drag Handle)
+        // ============================================
+        const sidebarDragHandle = document.getElementById('sidebarDragHandle');
+        let isDraggingSidebar = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        sidebarDragHandle.addEventListener('mousedown', (e) => {
+            isDraggingSidebar = true;
+            startX = e.clientX;
+            startWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width'));
+            sidebarDragHandle.classList.add('dragging');
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDraggingSidebar) return;
+            
+            const delta = e.clientX - startX;
+            let newWidth = startWidth + delta;
+            
+            // Enforce min/max constraints
+            const minWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min-width'));
+            const maxWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max-width'));
+            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+            
+            // Update CSS variable
+            document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDraggingSidebar) {
+                isDraggingSidebar = false;
+                sidebarDragHandle.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                
+                // Save to localStorage
+                const currentWidth = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width');
+                localStorage.setItem('sidebar-width', currentWidth);
+            }
+        });
+
+        // Restore saved sidebar width on load
+        const savedSidebarWidth = localStorage.getItem('sidebar-width');
+        if (savedSidebarWidth) {
+            document.documentElement.style.setProperty('--sidebar-width', savedSidebarWidth);
         }
 
         // Cleanup on page unload
@@ -478,11 +706,17 @@
                 ignoreList = settings.ignoreList || [];
                 const savedVoice = settings.voice_id;
                 const savedSpeed = settings.speed;
+                headerFooterMode = settings.header_footer_mode || 'off';
 
                 // 2. Set speed independently (immediate)
                 if (savedSpeed) {
                     speedRange.value = savedSpeed;
                     speedVal.textContent = parseFloat(savedSpeed).toFixed(2);
+                }
+                
+                // 3. Set header/footer mode
+                if (headerFooterModeSelect) {
+                    headerFooterModeSelect.value = headerFooterMode;
                 }
 
                 // 3. Wait for UI components to be fully ready for voice selection
@@ -527,7 +761,8 @@
                     pronunciationRules: rules, 
                     ignoreList: ignoreList,
                     voice_id: voiceSelect.value,
-                    speed: parseFloat(speedRange.value)
+                    speed: parseFloat(speedRange.value),
+                    header_footer_mode: headerFooterMode
                 };
                 await fetch(`${API_URL}/api/settings`, { 
                     method: 'POST', 
@@ -546,6 +781,16 @@
             speedVal.textContent = val;
         };
         speedRange.onchange = saveSettings; // Save only on release to avoid spamming the FS
+        
+        // Header/Footer Mode handler
+        headerFooterModeSelect.onchange = async () => {
+            headerFooterMode = headerFooterModeSelect.value;
+            await saveSettings();
+            // Refresh current page to apply new filter
+            if (currentDoc && currentPages.length > 0) {
+                await refreshCurrentPage();
+            }
+        };
 
         let isEngineReady = false;
         let lastSystemState = null;
@@ -801,7 +1046,12 @@
                         currentPages = [];
                         textContent.innerHTML = '';
                         docTitle.textContent = 'No document selected';
-                        pageNav.classList.add('hidden');
+                        // Deactivate page navigation
+                        pageNav.classList.add('opacity-50', 'pointer-events-none');
+                        pageNav.setAttribute('data-inactive', 'true');
+                        document.getElementById('prevPage').disabled = true;
+                        document.getElementById('nextPage').disabled = true;
+                        document.getElementById('pageInput').disabled = true;
                         controls.classList.add('hidden');
                         exportArea.style.display = 'none';
                         emptyState.classList.remove('hidden');
@@ -817,13 +1067,35 @@
             currentDoc = item;
             const res = await fetch(`${API_URL}/api/library/content/${item.id}`);
             const data = await res.json();
-            currentPages = data.pages; currentPageIndex = item.currentPage || 0; currentSentenceIndex = item.lastSentenceIndex || 0;
-            docTitle.textContent = item.fileName; pageNav.classList.remove('hidden'); controls.classList.remove('hidden'); emptyState.classList.add('hidden'); textContent.classList.remove('hidden');
+            currentPages = data.pages;
+            smartStartPage = data.smart_start_page || 0;
+            
+            // Apply Smart Start if this is first time opening (currentPage is 0)
+            if ((item.currentPage || 0) === 0 && smartStartPage > 0) {
+                currentPageIndex = smartStartPage;
+                currentSentenceIndex = 0;
+                showToast(`⚡ Skipped to start of content (Page ${smartStartPage + 1})`);
+            } else {
+                currentPageIndex = item.currentPage || 0;
+                currentSentenceIndex = item.lastSentenceIndex || 0;
+            }
+            
+            docTitle.textContent = item.fileName; 
+            // Activate page navigation
+            pageNav.classList.remove('opacity-50', 'pointer-events-none');
+            pageNav.removeAttribute('data-inactive');
+            document.getElementById('prevPage').disabled = false;
+            document.getElementById('nextPage').disabled = false;
+            document.getElementById('pageInput').disabled = false;
+            controls.classList.remove('hidden'); 
+            emptyState.classList.add('hidden'); 
+            textContent.classList.remove('hidden');
             if (isEngineReady) exportArea.style.display = 'block';
-            renderPage(); loadLibrary();
+            renderPage(); 
+            loadLibrary();
         }
 
-        function renderPage() {
+        async function renderPage() {
             // Add safety check for valid page
             if (!currentPages || !currentPages[currentPageIndex]) {
                 console.error(`Invalid page index: ${currentPageIndex}`);
@@ -831,7 +1103,21 @@
                 return;
             }
             
-            const text = currentPages[currentPageIndex];
+            let text = currentPages[currentPageIndex];
+            
+            // Apply header/footer filter if enabled
+            if (headerFooterMode !== 'off' && currentDoc) {
+                try {
+                    const filterRes = await fetch(`${API_URL}/api/library/content/${currentDoc.id}/page/${currentPageIndex}`);
+                    if (filterRes.ok) {
+                        const filterData = await filterRes.json();
+                        text = filterData.filtered_text;
+                    }
+                } catch (e) {
+                    console.error("Filter fetch failed:", e);
+                    // Fallback to original text
+                }
+            }
             // Split by sentence but keep trailing quotes
             const rawSentences = text.match(/[^.!?]+[.!?]+[\"\'\u201c\u2018\u201d\u2019]*(?:\s|$)|[^.!?]+$/g) || [text];
             
@@ -855,7 +1141,26 @@
             sentences.forEach((s, i) => {
                 const span = document.createElement('span'); 
                 span.className = `sentence ${i===currentSentenceIndex?'active-sentence':''}`; 
-                span.textContent = s; 
+                
+                // Check if sentence contains [DIM] markers
+                if (s.includes('[DIM]')) {
+                    // Parse and render with dimmed sections
+                    const parts = s.split(/(\[DIM\].*?\[\/DIM\])/g);
+                    parts.forEach(part => {
+                        if (part.startsWith('[DIM]') && part.endsWith('[/DIM]')) {
+                            const dimmedText = part.replace('[DIM]', '').replace('[/DIM]', '');
+                            const dimSpan = document.createElement('span');
+                            dimSpan.className = 'dimmed-text';
+                            dimSpan.textContent = dimmedText;
+                            span.appendChild(dimSpan);
+                        } else if (part) {
+                            span.appendChild(document.createTextNode(part));
+                        }
+                    });
+                } else {
+                    span.textContent = s;
+                }
+                
                 span.onclick = () => jumpToSentence(i); 
                 fragment.appendChild(span);
             });
@@ -865,13 +1170,18 @@
             // Cache sentence elements for performance (avoid repeated queries)
             sentenceElements = Array.from(textContent.querySelectorAll('.sentence'));
             
-            pageInput.value = currentPageIndex + 1; pageTotal.textContent = currentPages.length; readerContent.scrollTop = 0;
+            pageInput.value = currentPageIndex + 1; pageTotal.textContent = currentPages.length; scrollContainer.scrollTop = 0;
             
             // Safe sentence preview with bounds check
             const currentSentence = sentences[currentSentenceIndex];
             currentSentencePreview.textContent = (currentSentence && typeof currentSentence === 'string') 
-                ? currentSentence.substring(0, 50) + "..." 
+                ? currentSentence 
                 : "Ready";
+            
+            // Re-apply search highlighting if there's an active search query
+            if (currentSearchQuery) {
+                highlightSearchTerm(currentSearchQuery);
+            }
         }
 
         async function extractTextFromPage(page) {
@@ -993,11 +1303,16 @@
             reader.readAsArrayBuffer(blob);
         }
 
+        async function refreshCurrentPage() {
+            // Helper to refresh the current page (e.g., when filter mode changes)
+            await renderPage();
+        }
+
         async function playNext() {
             if (!isPlaying || !isEngineReady) { stopPlayback(); return; }
             const text = sentences[currentSentenceIndex];
             if (!text || typeof text !== 'string') {
-                if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; renderPage(); playNext(); }
+                if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; await renderPage(); playNext(); }
                 else stopPlayback();
                 return;
             }
@@ -1007,7 +1322,7 @@
             const active = sentenceElements[currentSentenceIndex];
             if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            currentSentencePreview.textContent = text.substring(0, 50) + "...";
+            currentSentencePreview.textContent = text;
             saveProgress();
             console.log(`Synthesizing sentence ${currentSentenceIndex}: "${text.substring(0, 30)}..."`);
             try {
@@ -1139,11 +1454,11 @@
             }
         };
 
-        function jumpToSentence(i) { 
+        async function jumpToSentence(i) { 
             audioPlayer.pause();
             audioPlayer.src = "";
             currentSentenceIndex = i; 
-            renderPage(); 
+            await renderPage(); 
             if (!isPlaying) { 
                 isPlaying = true; 
                 setPlayIcon('pause');
@@ -1167,11 +1482,11 @@
         
         // Bidirectional Smart Scroll
         let isAutoFlipping = false;
-        readerContent.addEventListener('wheel', (e) => {
+        scrollContainer.addEventListener('wheel', async (e) => {
             if (isAutoFlipping) return;
             
-            const isAtBottom = readerContent.scrollTop + readerContent.clientHeight >= readerContent.scrollHeight - 10;
-            const isAtTop = readerContent.scrollTop <= 10;
+            const isAtBottom = scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 10;
+            const isAtTop = scrollContainer.scrollTop <= 10;
             
             // Scroll Down to Next Page
             if (e.deltaY > 0 && isAtBottom && currentPageIndex < currentPages.length - 1) {
@@ -1179,8 +1494,8 @@
                 isAutoFlipping = true;
                 currentPageIndex++;
                 currentSentenceIndex = 0;
-                renderPage();
-                readerContent.scrollTop = 0;
+                await renderPage();
+                scrollContainer.scrollTop = 0;
                 saveProgress();
                 setTimeout(() => { isAutoFlipping = false; }, 700);
             } 
@@ -1190,18 +1505,18 @@
                 isAutoFlipping = true;
                 currentPageIndex--;
                 currentSentenceIndex = 0; // Or last sentence? Better to stay consistent.
-                renderPage();
+                await renderPage();
                 // When going back, scroll to the BOTTOM of the previous page
-                readerContent.scrollTop = readerContent.scrollHeight;
+                scrollContainer.scrollTop = scrollContainer.scrollHeight;
                 saveProgress();
                 setTimeout(() => { isAutoFlipping = false; }, 700);
             }
         }, { passive: true });
 
         speedRange.oninput = (e) => speedVal.textContent = parseFloat(e.target.value).toFixed(2);
-        document.getElementById('prevPage').onclick = () => { if (currentPageIndex > 0) { currentPageIndex--; currentSentenceIndex = 0; renderPage(); if (isPlaying) playNext(); } };
-        document.getElementById('nextPage').onclick = () => { if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; renderPage(); if (isPlaying) playNext(); } };
-        pageInput.onchange = () => { let v = parseInt(pageInput.value)-1; if (v >= 0 && v < currentPages.length) { currentPageIndex = v; currentSentenceIndex = 0; renderPage(); if (isPlaying) playNext(); } };
+        document.getElementById('prevPage').onclick = async () => { if (currentPageIndex > 0) { currentPageIndex--; currentSentenceIndex = 0; await renderPage(); if (isPlaying) playNext(); } };
+        document.getElementById('nextPage').onclick = async () => { if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; await renderPage(); if (isPlaying) playNext(); } };
+        pageInput.onchange = async () => { let v = parseInt(pageInput.value)-1; if (v >= 0 && v < currentPages.length) { currentPageIndex = v; currentSentenceIndex = 0; await renderPage(); if (isPlaying) playNext(); } };
 
         // === MP3 EXPORT FUNCTIONALITY ===
         let exportPollInterval = null;
@@ -1450,6 +1765,235 @@
                     showToast("Error: " + e.message);
                 }
             }
+        };
+
+        // ============================================
+        // FEATURE: Global Search (Ctrl+F Replacement)
+        // ============================================
+        
+        function openSearchModal() {
+            if (!currentDoc) {
+                showToast("No document loaded");
+                return;
+            }
+            searchModal.classList.remove('hidden');
+            searchInput.focus();
+            renderIcons();
+        }
+
+        function closeSearchModal() {
+            searchModal.classList.add('hidden');
+            searchInput.value = '';
+            searchResultsList.innerHTML = '';
+            searchPlaceholder.classList.remove('hidden');
+            searchEmpty.classList.add('hidden');
+            searchFooter.classList.add('hidden');
+            currentSearchQuery = '';
+            clearSearchHighlights();
+        }
+
+        function clearSearchHighlights() {
+            const highlightedElements = textContent.querySelectorAll('.search-highlight');
+            highlightedElements.forEach(el => {
+                const parent = el.parentNode;
+                parent.replaceChild(document.createTextNode(el.textContent), el);
+                parent.normalize(); // Merge adjacent text nodes
+            });
+        }
+
+        async function performSearch(query) {
+            if (!query || query.length < 2) {
+                searchPlaceholder.classList.remove('hidden');
+                searchEmpty.classList.add('hidden');
+                searchFooter.classList.add('hidden');
+                searchResultsList.innerHTML = '';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/api/library/search/${currentDoc.id}?q=${encodeURIComponent(query)}`);
+                if (!res.ok) throw new Error('Search failed');
+                
+                const data = await res.json();
+                displaySearchResults(data);
+            } catch (e) {
+                console.error('Search error:', e);
+                showToast('Search failed: ' + e.message);
+            }
+        }
+
+        function displaySearchResults(data) {
+            searchPlaceholder.classList.add('hidden');
+            searchResultsList.innerHTML = '';
+
+            if (data.results.length === 0) {
+                searchEmpty.classList.remove('hidden');
+                searchFooter.classList.add('hidden');
+                return;
+            }
+
+            searchEmpty.classList.add('hidden');
+            searchFooter.classList.remove('hidden');
+            
+            // Update stats
+            searchStats.textContent = `${data.total_matches} match${data.total_matches !== 1 ? 'es' : ''} across ${data.pages_with_matches} page${data.pages_with_matches !== 1 ? 's' : ''}`;
+
+            const fragment = document.createDocumentFragment();
+
+            data.results.forEach(result => {
+                result.matches.forEach((match, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result-item';
+                    
+                    // Highlight the query in the snippet (escape regex special chars)
+                    const escapedQuery = escapeRegex(data.query);
+                    const highlightedSnippet = match.snippet.replace(
+                        new RegExp(escapedQuery, 'gi'),
+                        (m) => `<mark>${m}</mark>`
+                    );
+
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-blue-400">Page ${result.page_index + 1}</span>
+                            <span class="text-xs text-zinc-600">${result.match_count} match${result.match_count !== 1 ? 'es' : ''} on this page</span>
+                        </div>
+                        <div class="search-result-snippet">${highlightedSnippet}</div>
+                    `;
+
+                    div.onclick = () => jumpToSearchResult(result.page_index, data.query);
+                    fragment.appendChild(div);
+                });
+            });
+
+            searchResultsList.appendChild(fragment);
+        }
+
+        async function jumpToSearchResult(pageIndex, query) {
+            currentSearchQuery = query;
+            currentPageIndex = pageIndex;
+            currentSentenceIndex = 0;
+            
+            closeSearchModal();
+            await renderPage();
+            
+            // Highlight the search term on the page
+            highlightSearchTerm(query);
+            
+            showToast(`Jumped to Page ${pageIndex + 1}`);
+        }
+
+        function escapeRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function highlightSearchTerm(query) {
+            if (!query) return;
+
+            const textElements = textContent.querySelectorAll('.sentence');
+            const escapedQuery = escapeRegex(query);
+            const regex = new RegExp(`(${escapedQuery})`, 'gi');
+            
+            textElements.forEach(el => {
+                highlightTextNodes(el, regex);
+            });
+        }
+
+        function highlightTextNodes(node, regex) {
+            // Walk through all child nodes
+            const walker = document.createTreeWalker(
+                node,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            const textNodes = [];
+            let currentNode;
+            
+            while (currentNode = walker.nextNode()) {
+                if (regex.test(currentNode.textContent)) {
+                    textNodes.push(currentNode);
+                }
+            }
+
+            // Process text nodes (do this separately to avoid iterator issues)
+            textNodes.forEach(textNode => {
+                const text = textNode.textContent;
+                const parent = textNode.parentNode;
+                
+                // Skip if already highlighted
+                if (parent.classList && parent.classList.contains('search-highlight')) {
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+                let lastIndex = 0;
+                let match;
+                
+                // Reset regex
+                regex.lastIndex = 0;
+                
+                while ((match = regex.exec(text)) !== null) {
+                    // Add text before match
+                    if (match.index > lastIndex) {
+                        fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+                    }
+                    
+                    // Add highlighted match
+                    const highlight = document.createElement('span');
+                    highlight.className = 'search-highlight';
+                    highlight.textContent = match[0];
+                    fragment.appendChild(highlight);
+                    
+                    lastIndex = match.index + match[0].length;
+                }
+                
+                // Add remaining text
+                if (lastIndex < text.length) {
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                }
+                
+                // Replace original text node with fragment
+                parent.replaceChild(fragment, textNode);
+            });
+        }
+
+        // Search Button Handler
+        searchBtn.onclick = openSearchModal;
+
+        // Close Search Modal
+        closeSearchBtn.onclick = closeSearchModal;
+        searchModal.onclick = (e) => {
+            if (e.target === searchModal) closeSearchModal();
+        };
+
+        // Search Input Handler (Debounced)
+        searchInput.oninput = (e) => {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                performSearch(e.target.value.trim());
+            }, 300);
+        };
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            // Ctrl+F or Cmd+F - Open search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && currentDoc) {
+                e.preventDefault();
+                openSearchModal();
+            }
+            
+            // ESC - Close search
+            if (e.key === 'Escape' && !searchModal.classList.contains('hidden')) {
+                closeSearchModal();
+            }
+        });
+
+        // Update selectDocument to show search button
+        const originalSelectDocument = selectDocument;
+        selectDocument = async function(item) {
+            await originalSelectDocument(item);
+            searchBtn.classList.remove('hidden');
         };
 
         init();
