@@ -1,0 +1,42 @@
+========================================
+   LocalReader Pro - Installation
+========================================
+
+HOW TO INSTALL:
+
+1. Extract this ZIP to any folder
+2. Navigate to the "dist" folder
+3. Double-click "setup.exe"
+4. Follow the installer prompts
+5. Wait for installation to complete
+
+The installer will:
+- Check for Python 3.12+ (installs if missing)
+- Install all required dependencies
+- Create Desktop and Start Menu shortcuts
+- Set up the application
+
+After installation, launch from:
+- Desktop shortcut: "LocalReader Pro"
+- Or Start Menu: "LocalReader Pro"
+
+========================================
+
+UNINSTALL:
+
+Run "uninstall.exe" from the installation directory
+(Location shown at the end of installation)
+
+========================================
+
+MANUAL INSTALLATION (Advanced):
+
+If you prefer manual installation without the installer:
+
+1. Install Python 3.10-3.13
+2. Open terminal in the "dist" folder
+3. Run: pip install -r requirements.txt
+4. Run: python main.py
+
+========================================
+
