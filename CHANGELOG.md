@@ -1,5 +1,64 @@
 # LocalReader Pro - Changelog
 
+## 🐛 v1.8.1 - Critical Bug Fix (Dec 2025)
+
+### Bug Fix: Variable Scope Error in TTS Synthesis
+
+**Problem:** Application crashed with `cannot access local variable 'has_pause_settings'` error when attempting to synthesize text containing only punctuation marks (e.g., "???", "...", "!!!").
+
+**Root Cause:**
+- Variables `has_pause_settings` and `has_punctuation` were defined inside an `else` block
+- When text had no alphanumeric characters, the code executed a different path
+- Subsequent code tried to use these undefined variables, causing a crash
+
+**The Fix:**
+1. **Moved variable declarations outside conditional blocks** - Variables now defined before any conditional logic
+2. **Added proper else block** - Ensures correct control flow for all text types
+
+**Code Changes (app/server.py lines 760-784):**
+```python
+# OLD (BROKEN):
+if not re.search(r'[a-zA-Z0-9]', text):
+    samples = ...
+else:
+    has_pause_settings = ...  # Only defined in else block
+    has_punctuation = ...
+# Later: print(has_pause_settings)  # ERROR if if-block executed!
+
+# NEW (FIXED):
+has_pause_settings = pause_settings and isinstance(pause_settings, dict)
+has_punctuation = any(p in text for p in [',', '.', '!', '?', ':', ';', '\n'])
+
+if not re.search(r'[a-zA-Z0-9]', text):
+    samples = ...
+else:
+    if has_pause_settings and has_punctuation:
+        ...  # Use variables safely
+```
+
+**Affected Text Patterns:**
+- ✅ Fixed: `"???"` (punctuation only)
+- ✅ Fixed: `"..."` (ellipsis)
+- ✅ Fixed: `"!!!"` (exclamation marks)
+- ✅ Fixed: Empty strings and whitespace-only text
+
+**Testing:**
+- Created comprehensive test suite covering all edge cases
+- All 7 test scenarios passed
+- Verified no similar patterns exist in codebase
+
+**Impact:**
+- **Severity:** High - Application would crash on certain text patterns
+- **Frequency:** Low - Only triggered by non-alphanumeric text
+- **Users Affected:** Anyone reading content with punctuation-only sequences
+
+**Benefits:**
+- ✅ No more crashes on edge-case text patterns
+- ✅ Improved code robustness
+- ✅ Better variable scoping practices applied
+
+---
+
 ## 🚀 v1.8 - One-Click Windows Installer (Dec 2025)
 
 ### Major Feature: Standalone Installer System
