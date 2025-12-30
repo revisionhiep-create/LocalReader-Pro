@@ -757,31 +757,32 @@ async def synthesize(request: SynthesisRequest):
         
         print(f"[CACHE MISS] Generating audio for hash {cache_key[:8]}...")
         
+        # Check if custom pause settings are provided (including 0ms pauses)
+        # Define these BEFORE any conditional blocks to avoid scope issues
+        has_pause_settings = pause_settings and isinstance(pause_settings, dict)
+        has_punctuation = any(p in text for p in [',', '.', '!', '?', ':', ';', '\n'])
+        
         # Heuristic: If text has no alphanumeric characters, return tiny silence
         if not re.search(r'[a-zA-Z0-9]', text):
             # 0.1s silence
             samples = np.zeros(int(24000 * 0.1), dtype=np.float32)
             sample_rate = 24000
         else:
-            # Check if custom pause settings are provided (including 0ms pauses)
-            # We check if pause_settings exists and is not all defaults
-            has_pause_settings = pause_settings and isinstance(pause_settings, dict)
-            has_punctuation = any(p in text for p in [',', '.', '!', '?', ':', ';', '\n'])
+            # Normal text synthesis
+            print(f"\n[PAUSE LOGIC CHECK]")
+            print(f"  Has pause settings dict: {has_pause_settings}")
+            print(f"  Pause settings: {pause_settings}")
+            print(f"  Text has punctuation: {has_punctuation}")
+            print(f"  Text preview: '{text[:100]}...'")
             
-        print(f"\n[PAUSE LOGIC CHECK]")
-        print(f"  Has pause settings dict: {has_pause_settings}")
-        print(f"  Pause settings: {pause_settings}")
-        print(f"  Text has punctuation: {has_punctuation}")
-        print(f"  Text preview: '{text[:100]}...'")
-        
-        if has_pause_settings and has_punctuation:
-            # Use audio stitching with custom pauses (even if some are 0ms)
-            print(f"  [MODE] Using audio stitching with custom pauses")
-            samples, sample_rate = synthesize_with_pauses(text, selected_voice, float(request.speed or 1.0), pause_settings)
-        else:
-            # Use standard synthesis (faster for simple text)
-            print(f"  [MODE] Using standard synthesis (no punctuation or no pause settings)")
-            samples, sample_rate = kokoro.create(text, voice=selected_voice, speed=float(request.speed or 1.0), lang="en-us")
+            if has_pause_settings and has_punctuation:
+                # Use audio stitching with custom pauses (even if some are 0ms)
+                print(f"  [MODE] Using audio stitching with custom pauses")
+                samples, sample_rate = synthesize_with_pauses(text, selected_voice, float(request.speed or 1.0), pause_settings)
+            else:
+                # Use standard synthesis (faster for simple text)
+                print(f"  [MODE] Using standard synthesis (no punctuation or no pause settings)")
+                samples, sample_rate = kokoro.create(text, voice=selected_voice, speed=float(request.speed or 1.0), lang="en-us")
         
         # Check cache size before saving (cleanup if needed)
         current_cache_size = get_cache_size_mb()
