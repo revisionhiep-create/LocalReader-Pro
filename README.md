@@ -46,14 +46,15 @@
 **One-Click Installer - No Manual Setup Required**
 
 1. **Extract the ZIP** to your desired location
-2. **Double-click:** `Install LocalReader Pro.lnk`
-3. **Approve UAC Prompt** when Windows requests administrator access
-4. **Wait for Installation:**
+2. **Navigate to the `dist` folder**
+3. **Double-click:** `setup.exe`
+4. **Approve UAC Prompt** when Windows requests administrator access
+5. **Wait for Installation:**
    - Checks for Python 3.12+ (downloads and installs if missing)
    - Deploys application files
    - Installs all dependencies automatically
    - Creates Desktop and Start Menu shortcuts
-5. **Launch:** Double-click "LocalReader Pro" on your Desktop
+6. **Launch:** Double-click "LocalReader Pro" on your Desktop
 
 **What the installer does:**
 - ✅ Installs Python 3.12 if not present
