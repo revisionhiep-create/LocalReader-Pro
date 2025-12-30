@@ -9,6 +9,7 @@ import numpy as np
 import io
 import json
 import re
+import hashlib
 import soundfile as sf
 import ebooklib
 from ebooklib import epub
@@ -54,15 +55,143 @@ userdata_dir = get_app_anchored_path("userdata")
 library_file = userdata_dir / "library.json"
 content_dir = userdata_dir / "content"
 settings_file = userdata_dir / "settings.json"
+cache_dir = get_app_anchored_path(".cache")  # Audio cache directory
+
+# Cache Management Settings
+MAX_CACHE_SIZE_MB = 100  # Maximum cache size in megabytes
+MAX_FILE_AGE_DAYS = 7    # Delete files older than this many days
 
 # Ensure dirs exist (with clear logging)
 try:
     userdata_dir.mkdir(exist_ok=True)
     content_dir.mkdir(exist_ok=True)
-    print(f"✅ Storage initialized at: {userdata_dir}")
+    cache_dir.mkdir(exist_ok=True)
+    print(f"[OK] Storage initialized at: {userdata_dir}")
+    print(f"[OK] Audio cache initialized at: {cache_dir}")
 except Exception as e:
-    print(f"❌ CRITICAL: Failed to create storage dirs: {e}")
-    print(f"   Attempted path: {userdata_dir}")
+    print(f"[CRITICAL] Failed to create storage dirs: {e}")
+    print(f"           Attempted path: {userdata_dir}")
+
+# =============================================================================
+# CACHE MANAGEMENT FUNCTIONS
+# =============================================================================
+
+def get_cache_size_mb() -> float:
+    """Calculate total size of cache directory in MB."""
+    total_size = 0
+    try:
+        for file_path in cache_dir.glob("*.wav"):
+            if file_path.is_file():
+                total_size += file_path.stat().st_size
+    except Exception as e:
+        print(f"[WARNING] Failed to calculate cache size: {e}")
+    return total_size / (1024 * 1024)  # Convert bytes to MB
+
+def get_cache_file_count() -> int:
+    """Count number of files in cache directory."""
+    try:
+        return len(list(cache_dir.glob("*.wav")))
+    except Exception:
+        return 0
+
+def cleanup_old_cache_files(max_age_days: int = MAX_FILE_AGE_DAYS) -> int:
+    """
+    Delete cache files older than max_age_days.
+    Returns number of files deleted.
+    """
+    deleted_count = 0
+    current_time = time.time()
+    max_age_seconds = max_age_days * 24 * 60 * 60
+    
+    try:
+        for file_path in cache_dir.glob("*.wav"):
+            if file_path.is_file():
+                file_age = current_time - file_path.stat().st_mtime
+                if file_age > max_age_seconds:
+                    file_path.unlink()
+                    deleted_count += 1
+    except Exception as e:
+        print(f"[WARNING] Error during age-based cleanup: {e}")
+    
+    return deleted_count
+
+def cleanup_cache_by_size(max_size_mb: float = MAX_CACHE_SIZE_MB) -> int:
+    """
+    Delete oldest cache files (LRU) until total size is under max_size_mb.
+    Returns number of files deleted.
+    """
+    deleted_count = 0
+    current_size = get_cache_size_mb()
+    
+    if current_size <= max_size_mb:
+        return 0  # Cache is within limit
+    
+    try:
+        # Get all cache files with their access times
+        files_with_time = []
+        for file_path in cache_dir.glob("*.wav"):
+            if file_path.is_file():
+                # Use atime (access time) for LRU, fallback to mtime
+                try:
+                    access_time = file_path.stat().st_atime
+                except:
+                    access_time = file_path.stat().st_mtime
+                file_size = file_path.stat().st_size / (1024 * 1024)  # MB
+                files_with_time.append((file_path, access_time, file_size))
+        
+        # Sort by access time (oldest first)
+        files_with_time.sort(key=lambda x: x[1])
+        
+        # Delete oldest files until we're under the limit
+        for file_path, _, file_size in files_with_time:
+            if current_size <= max_size_mb:
+                break
+            file_path.unlink()
+            current_size -= file_size
+            deleted_count += 1
+            
+    except Exception as e:
+        print(f"[WARNING] Error during size-based cleanup: {e}")
+    
+    return deleted_count
+
+def run_cache_cleanup():
+    """
+    Run full cache cleanup: age-based and size-based.
+    Called on app startup and periodically.
+    """
+    print(f"\n[CACHE CLEANUP] Starting...")
+    
+    # Get initial stats
+    initial_count = get_cache_file_count()
+    initial_size = get_cache_size_mb()
+    print(f"  Initial: {initial_count} files, {initial_size:.2f} MB")
+    
+    # Step 1: Delete old files (age-based)
+    age_deleted = cleanup_old_cache_files(MAX_FILE_AGE_DAYS)
+    if age_deleted > 0:
+        print(f"  Deleted {age_deleted} files older than {MAX_FILE_AGE_DAYS} days")
+    
+    # Step 2: Check size limit (LRU-based)
+    size_deleted = cleanup_cache_by_size(MAX_CACHE_SIZE_MB)
+    if size_deleted > 0:
+        print(f"  Deleted {size_deleted} oldest files to fit {MAX_CACHE_SIZE_MB}MB limit")
+    
+    # Get final stats
+    final_count = get_cache_file_count()
+    final_size = get_cache_size_mb()
+    total_deleted = age_deleted + size_deleted
+    
+    if total_deleted > 0:
+        print(f"  Final: {final_count} files, {final_size:.2f} MB (freed {initial_size - final_size:.2f} MB)")
+    else:
+        print(f"  No cleanup needed (within limits)")
+    
+    print(f"[CACHE CLEANUP] Complete\n")
+
+# =============================================================================
+# END CACHE MANAGEMENT
+# =============================================================================
 
 def safe_init_json(path: Path, default_data: Any):
     if not path.exists():
@@ -74,7 +203,16 @@ safe_init_json(settings_file, {
     "ignoreList": [],
     "voice_id": "af_bella",
     "speed": 1.0,
-    "header_footer_mode": "off"  # Options: "off", "clean", "dim"
+    "header_footer_mode": "off",  # Options: "off", "clean", "dim"
+    "pause_settings": {
+        "comma": 300,
+        "period": 600,
+        "question": 600,
+        "exclamation": 600,
+        "colon": 400,
+        "semicolon": 400,
+        "newline": 800
+    }
 })
 
 class LibraryItem(BaseModel):
@@ -103,25 +241,31 @@ class AppSettings(BaseModel):
     voice_id: Optional[str] = "af_bella"
     speed: Optional[float] = 1.0
     header_footer_mode: Optional[str] = "off"  # "off", "clean", or "dim"
+    pause_settings: Optional[Dict[str, int]] = {
+        "comma": 300,
+        "period": 600,
+        "question": 600,
+        "exclamation": 600,
+        "colon": 400,
+        "semicolon": 400,
+        "newline": 800
+    }
 
 # Import logic
 try:
-    from logic.text_normalizer import apply_custom_pronunciations
+    from logic.text_normalizer import apply_custom_pronunciations, inject_pauses
     from logic.downloader import download_kokoro_model
     from logic.dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
     from logic.smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
-    from logic.dialogue_flow_manager import DialogueFlowManager
 except ImportError:
     sys.path.append(str(base_dir / "logic"))
-    from text_normalizer import apply_custom_pronunciations
+    from text_normalizer import apply_custom_pronunciations, inject_pauses
     from downloader import download_kokoro_model
     from dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
     from smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
-    from dialogue_flow_manager import DialogueFlowManager
 
 # Global engine
 kokoro = None
-dialogue_manager = DialogueFlowManager(use_ssml=False)  # Initialize dialogue flow manager
 system_status = {"is_loading": False, "last_error": None, "is_downloading": False}
 export_status = {"is_exporting": False, "progress": 0, "total": 0, "error": None, "output_file": None}
 ffmpeg_status = {"is_installed": False, "is_downloading": False, "progress": 0, "total": 0, "error": None, "message": ""}
@@ -160,6 +304,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Check FFMPEG on startup
     installer = FFMPEGInstaller()
     ffmpeg_status["is_installed"] = installer.check_installed()
+    # Run cache cleanup on startup
+    run_cache_cleanup()
     yield
 
 app = FastAPI(title="LocalReader Pro API", lifespan=lifespan)
@@ -444,15 +590,136 @@ class SynthesisRequest(BaseModel):
     speed: float = 1.0
     rules: List[PronunciationRule]
     ignore_list: List[str] = []
+    pause_settings: Optional[Dict[str, int]] = {
+        "comma": 300,
+        "period": 600,
+        "question": 600,
+        "exclamation": 600,
+        "colon": 400,
+        "semicolon": 400,
+        "newline": 800
+    }
 
-class SynthesisWithContextRequest(BaseModel):
-    text: str
-    context_before: List[str] = []  # Up to 2 sentences before
-    context_after: List[str] = []   # Up to 2 sentences after
-    voice: str = "af_sky"
-    speed: float = 1.0
-    rules: List[PronunciationRule]
-    ignore_list: List[str] = []
+def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: Dict[str, int]) -> tuple:
+    """
+    Synthesize text with custom pauses using audio stitching.
+    NEW LOGIC: Only apply pauses to SINGLE punctuation marks at sentence ends.
+    Ignores consecutive/mixed punctuation (e.g., "...", "?!", "!!!") entirely.
+    
+    Returns: (audio_samples, sample_rate)
+    """
+    print(f"\n{'='*60}")
+    print(f"[PAUSE LOGIC] Processing: '{text[:100]}{'...' if len(text) > 100 else ''}'")
+    print(f"{'='*60}")
+    
+    # NEW APPROACH: Split by punctuation but capture sequences (not individual chars)
+    # This pattern captures groups of punctuation together: "..." stays as "...", not split into 3
+    # Pattern: Match text OR punctuation sequences OR newlines
+    segments = re.split(r'([,\.!\?:;]+|\n)', text)
+    
+    audio_segments = []
+    sample_rate = SAMPLE_RATE
+    
+    print(f"\n[SPLIT] Text split into {len(segments)} segments")
+    print(f"[SETTINGS] Pauses: {pause_settings}")
+    print(f"\n[PROCESSING]")
+    
+    pause_count = 0
+    skip_count = 0
+    
+    for i, segment in enumerate(segments):
+        segment = segment.strip()
+        if not segment:
+            continue
+        
+        # Check if segment is punctuation
+        if re.match(r'^[,\.!\?:;]+$', segment):
+            # Check if it's SINGLE punctuation (apply pause) or MULTIPLE (skip)
+            if len(segment) == 1:
+                # Single punctuation - apply pause
+                pause_ms = 0
+                if segment == ',':
+                    pause_ms = pause_settings.get('comma', 300)
+                elif segment == '.':
+                    pause_ms = pause_settings.get('period', 600)
+                elif segment == '?':
+                    pause_ms = pause_settings.get('question', 600)
+                elif segment == '!':
+                    pause_ms = pause_settings.get('exclamation', 600)
+                elif segment == ':':
+                    pause_ms = pause_settings.get('colon', 400)
+                elif segment == ';':
+                    pause_ms = pause_settings.get('semicolon', 400)
+                
+                # Generate silent audio
+                pause_samples = int((pause_ms / 1000.0) * sample_rate)
+                silence = np.zeros(pause_samples, dtype=np.float32)
+                audio_segments.append(silence)
+                pause_count += 1
+                print(f"  [{i}] PAUSE: '{segment}' = {pause_ms}ms")
+            else:
+                # Multiple/mixed punctuation - SKIP pause entirely
+                skip_count += 1
+                print(f"  [{i}] SKIP: '{segment}' (consecutive/mixed punctuation - ignored)")
+        
+        elif segment == '\n':
+            # Add newline pause
+            pause_ms = pause_settings.get('newline', 800)
+            pause_samples = int((pause_ms / 1000.0) * sample_rate)
+            silence = np.zeros(pause_samples, dtype=np.float32)
+            audio_segments.append(silence)
+            pause_count += 1
+            print(f"  [{i}] PAUSE: newline = {pause_ms}ms")
+        
+        else:
+            # Generate audio for text segment
+            if re.search(r'[a-zA-Z0-9]', segment):
+                try:
+                    samples, _ = kokoro.create(segment, voice=voice, speed=speed, lang="en-us")
+                    audio_segments.append(samples.flatten())
+                    word_count = len(segment.split())
+                    print(f"  [{i}] AUDIO: '{segment[:40]}{'...' if len(segment) > 40 else ''}' ({word_count} words)")
+                except Exception as e:
+                    print(f"  [{i}] ERROR: Synthesis failed for '{segment[:30]}...': {e}")
+    
+    # Concatenate all audio segments
+    if audio_segments:
+        final_audio = np.concatenate(audio_segments)
+        print(f"\n[COMPLETE]")
+        print(f"  Pauses applied: {pause_count}")
+        print(f"  Pauses skipped: {skip_count} (consecutive/mixed)")
+        print(f"  Audio length: {len(final_audio)/sample_rate:.2f}s")
+        print(f"{'='*60}\n")
+        return final_audio, sample_rate
+    else:
+        # Return tiny silence if no audio was generated
+        print(f"\n[WARNING] No audio generated - returning silence")
+        print(f"{'='*60}\n")
+        return np.zeros(int(sample_rate * 0.1), dtype=np.float32), sample_rate
+
+def generate_cache_key(text: str, voice: str, speed: float, pause_settings: Dict[str, int], rules: List, ignore_list: List) -> str:
+    """
+    Generate MD5 hash for caching based on all synthesis parameters.
+    If ANY parameter changes, the hash MUST change to force re-generation.
+    """
+    # Create a deterministic string from all parameters
+    cache_data = {
+        "text": text,
+        "voice": voice,
+        "speed": speed,
+        "pause_settings": pause_settings,
+        "rules": [str(r) for r in rules],  # Convert to strings for hashing
+        "ignore_list": sorted(ignore_list)  # Sort for consistency
+    }
+    
+    # Convert to JSON string (sorted keys for consistency)
+    cache_string = json.dumps(cache_data, sort_keys=True)
+    
+    # Generate MD5 hash
+    hash_object = hashlib.md5(cache_string.encode('utf-8'))
+    cache_hash = hash_object.hexdigest()
+    
+    return cache_hash
 
 @app.post("/api/synthesize")
 async def synthesize(request: SynthesisRequest):
@@ -470,6 +737,25 @@ async def synthesize(request: SynthesisRequest):
     try:
         voices = kokoro.get_voices()
         selected_voice = request.voice if request.voice in voices else "af_sky"
+        pause_settings = request.pause_settings or {}
+        
+        # Generate cache key
+        cache_key = generate_cache_key(
+            text, 
+            selected_voice, 
+            float(request.speed or 1.0), 
+            pause_settings,
+            request.rules,
+            request.ignore_list
+        )
+        cache_file = cache_dir / f"{cache_key}.wav"
+        
+        # Check cache first
+        if cache_file.exists():
+            print(f"[CACHE HIT] Serving cached audio for hash {cache_key[:8]}...")
+            return FileResponse(cache_file, media_type="audio/wav")
+        
+        print(f"[CACHE MISS] Generating audio for hash {cache_key[:8]}...")
         
         # Heuristic: If text has no alphanumeric characters, return tiny silence
         if not re.search(r'[a-zA-Z0-9]', text):
@@ -477,83 +763,39 @@ async def synthesize(request: SynthesisRequest):
             samples = np.zeros(int(24000 * 0.1), dtype=np.float32)
             sample_rate = 24000
         else:
+            # Check if custom pause settings are provided (including 0ms pauses)
+            # We check if pause_settings exists and is not all defaults
+            has_pause_settings = pause_settings and isinstance(pause_settings, dict)
+            has_punctuation = any(p in text for p in [',', '.', '!', '?', ':', ';', '\n'])
+            
+        print(f"\n[PAUSE LOGIC CHECK]")
+        print(f"  Has pause settings dict: {has_pause_settings}")
+        print(f"  Pause settings: {pause_settings}")
+        print(f"  Text has punctuation: {has_punctuation}")
+        print(f"  Text preview: '{text[:100]}...'")
+        
+        if has_pause_settings and has_punctuation:
+            # Use audio stitching with custom pauses (even if some are 0ms)
+            print(f"  [MODE] Using audio stitching with custom pauses")
+            samples, sample_rate = synthesize_with_pauses(text, selected_voice, float(request.speed or 1.0), pause_settings)
+        else:
+            # Use standard synthesis (faster for simple text)
+            print(f"  [MODE] Using standard synthesis (no punctuation or no pause settings)")
             samples, sample_rate = kokoro.create(text, voice=selected_voice, speed=float(request.speed or 1.0), lang="en-us")
         
-        buffer = io.BytesIO()
-        sf.write(buffer, samples.flatten(), sample_rate, format='WAV', subtype='PCM_16')
-        buffer.seek(0)
-        return StreamingResponse(buffer, media_type="audio/wav")
+        # Check cache size before saving (cleanup if needed)
+        current_cache_size = get_cache_size_mb()
+        if current_cache_size > MAX_CACHE_SIZE_MB * 0.9:  # Cleanup at 90% threshold
+            print(f"[CACHE] Size {current_cache_size:.1f}MB approaching limit, running cleanup...")
+            cleanup_cache_by_size(MAX_CACHE_SIZE_MB)
+        
+        # Save to cache
+        sf.write(str(cache_file), samples.flatten(), sample_rate, format='WAV', subtype='PCM_16')
+        print(f"[CACHE SAVE] Audio saved: {cache_file.name}")
+        
+        # Stream the cached file
+        return FileResponse(cache_file, media_type="audio/wav")
     except Exception as e: raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/synthesize/with-context")
-async def synthesize_with_context(request: SynthesisWithContextRequest):
-    """
-    Enhanced synthesis endpoint with context-aware pause calculation.
-    Uses DialogueFlowManager to determine natural pause duration.
-    """
-    if kokoro is None:
-        raise HTTPException(status_code=503, detail="TTS Engine not initialized.")
-    
-    try:
-        # Process text (remove [DIM] markers and apply pronunciation rules)
-        text = filter_text_for_tts(request.text)
-        rules_data = [r.model_dump() for r in request.rules]
-        processed_text = apply_custom_pronunciations(text, rules_data, request.ignore_list)
-    except Exception as e:
-        print(f"Warning: Text processing failed: {e}")
-        processed_text = filter_text_for_tts(request.text)
-    
-    # Build context for classification (use original text to preserve quotes/formatting)
-    context_paragraphs = []
-    context_paragraphs.extend(request.context_before)
-    context_paragraphs.append(request.text)  # Original text needed for accurate dialogue detection
-    context_paragraphs.extend(request.context_after)
-    
-    # Use DialogueFlowManager to classify and calculate pause
-    context_text = "\n\n".join(context_paragraphs)
-    segments = dialogue_manager.process_chapter(context_text)
-    
-    # Find the current sentence segment (should be at index len(context_before))
-    target_index = len(request.context_before)
-    pause_after = 0.5  # Default fallback
-    
-    if target_index < len(segments):
-        pause_after = segments[target_index]["pause_after"]
-    
-    # Generate audio
-    try:
-        voices = kokoro.get_voices()
-        selected_voice = request.voice if request.voice in voices else "af_sky"
-        
-        # Heuristic: If text has no alphanumeric characters, return tiny silence
-        if not re.search(r'[a-zA-Z0-9]', processed_text):
-            samples = np.zeros(int(24000 * 0.1), dtype=np.float32)
-            sample_rate = 24000
-        else:
-            samples, sample_rate = kokoro.create(
-                processed_text,
-                voice=selected_voice,
-                speed=float(request.speed or 1.0),
-                lang="en-us"
-            )
-        
-        # Encode audio
-        buffer = io.BytesIO()
-        sf.write(buffer, samples.flatten(), sample_rate, format='WAV', subtype='PCM_16')
-        buffer.seek(0)
-        
-        # Return audio stream with pause metadata in custom header
-        return StreamingResponse(
-            buffer, 
-            media_type="audio/wav",
-            headers={
-                "X-Pause-After": str(pause_after),  # Custom header for pause duration
-                "X-Sample-Rate": str(sample_rate)
-            }
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 # MP3 Export API
 class ExportRequest(BaseModel):
@@ -661,38 +903,27 @@ async def export_audio(request: ExportRequest, background_tasks: BackgroundTasks
                 export_status["error"] = "Document metadata not found"
                 return
             
-            # 3. Combine all pages and process with DialogueFlowManager
+            # 3. Combine all pages into paragraphs
             full_text = "\n\n".join(doc_data.get("pages", []))
+            paragraphs = [p.strip() for p in full_text.split("\n\n") if p.strip()]
             
-            # Use DialogueFlowManager to intelligently split text
-            segments = dialogue_manager.process_chapter(full_text)
+            export_status["total"] = len(paragraphs)
             
-            export_status["total"] = len(segments)
-            
-            # 4. Process each segment with smart pausing
+            # 4. Process each paragraph
             audio_segments = []
             rules_data = [r.model_dump() for r in request.rules]
             
-            for i, segment in enumerate(segments):
+            for i, paragraph in enumerate(paragraphs):
                 if not export_status["is_exporting"]:  # Check for cancellation
                     export_status["error"] = "Export cancelled"
                     return
                 
                 try:
-                    # Get text from segment
-                    text = segment["text"]
-                    pause_duration = segment["pause_after"]
-                    
                     # First filter out dimmed text (headers/footers)
-                    filtered_text = filter_text_for_tts(text)
-                    
-                    # Skip empty segments
-                    if not filtered_text.strip():
-                        export_status["progress"] = i + 1
-                        continue
+                    filtered_paragraph = filter_text_for_tts(paragraph)
                     
                     # Then apply pronunciation rules
-                    processed_text = apply_custom_pronunciations(filtered_text, rules_data, request.ignore_list)
+                    processed_text = apply_custom_pronunciations(filtered_paragraph, rules_data, request.ignore_list)
                     
                     # Generate audio
                     samples, sample_rate = kokoro.create(
@@ -709,16 +940,13 @@ async def export_audio(request: ExportRequest, background_tasks: BackgroundTasks
                     audio_segment = AudioSegment.from_wav(buffer)
                     audio_segments.append(audio_segment)
                     
-                    # Add smart pause based on segment type (DialogueFlowManager logic)
-                    # Convert seconds to milliseconds
-                    pause_ms = int(pause_duration * 1000)
-                    if pause_ms > 0:
-                        silence = AudioSegment.silent(duration=pause_ms)
-                        audio_segments.append(silence)
+                    # Add small pause between paragraphs (500ms)
+                    silence = AudioSegment.silent(duration=500)
+                    audio_segments.append(silence)
                     
                 except Exception as e:
-                    print(f"Warning: Failed to process segment {i}: {e}")
-                    # Continue with next segment
+                    print(f"Warning: Failed to process paragraph {i}: {e}")
+                    # Continue with next paragraph
                 
                 export_status["progress"] = i + 1
             
@@ -777,11 +1005,11 @@ async def open_file_location(filename: str):
         file_path = userdata_dir / filename
         abs_file_path = file_path.absolute()
         
-        print(f"🔍 Looking for file: {abs_file_path}")
+        print(f"[LOOKUP] Looking for file: {abs_file_path}")
         
         # Step 2: Verify file exists
         if not abs_file_path.exists():
-            print(f"❌ File not found: {abs_file_path}")
+            print(f"[ERROR] File not found: {abs_file_path}")
             raise HTTPException(status_code=404, detail=f"File not found: {filename}")
         
         # Step 3: Get the folder path
@@ -790,14 +1018,14 @@ async def open_file_location(filename: str):
         # Step 4: Verify folder exists (should always be true if file exists)
         if not folder_path.exists():
             # This should be impossible, but handle it gracefully
-            print(f"⚠️ Folder missing, creating: {folder_path}")
+            print(f"[WARNING] Folder missing, creating: {folder_path}")
             folder_path.mkdir(parents=True, exist_ok=True)
         
         # Step 5: Open folder (platform-specific, using native APIs)
         system = platform.system()
         folder_str = str(folder_path)
         
-        print(f"✅ Opening folder: {folder_str}")
+        print(f"[OPEN] Opening folder: {folder_str}")
         print(f"   Platform: {system}")
         print(f"   File: {filename}")
         
@@ -825,7 +1053,7 @@ async def open_file_location(filename: str):
         raise
     except Exception as e:
         error_msg = f"Failed to open folder: {str(e)}"
-        print(f"❌ CRITICAL ERROR: {error_msg}")
+        print(f"[CRITICAL] {error_msg}")
         print(f"   File requested: {filename}")
         print(f"   Userdata dir: {userdata_dir}")
         raise HTTPException(status_code=500, detail=error_msg)

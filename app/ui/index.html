@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LocalReader - Pro Edition</title>
+    <title>LocalReader Pro</title>
     <!-- Local Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="lib/lucide.min.js"></script>
@@ -293,6 +293,24 @@
             font-style: italic;
             color: #71717a;
         }
+        
+        /* Settings Section Styling */
+        .settings-section {
+            background: rgba(9, 9, 11, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid rgba(63, 63, 70, 0.3);
+        }
+        
+        .settings-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            display: block;
+        }
     </style>
 </head>
 <body class="min-h-screen selection:bg-blue-500/30 overflow-hidden">
@@ -336,11 +354,20 @@
                 </div>
             </div>
 
-            <!-- Tabs -->
+            <!-- Tabs (Compact with Icons) -->
             <div class="flex border-b border-border">
-                <button id="tabLibrary" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5">Library</button>
-                <button id="tabRules" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300">Pronunciation</button>
-                <button id="tabIgnore" class="flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300">Ignore</button>
+                <button id="tabLibrary" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5" title="Library">
+                    <i data-lucide="library" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Library</span>
+                </button>
+                <button id="tabRules" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300" title="Pronunciation Rules">
+                    <i data-lucide="type" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Rules</span>
+                </button>
+                <button id="tabIgnore" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300" title="Ignore List">
+                    <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Ignore</span>
+                </button>
             </div>
 
             <!-- Content -->
@@ -363,7 +390,8 @@
             </div>
 
             <!-- Settings -->
-            <div class="p-6 border-t border-border bg-black/20 space-y-4">
+            <div class="p-6 border-t border-border bg-black/20 space-y-4 overflow-y-auto custom-scrollbar max-h-[400px]">
+                <!-- Voice Settings -->
                 <div>
                     <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Voice Selection</label>
                     <select id="voiceSelect" class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500">
@@ -377,10 +405,14 @@
                         <option value="bm_lewis">BM Lewis (British Male)</option>
                     </select>
                 </div>
+                
+                <!-- Speed Control -->
                 <div>
                     <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Speed (<span id="speedVal">1.00</span>x)</label>
                     <input type="range" id="speedRange" min="0.5" max="3.0" step="0.05" value="1.00" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
                 </div>
+                
+                <!-- Header/Footer Filter -->
                 <div>
                     <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Header/Footer Filter</label>
                     <select id="headerFooterMode" class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500">
@@ -389,6 +421,44 @@
                         <option value="dim">Dim (Show Faded)</option>
                     </select>
                     <p class="text-[9px] text-zinc-600 mt-1">Automatically hide repeated page headers & footers</p>
+                </div>
+                
+                <!-- Pause Settings Accordion -->
+                <div class="border border-zinc-800 rounded-lg overflow-hidden">
+                    <button id="pauseSettingsToggle" class="w-full flex items-center justify-between p-3 bg-zinc-900/50 hover:bg-zinc-900 transition-colors">
+                        <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Pause Settings</span>
+                        <i data-lucide="chevron-down" id="pauseChevron" class="w-4 h-4 text-zinc-500 transition-transform"></i>
+                    </button>
+                    <div id="pauseSettingsContent" class="hidden bg-zinc-950/50 p-3 space-y-3">
+                        <div>
+                            <label class="text-[9px] text-zinc-500 mb-1 block">Comma Pause (<span id="pauseCommaVal">300</span>ms)</label>
+                            <input type="range" id="pauseComma" min="0" max="1000" step="50" value="300" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-zinc-500 mb-1 block">Period Pause (<span id="pausePeriodVal">600</span>ms)</label>
+                            <input type="range" id="pausePeriod" min="0" max="1500" step="50" value="600" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-zinc-500 mb-1 block">Question Pause (<span id="pauseQuestionVal">600</span>ms)</label>
+                            <input type="range" id="pauseQuestion" min="0" max="1500" step="50" value="600" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-zinc-500 mb-1 block">Exclamation Pause (<span id="pauseExclamationVal">600</span>ms)</label>
+                            <input type="range" id="pauseExclamation" min="0" max="1500" step="50" value="600" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-zinc-500 mb-1 block">Colon Pause (<span id="pauseColonVal">400</span>ms)</label>
+                            <input type="range" id="pauseColon" min="0" max="1500" step="50" value="400" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-zinc-500 mb-1 block">Semicolon Pause (<span id="pauseSemicolonVal">400</span>ms)</label>
+                            <input type="range" id="pauseSemicolon" min="0" max="1500" step="50" value="400" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                        </div>
+                        <div>
+                            <label class="text-[9px] text-zinc-500 mb-1 block">Newline Pause (<span id="pauseNewlineVal">800</span>ms)</label>
+                            <input type="range" id="pauseNewline" min="0" max="2000" step="50" value="800" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                        </div>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -590,11 +660,11 @@
 
         let currentDoc = null, currentPages = [], currentPageIndex = 0, currentSentenceIndex = 0, sentences = [], sentenceElements = [], isPlaying = false, rules = [], ignoreList = [];
         let activeAudioURL = null; // Track active audio URL for cleanup
-        let smartPauseTimeout = null; // Track smart pause timeout for cancellation
         let headerFooterMode = 'off'; // Track header/footer filter mode
         let smartStartPage = 0; // Track the smart start page
         let currentSearchQuery = ''; // Track current search query for highlighting
         let searchDebounceTimer = null; // Debounce timer for search
+        let pauseSettings = { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 800 }; // Pause durations in ms
         const API_URL = 'http://127.0.0.1:8000';
 
         const pdfUpload = document.getElementById('pdfUpload'), uploadArea = document.getElementById('uploadArea'), exportArea = document.getElementById('exportArea'),
@@ -625,7 +695,16 @@
               searchInput = document.getElementById('searchInput'), closeSearchBtn = document.getElementById('closeSearchBtn'),
               searchResultsList = document.getElementById('searchResultsList'), searchEmpty = document.getElementById('searchEmpty'),
               searchPlaceholder = document.getElementById('searchPlaceholder'), searchFooter = document.getElementById('searchFooter'),
-              searchStats = document.getElementById('searchStats');
+              searchStats = document.getElementById('searchStats'),
+              pauseSettingsToggle = document.getElementById('pauseSettingsToggle'), pauseSettingsContent = document.getElementById('pauseSettingsContent'),
+              pauseChevron = document.getElementById('pauseChevron'),
+              pauseComma = document.getElementById('pauseComma'), pauseCommaVal = document.getElementById('pauseCommaVal'),
+              pausePeriod = document.getElementById('pausePeriod'), pausePeriodVal = document.getElementById('pausePeriodVal'),
+              pauseQuestion = document.getElementById('pauseQuestion'), pauseQuestionVal = document.getElementById('pauseQuestionVal'),
+              pauseExclamation = document.getElementById('pauseExclamation'), pauseExclamationVal = document.getElementById('pauseExclamationVal'),
+              pauseColon = document.getElementById('pauseColon'), pauseColonVal = document.getElementById('pauseColonVal'),
+              pauseSemicolon = document.getElementById('pauseSemicolon'), pauseSemicolonVal = document.getElementById('pauseSemicolonVal'),
+              pauseNewline = document.getElementById('pauseNewline'), pauseNewlineVal = document.getElementById('pauseNewlineVal');
 
         lucide.createIcons();
 
@@ -634,6 +713,16 @@
         function renderIcons() {
             clearTimeout(iconRenderTimeout);
             iconRenderTimeout = setTimeout(() => lucide.createIcons(), 50);
+        }
+        
+        // Helper: Strip HTML tags and emojis from text (for TTS and preview display)
+        function stripHTML(text) {
+            if (!text) return '';
+            // Remove HTML tags
+            text = text.replace(/<[^>]*>/g, '');
+            // Remove emojis and symbols (comprehensive Unicode ranges)
+            text = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F000}-\u{1F02F}]|[\u{1F0A0}-\u{1F0FF}]/gu, '');
+            return text.trim();
         }
 
         // ============================================
@@ -708,6 +797,7 @@
                 const savedVoice = settings.voice_id;
                 const savedSpeed = settings.speed;
                 headerFooterMode = settings.header_footer_mode || 'off';
+                pauseSettings = settings.pause_settings || { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 800 };
 
                 // 2. Set speed independently (immediate)
                 if (savedSpeed) {
@@ -718,6 +808,36 @@
                 // 3. Set header/footer mode
                 if (headerFooterModeSelect) {
                     headerFooterModeSelect.value = headerFooterMode;
+                }
+                
+                // 4. Set pause settings
+                if (pauseComma) {
+                    pauseComma.value = pauseSettings.comma;
+                    pauseCommaVal.textContent = pauseSettings.comma;
+                }
+                if (pausePeriod) {
+                    pausePeriod.value = pauseSettings.period;
+                    pausePeriodVal.textContent = pauseSettings.period;
+                }
+                if (pauseQuestion) {
+                    pauseQuestion.value = pauseSettings.question;
+                    pauseQuestionVal.textContent = pauseSettings.question;
+                }
+                if (pauseExclamation) {
+                    pauseExclamation.value = pauseSettings.exclamation || 600;
+                    pauseExclamationVal.textContent = pauseSettings.exclamation || 600;
+                }
+                if (pauseColon) {
+                    pauseColon.value = pauseSettings.colon || 400;
+                    pauseColonVal.textContent = pauseSettings.colon || 400;
+                }
+                if (pauseSemicolon) {
+                    pauseSemicolon.value = pauseSettings.semicolon || 400;
+                    pauseSemicolonVal.textContent = pauseSettings.semicolon || 400;
+                }
+                if (pauseNewline) {
+                    pauseNewline.value = pauseSettings.newline;
+                    pauseNewlineVal.textContent = pauseSettings.newline;
                 }
 
                 // 3. Wait for UI components to be fully ready for voice selection
@@ -763,7 +883,8 @@
                     ignoreList: ignoreList,
                     voice_id: voiceSelect.value,
                     speed: parseFloat(speedRange.value),
-                    header_footer_mode: headerFooterMode
+                    header_footer_mode: headerFooterMode,
+                    pause_settings: pauseSettings
                 };
                 await fetch(`${API_URL}/api/settings`, { 
                     method: 'POST', 
@@ -792,6 +913,57 @@
                 await refreshCurrentPage();
             }
         };
+        
+        // Pause Settings Accordion Toggle
+        pauseSettingsToggle.onclick = () => {
+            const isHidden = pauseSettingsContent.classList.contains('hidden');
+            pauseSettingsContent.classList.toggle('hidden');
+            pauseChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            renderIcons();
+        };
+        
+        // Pause Settings Handlers
+        pauseComma.oninput = (e) => {
+            pauseSettings.comma = parseInt(e.target.value);
+            pauseCommaVal.textContent = pauseSettings.comma;
+        };
+        pauseComma.onchange = saveSettings;
+        
+        pausePeriod.oninput = (e) => {
+            pauseSettings.period = parseInt(e.target.value);
+            pausePeriodVal.textContent = pauseSettings.period;
+        };
+        pausePeriod.onchange = saveSettings;
+        
+        pauseQuestion.oninput = (e) => {
+            pauseSettings.question = parseInt(e.target.value);
+            pauseQuestionVal.textContent = pauseSettings.question;
+        };
+        pauseQuestion.onchange = saveSettings;
+        
+        pauseExclamation.oninput = (e) => {
+            pauseSettings.exclamation = parseInt(e.target.value);
+            pauseExclamationVal.textContent = pauseSettings.exclamation;
+        };
+        pauseExclamation.onchange = saveSettings;
+        
+        pauseColon.oninput = (e) => {
+            pauseSettings.colon = parseInt(e.target.value);
+            pauseColonVal.textContent = pauseSettings.colon;
+        };
+        pauseColon.onchange = saveSettings;
+        
+        pauseSemicolon.oninput = (e) => {
+            pauseSettings.semicolon = parseInt(e.target.value);
+            pauseSemicolonVal.textContent = pauseSettings.semicolon;
+        };
+        pauseSemicolon.onchange = saveSettings;
+        
+        pauseNewline.oninput = (e) => {
+            pauseSettings.newline = parseInt(e.target.value);
+            pauseNewlineVal.textContent = pauseSettings.newline;
+        };
+        pauseNewline.onchange = saveSettings;
 
         let isEngineReady = false;
         let lastSystemState = null;
@@ -845,11 +1017,12 @@
         function switchTab(activeTab, activePanel) {
             const tabs = [tabLibrary, tabRules, tabIgnore];
             const panels = [libraryPanel, rulesPanel, ignorePanel];
-            const activeClass = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5";
-            const inactiveClass = "flex-1 py-3 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
+            const activeClass = "flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5";
+            const inactiveClass = "flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
             
             tabs.forEach(tab => tab.className = tab === activeTab ? activeClass : inactiveClass);
             panels.forEach(panel => panel.classList.toggle('hidden', panel !== activePanel));
+            renderIcons(); // Re-render icons after class change
         }
 
         tabLibrary.onclick = () => switchTab(tabLibrary, libraryPanel);
@@ -1119,21 +1292,32 @@
                     // Fallback to original text
                 }
             }
+            
+            // PREPROCESSING: Join broken lines for natural TTS flow
+            // PDFs often have line breaks mid-sentence due to text wrapping
+            // This joins lines that don't end with sentence-ending punctuation
+            text = text
+                // Preserve paragraph breaks (double newlines)
+                .replace(/\n\n/g, '<!PARAGRAPH!>')
+                // Join lines that don't end with sentence punctuation
+                // If line ends with .!?:; keep the newline, otherwise join with space
+                .replace(/([^.!?:;])\n/g, '$1 ')
+                // Restore paragraph breaks
+                .replace(/<!PARAGRAPH!>/g, '\n\n')
+                // Clean up multiple spaces
+                .replace(/  +/g, ' ');
+            
             // Split by sentence but keep trailing quotes
             const rawSentences = text.match(/[^.!?]+[.!?]+[\"\'\u201c\u2018\u201d\u2019]*(?:\s|$)|[^.!?]+$/g) || [text];
             
-            // Smart Merge: Combine very short sentences (e.g. artifacts or abbreviations)
+            // Process sentences: clean up quotes and whitespace
             sentences = [];
             for (let i = 0; i < rawSentences.length; i++) {
                 let s = rawSentences[i].trim()
                     .replace(/^[\"\'\u201c\u2018\u201d\u2019]+(?=[\"\'\u201c\u2018\u201d\u2019])/, '') // Deduplicate leading quotes
                     .replace(/[\"\'\u201c\u2018\u201d\u2019]+$/, (match) => match.length > 1 ? match[0] : match); // Deduplicate trailing quotes
 
-                if (!s) continue;
-                // If current sentence is very short and doesn't end in punctuation, or if next sentence is very short
-                if (sentences.length > 0 && (sentences[sentences.length-1].length < 15 || !/[.!?]/.test(sentences[sentences.length-1]))) {
-                    sentences[sentences.length-1] += " " + s;
-                } else {
+                if (s) {
                     sentences.push(s);
                 }
             }
@@ -1146,18 +1330,8 @@
                 // Check if sentence contains [DIM] markers
                 if (s.includes('[DIM]')) {
                     // Parse and render with dimmed sections
-                    const parts = s.split(/(\[DIM\].*?\[\/DIM\])/g);
-                    parts.forEach(part => {
-                        if (part.startsWith('[DIM]') && part.endsWith('[/DIM]')) {
-                            const dimmedText = part.replace('[DIM]', '').replace('[/DIM]', '');
-                            const dimSpan = document.createElement('span');
-                            dimSpan.className = 'dimmed-text';
-                            dimSpan.textContent = dimmedText;
-                            span.appendChild(dimSpan);
-                        } else if (part) {
-                            span.appendChild(document.createTextNode(part));
-                        }
-                    });
+                    const dimRegex = /\[DIM\](.*?)\[\/DIM\]/g;
+                    span.innerHTML = s.replace(dimRegex, '<span class="dimmed-text">$1</span>');
                 } else {
                     span.textContent = s;
                 }
@@ -1173,10 +1347,10 @@
             
             pageInput.value = currentPageIndex + 1; pageTotal.textContent = currentPages.length; scrollContainer.scrollTop = 0;
             
-            // Safe sentence preview with bounds check
+            // Safe sentence preview with bounds check (strip HTML for clean display)
             const currentSentence = sentences[currentSentenceIndex];
             currentSentencePreview.textContent = (currentSentence && typeof currentSentence === 'string') 
-                ? currentSentence 
+                ? stripHTML(currentSentence)
                 : "Ready";
             
             // Re-apply search highlighting if there's an active search query
@@ -1323,40 +1497,24 @@
             const active = sentenceElements[currentSentenceIndex];
             if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            currentSentencePreview.textContent = text;
+            // Strip HTML for preview display
+            currentSentencePreview.textContent = stripHTML(text);
             saveProgress();
-            console.log(`Synthesizing sentence ${currentSentenceIndex}: "${text.substring(0, 30)}..."`);
+            
+            // Strip HTML before sending to TTS
+            const cleanText = stripHTML(text);
+            console.log(`Synthesizing sentence ${currentSentenceIndex}: "${cleanText.substring(0, 30)}..."`);
             try {
-                // Collect context sentences for smart pause calculation
-                const contextBefore = [];
-                const contextAfter = [];
-                
-                // Get up to 2 sentences before
-                for (let i = Math.max(0, currentSentenceIndex - 2); i < currentSentenceIndex; i++) {
-                    if (sentences[i] && typeof sentences[i] === 'string') {
-                        contextBefore.push(sentences[i]);
-                    }
-                }
-                
-                // Get up to 2 sentences after
-                for (let i = currentSentenceIndex + 1; i < Math.min(sentences.length, currentSentenceIndex + 3); i++) {
-                    if (sentences[i] && typeof sentences[i] === 'string') {
-                        contextAfter.push(sentences[i]);
-                    }
-                }
-                
-                // Use context-aware endpoint for smart pausing
-                const res = await fetch(`${API_URL}/api/synthesize/with-context`, { 
+                const res = await fetch(`${API_URL}/api/synthesize`, { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ 
-                        text, 
-                        context_before: contextBefore,
-                        context_after: contextAfter,
+                        text: cleanText,  // Send clean text without HTML
                         voice: voiceSelect.value, 
                         speed: parseFloat(speedRange.value), 
                         rules, 
-                        ignore_list: ignoreList 
+                        ignore_list: ignoreList,
+                        pause_settings: pauseSettings
                     }) 
                 });
                 
@@ -1364,14 +1522,6 @@
                     const err = await res.json();
                     throw new Error(err.detail || "Synthesis failed");
                 }
-                
-                // Read smart pause duration from response header
-                let pauseAfter = parseFloat(res.headers.get('X-Pause-After') || '0.5');
-                if (isNaN(pauseAfter) || pauseAfter < 0) {
-                    console.warn('Invalid pause duration, using default 0.5s');
-                    pauseAfter = 0.5;
-                }
-                console.log(`Smart pause duration: ${pauseAfter}s`);
                 
                 const blob = await res.blob();
                 console.log(`Audio blob received: ${blob.size} bytes`);
@@ -1392,15 +1542,8 @@
                     URL.revokeObjectURL(url); 
                     activeAudioURL = null;
                     currentSentenceIndex++; 
-                    console.log(`Sentence ended, waiting ${pauseAfter}s before next...`);
-                    
-                    // Clear any existing timeout before setting new one
-                    if (smartPauseTimeout) clearTimeout(smartPauseTimeout);
-                    
-                    // Apply smart pause before playing next sentence
-                    smartPauseTimeout = setTimeout(() => {
-                        playNext(); 
-                    }, pauseAfter * 1000);
+                    console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
+                    playNext(); 
                 };
 
                 const playPromise = audioPlayer.play();
@@ -1432,12 +1575,6 @@
             setPlayIcon('play');
             audioPlayer.pause(); 
             audioPlayer.src = "";
-            
-            // Cancel any pending smart pause
-            if (smartPauseTimeout) {
-                clearTimeout(smartPauseTimeout);
-                smartPauseTimeout = null;
-            }
             
             // Clean up object URL to prevent memory leak
             if (activeAudioURL) {

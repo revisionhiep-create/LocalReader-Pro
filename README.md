@@ -1,42 +1,38 @@
-# LocalReader Pro v1.6
+# LocalReader Pro v1.7
 
-**A modern, privacy-focused PDF/EPUB reader with AI-powered text-to-speech, smart dialogue pacing, and MP3 export.**
-
----
-
-## 🚀 What's New in v1.6
-
-### 🎭 Dialogue Flow Manager (Smart TTS Pacing)
-- **Natural Speaker Turns:** TTS now pauses naturally between dialogue exchanges (400ms industry-standard pause)
-- **Action Beats:** Shorter pauses (100ms) when narration interrupts dialogue, maintaining narrative flow
-- **Context-Aware:** Automatically detects dialogue vs narration and adjusts pacing accordingly
-- **Live Playback:** Works during real-time sentence-by-sentence reading
-- **MP3 Export:** Applies to exported audiobooks as well
-- **No Configuration:** Zero setup required—works automatically everywhere
-- **Screenplay-Style Pacing:** Eliminates the "rushed dialogue" problem in conversation-heavy chapters
-
-**Before:** "Who are you?" "I am your nightmare." "Don't trust him." *(runs together)*  
-**After:** "Who are you?" [400ms pause] "I am your nightmare." [100ms pause] *He stepped back.* [200ms pause] "Don't trust him."
+**A modern, privacy-focused PDF/EPUB reader with AI-powered text-to-speech, natural speech flow, and smart audio caching.**
 
 ---
 
-## 🚀 What's New in v1.5
+## 🚀 What's New in v1.7
 
-### 🧠 Smart Content Detection
+### 🎯 Natural Speech Flow
+- **Smart Sentence Joining:** Automatically merges broken lines mid-sentence for natural TTS flow
+- **Intelligent Pause Logic:** Only pauses at single punctuation marks; ignores consecutive/mixed punctuation (e.g., "...", "?!", "!!!")
+- **Better Prosody:** TTS uses proper sentence intonation without unnatural delays
+- **Book-Like Reading:** Audio flows smoothly like reading a physical book
+
+### 💾 Smart Audio Cache Management
+- **Size-Based LRU:** 100MB cache limit with automatic cleanup
+- **Age-Based Cleanup:** Auto-delete files older than 7 days
+- **Instant Playback:** Recently played audio loads instantly (cache hit)
+- **Zero Maintenance:** Cleanup runs automatically on startup and when needed
+
+### 🧠 Smart Content Detection (v1.5)
 - **Smart Start (Auto-Skip Intro):** Automatically skips blank pages and front matter to jump to the first page with real content (>500 characters)
 - **Smart Header/Footer Filter:** Detects and removes/dims repeated headers (book titles, chapter names) and footers (page numbers) that appear on every page
   - **Three Modes:** Off, Clean (remove), or Dim (show faded)
   - **TTS-Aware:** Voice skips filtered content in all modes
   - **90% Similarity Detection:** Works even with OCR errors or typos
 
-### 🔍 Global Search (Ctrl+F Replacement)
+### 🔍 Global Search (v1.5)
 - **Full-Book Search:** Search across ALL pages (not just current page like browser Ctrl+F)
 - **Smart Highlighting:** Yellow highlights show exact matches on the page
 - **Context Previews:** See 50 characters before/after each match
 - **Keyboard Shortcuts:** `Ctrl+F` (or `Cmd+F` on Mac) to open, `ESC` to close
 - **Instant Navigation:** Click any result to jump to that page with highlights
 
-### 🎨 UI/UX Enhancements
+### 🎨 UI/UX Enhancements (v1.5)
 - **Sticky Header:** Page navigation and search controls stay fixed at top while scrolling
 - **Draggable Sidebar:** Resize sidebar by dragging the right edge (200px-600px)
 - **Full Sentence Display:** Player bar shows complete sentences without truncation
@@ -67,14 +63,11 @@
 - **Smart Pagination:** Auto-scroll to next/previous page at boundaries
 
 ### 🎙️ TTS & Voice Control
-- **Dialogue Flow Manager (v1.6):** Industry-standard pause injection for natural dialogue pacing
-  - Works in live playback AND MP3 export
-  - Speaker changes: 400ms pause (natural turn-taking)
-  - Action beats: 100ms pause (connected flow)
-  - Chapter headers: 1000ms pause (clear transitions)
-  - Auto-detects dialogue vs narration (zero config)
-  - Context-aware: Uses surrounding sentences to classify content type
 - **Speed Control:** 0.5x to 3.0x playback speed
+- **Natural Speech Flow (v1.7):**
+  - Intelligent line joining prevents mid-sentence stops
+  - Smart pause logic ignores consecutive punctuation (e.g., "..." no longer creates 3x delays)
+  - Book-like reading experience with proper intonation
 - **Custom Pronunciation Rules:** 
   - Fix mispronunciations (e.g., "ChatGPT" → "Chat G P T")
   - RegEx support for advanced patterns
@@ -107,6 +100,11 @@
 - **Memory Leak Prevention:** Stable during long reading sessions (~500MB)
 - **70% Faster Sentence Highlighting:** DOM caching optimization
 - **Crash Prevention:** Defensive bounds checks and error handling
+- **Smart Audio Caching (v1.7):**
+  - 100MB size limit with LRU cleanup
+  - Instant playback for recently played audio
+  - Auto-cleanup of files older than 7 days
+  - Zero disk space concerns
 
 ---
 
@@ -135,6 +133,8 @@
    ```
    Expected output: `Python 3.12.10` (or similar)
 
+> 💡 **Note:** LocalReader Pro v1.7 has been optimized for better Windows console compatibility.
+
 ---
 
 ### Step 2: Install Dependencies
@@ -145,7 +145,7 @@
 
 2. **Navigate to Project Folder:**
    ```bash
-   cd "C:\path\to\LocalReader_Pro_v1.5"
+   cd "C:\path\to\LocalReader_Pro_v1.7"
    ```
 
 3. **Install Python Packages:**
@@ -359,7 +359,7 @@ Convert entire documents to audio files.
 ### File Structure
 
 ```
-LocalReader_Pro_v1.5/
+LocalReader_Pro_v1.7/
 ├── launch.vbs                  # Silent Windows launcher (recommended)
 ├── main.py                     # Entry point (starts server + webview)
 ├── requirements.txt            # Python dependencies
@@ -367,7 +367,6 @@ LocalReader_Pro_v1.5/
 ├── app/
 │   ├── server.py               # FastAPI backend + API routes
 │   ├── logic/
-│   │   ├── dialogue_flow_manager.py  # Smart dialogue pacing engine (v1.6)
 │   │   ├── text_normalizer.py        # Pronunciation rule engine
 │   │   ├── smart_content_detector.py # Smart Start & Header/Footer filter
 │   │   ├── downloader.py             # Model downloader
@@ -382,6 +381,9 @@ LocalReader_Pro_v1.5/
 ├── bin/                        # FFMPEG binaries (auto-downloaded on first export)
 │   ├── ffmpeg.exe
 │   └── ffprobe.exe
+│
+├── .cache/                     # Audio cache (auto-managed, v1.7)
+│   └── *.wav                   # Cached TTS audio (MD5 hashes)
 │
 ├── userdata/                   # User data (auto-created)
 │   ├── library.json            # Document library metadata
@@ -419,10 +421,11 @@ LocalReader_Pro_v1.5/
 | **Python Dependencies** | ~2GB (PyTorch, etc.) |
 | **Kokoro-82M Model** | ~309MB |
 | **FFMPEG** | ~100MB (optional, for MP3 export) |
+| **Audio Cache (v1.7)** | ~100MB max (auto-managed) |
 | **Per Document Cache** | ~1-5MB (depending on page count) |
 | **Exported MP3** | ~1MB per minute of audio |
 
-**Total:** ~2.5GB (without exported audio)
+**Total:** ~2.6GB (without exported audio)
 
 ---
 
@@ -500,16 +503,26 @@ python main.py
 #### Sticky Header Not Working / Controls Scroll Away
 - Clear browser cache (Ctrl+Shift+R)
 - Restart the app
-- Verify you're on v1.5 (check window title)
+- Verify you're on v1.7 (check CHANGELOG.md)
 
 #### Auto-Scroll to Next Page Broken
-- v1.5 fixed this (scroll container architecture)
+- v1.5+ fixed this (scroll container architecture)
 - If still broken, check `index.html` line ~1485 for `scrollContainer.addEventListener`
 
 #### Search Not Highlighting / Highlights Disappear
-- v1.5 improved this (re-applies highlights on page change)
+- v1.5+ improved this (re-applies highlights on page change)
 - Try closing and reopening search modal
 - Search only works when document is loaded
+
+#### Audio Stops Mid-Sentence / Unnatural Pauses
+- v1.7 fixed this (sentence flow preprocessing)
+- Hard reload page: Ctrl+F5 or Ctrl+Shift+R
+- Sentences should now flow naturally without abrupt stops
+
+#### Cache Growing Too Large
+- v1.7 auto-manages cache (100MB limit)
+- Manual cleanup: Delete `.cache/` folder and restart
+- Adjust limits in `app/server.py` lines 61-62 if needed
 
 ---
 
@@ -660,12 +673,14 @@ See `requirements.txt` and library documentation for full license details.
 
 ## 🔄 Version History
 
-### v1.6 (December 2025)
-- ✨ **Dialogue Flow Manager:** Natural TTS pacing for dialogue-heavy chapters
-- ✨ Industry-standard pause injection (400ms speaker turns, 100ms action beats)
-- ✨ Automatic dialogue vs narration detection
-- 🎭 Eliminates "rushed dialogue" problem in Web Novels
-- 🚀 Zero configuration—works automatically on all exports
+### v1.7 (December 2025)
+- ✨ **Natural Speech Flow:** Intelligent line joining prevents mid-sentence stops
+- ✨ **Smart Pause Logic:** Only single punctuation creates pauses (ignores "...", "?!", "!!!")
+- ✨ **Audio Cache Management:** 100MB LRU cache with automatic cleanup
+- ✨ **Age-Based Cleanup:** Auto-delete cache files older than 7 days
+- 🐛 Fixed Windows console Unicode errors (all ASCII output)
+- ⚡ Instant playback for recently played audio (cache hits)
+- 📚 Better TTS prosody with complete sentences
 
 ### v1.5 (December 2025)
 - ✨ Smart Start (auto-skip intro pages)
@@ -694,7 +709,7 @@ See `requirements.txt` and library documentation for full license details.
 
 ### Found a Bug?
 1. Check **Troubleshooting** section above
-2. Verify you're on latest version (v1.5)
+2. Verify you're on latest version (v1.7)
 3. Check `CHANGELOG.md` for known issues
 4. Contact developer with:
    - Python version (`python --version`)
@@ -708,7 +723,7 @@ See `requirements.txt` and library documentation for full license details.
 
 ---
 
-**Version:** 1.6  
+**Version:** 1.7  
 **Engine:** Kokoro-82M (ONNX)  
 **Last Updated:** December 2025  
 **Status:** ✅ Stable Release

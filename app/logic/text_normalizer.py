@@ -45,3 +45,21 @@ def apply_custom_pronunciations(text: str, rules: List[Dict[str, Any]], ignore_l
         text = re.sub(pat, rep, text, flags=0 if rule.get("match_case") else re.IGNORECASE)
             
     return text
+
+def inject_pauses(text: str, pause_settings: Dict[str, int]) -> str:
+    """
+    Inject SSML-like pause markers based on punctuation.
+    Note: Kokoro TTS doesn't support SSML, so this is a placeholder for future enhancement.
+    For now, we simply return the text as-is since Kokoro handles pauses naturally.
+    
+    Args:
+        text: Input text
+        pause_settings: Dict with keys 'comma', 'period', 'question', 'newline' (values in ms)
+    
+    Returns:
+        Text with pause markers (currently unchanged for Kokoro compatibility)
+    """
+    # Kokoro TTS naturally handles pauses based on punctuation
+    # This function is a placeholder for future TTS engines that support SSML
+    # or custom pause injection
+    return text

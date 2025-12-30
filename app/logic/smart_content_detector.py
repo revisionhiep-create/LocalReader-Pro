@@ -1,5 +1,5 @@
 """
-Smart Content Detection Module for LocalReader Pro
+Smart Content Detection Module for LocalReader Pro v1.5
 Handles Smart Start (intro skip) and Header/Footer filtering.
 """
 

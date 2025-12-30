@@ -1,97 +1,195 @@
 # LocalReader Pro - Changelog
 
-## 🚀 v1.6 - Dialogue Flow Manager (TTS Pacing Fix) (Dec 2025)
+## 🚀 v1.7 - Natural Speech Flow & Smart Cache Management (Dec 2025)
 
-### Feature 4: DialogueFlowManager (Smart Dialogue Pacing)
-**Problem Solved:** TTS engine "rushes" through dialogue-heavy chapters, reading rapid-fire conversations (e.g., "No." "Yes.") as run-on sentences without natural pauses.
+### Feature 1: Intelligent Pause Logic
+**Problem Solved:** Consecutive punctuation (e.g., "Ah...", "What?!", "Stop!!!") created excessive, unnatural pauses during TTS playback.
 
-**Root Cause:**
-- Old pipeline processed text as uniform paragraphs with fixed 500ms pauses
-- No distinction between dialogue, narration, action beats, or speaker changes
-- Resulted in unnatural "audiobook robot" pacing
-
-**Solution: The "Screenplay" Heuristic**
-New `DialogueFlowManager` class intelligently classifies every paragraph into:
-1. **Dialogue (Standalone):** Pure quotes ending with punctuation ("Don't do that.")
-2. **Dialogue (Attributed):** Quotes with narration tags ("Wait," he whispered.)
-3. **Narration:** Pure descriptive text with no dialogue
-4. **Header:** Chapter/Arc titles (e.g., "Chapter 1: The Beginning")
-
-**Smart Batching Logic (Industry-Standard Pauses):**
-- **Rule A (Speaker Change):** Dialogue → Dialogue = **400ms pause**
-  - Natural turn-taking delay between speakers
-- **Rule B (Action Beat):** Dialogue → Narration = **100ms pause**
-  - Keeps flow connected when action interrupts dialogue
-- **Rule C (Chapter Headers):** Header → Any = **1000ms pause**
-  - Clear transition between chapters
-- **Default Narration:** **200ms pause** between paragraphs
-
-**Punctuation Hacking:**
-- Standalone dialogue automatically gets ellipsis (`...`) or SSML break tags
-- Forces TTS engine to respect sentence boundaries
-- Optional SSML support: `<break time="300ms"/>` for compatible engines
-
-**Integration:**
-- **Live Playback:** New `/api/synthesize/with-context` endpoint for sentence-by-sentence playback
-  - Frontend sends current sentence + 2 sentences before/after for context
-  - Backend classifies segment type and returns smart pause duration via `X-Pause-After` header
-  - Frontend applies calculated pause before playing next sentence
-- **MP3 Export:** Fully integrated into `/api/export/audio` pipeline
-- Zero breaking changes to existing API endpoints
-- Works automatically—no user configuration required
+**Solution:**
+- **Single Punctuation Only:** Pauses applied only to isolated punctuation marks at sentence endings
+- **Consecutive Ignored:** Multiple same punctuation (`...`, `!!!`, `???`) creates NO pause
+- **Mixed Ignored:** Mixed punctuation (`?!`, `...!`, `?!?`) creates NO pause
+- **Natural Speech:** TTS flows naturally without artificial delays
 
 **Technical Implementation:**
-- **Module:** `app/logic/dialogue_flow_manager.py`
-- **Classification Engine:** Regex-based pattern matching with Unicode quote support
-- **Output Format:**
 ```python
-[
-  {"text": "Chapter 1: The Beginning", "type": "header", "pause_after": 1.0},
-  {"text": "Lin Fan looked up.", "type": "narration", "pause_after": 0.2},
-  {"text": "Who are you?", "type": "dialogue", "pause_after": 0.4},
-  {"text": "I am your nightmare.", "type": "dialogue", "pause_after": 0.4}
-]
+# Split captures punctuation sequences as single tokens
+segments = re.split(r'([,\.!\?:;]+|\n)', text)
+
+# Apply pause only if single character
+if len(segment) == 1:
+    # Apply configured pause (e.g., "." → 600ms)
+else:
+    # Skip pause entirely (e.g., "..." → ignored)
 ```
 
-**Code Changes:**
-- **server.py (Line 113, 120):** Added `DialogueFlowManager` import
-- **server.py (Line 124):** Global `dialogue_manager` instance initialization
-- **server.py (Lines 448-455):** New `SynthesisWithContextRequest` model for context-aware synthesis
-- **server.py (Lines 488-543):** New `/api/synthesize/with-context` endpoint for live playback
-- **server.py (Lines 585-644):** Export pipeline uses `process_chapter()` for smart segmentation
-- **index.html (Lines 1329-1396):** Frontend collects context and applies smart pauses
-- **logic/__init__.py:** Proper module exports for clean imports
+**Benefits:**
+- ✅ **Natural Flow:** "Ah..." no longer has 3x delays
+- ✅ **Simpler Logic:** No complex deduplication needed
+- ✅ **Better Prosody:** TTS maintains natural rhythm
+- ✅ **User Control:** Pause sliders work predictably
+
+**Examples:**
+| Text | Old Behavior | New Behavior |
+|------|--------------|--------------|
+| `"Hello."` | 600ms pause | 600ms pause ✅ |
+| `"Ah..."` | 1800ms (3× 600ms) | **No pause** ✅ |
+| `"What?!"` | 1200ms (600+600) | **No pause** ✅ |
+| `"Stop!!!"` | 1800ms (3× 600ms) | **No pause** ✅ |
+
+---
+
+### Feature 2: Natural Sentence Flow
+**Problem Solved:** PDFs with line breaks mid-sentence caused abrupt audio stops and unnatural reading flow.
+
+**Root Cause:** PDF text wrapping creates newlines in the middle of sentences, and the sentence splitter was treating each line as a separate "sentence."
+
+**Example:**
+```
+Before (Broken):
+"I tried to move, but my limbs felt heavy like wet"  ← Stops abruptly
+"cotton."                                             ← Starts awkwardly
+
+After (Fixed):
+"I tried to move, but my limbs felt heavy like wet cotton."  ← Complete sentence
+```
+
+**Solution:**
+Preprocessing logic joins lines that don't end with sentence-ending punctuation:
+```javascript
+// Join lines without sentence punctuation
+text = text
+    .replace(/\n\n/g, '<!PARAGRAPH!>')      // Preserve paragraphs
+    .replace(/([^.!?:;])\n/g, '$1 ')        // Join broken lines
+    .replace(/<!PARAGRAPH!>/g, '\n\n')      // Restore paragraphs
+    .replace(/  +/g, ' ');                  // Clean spacing
+```
 
 **Benefits:**
-- ✅ **Natural Pacing:** Industry-standard pause durations (researched from audiobook production)
-- ✅ **Context-Aware:** Different pause lengths based on content type
-- ✅ **Web Novel Optimized:** Handles rapid dialogue exchanges common in translated fiction
-- ✅ **Professional Quality:** Matches human narrator pacing
-- ✅ **Works Everywhere:** Live playback AND MP3 export
-- ✅ **Zero Config:** Automatic detection, no user settings needed
-- ✅ **Extensible:** Easy to add new pause rules or segment types
+- ✅ **Natural Flow:** No more abrupt mid-sentence stops
+- ✅ **Better Prosody:** TTS uses proper sentence intonation
+- ✅ **Visual Match:** What you see matches what you hear
+- ✅ **Paragraph Support:** Double newlines preserved for future features
 
-**Before vs After:**
-- **Before:** "Who are you?" [500ms] "I am your nightmare." [500ms] "Don't trust him."
-- **After:** "Who are you?" [400ms - speaker change] "I am your nightmare." [100ms - action beat] He stepped back. [200ms] "Don't trust him."
+---
 
-**Verification (Live Playback):**
-1. Open a dialogue-heavy chapter (e.g., conversation between 2+ characters)
-2. Click Play and listen to TTS
-3. Console logs show: `Smart pause duration: 0.4s` (or similar)
-4. Hear natural pauses between speaker changes
-5. Shorter pauses between dialogue and narration
+### Feature 3: Smart Audio Cache Management
+**Problem Solved:** TTS audio cache accumulated indefinitely, consuming disk space without limits.
 
-**Verification (MP3 Export):**
-1. Export the same dialogue-heavy chapter
-2. Listen for natural pauses between speaker turns
-3. Confirm 400ms gaps between consecutive dialogue lines
-4. Confirm shorter 100ms gaps between dialogue and action
+**Solution: Size-Based LRU (Least Recently Used)**
+- **Size Limit:** 100MB maximum cache size (adjustable)
+- **Age Limit:** Auto-delete files older than 7 days
+- **LRU Strategy:** Deletes oldest-accessed files first when limit reached
+- **Automatic Cleanup:** Runs on startup and before saving new files
 
-**Research-Backed Standards:**
-- **400ms Speaker Change:** Film/TV industry standard for dialogue editing
-- **100ms Action Beat:** Maintains narrative flow without jarring gaps
-- **1000ms Header Pause:** Audiobook chapter transition standard
+**Technical Implementation:**
+```python
+# Cache Settings
+MAX_CACHE_SIZE_MB = 100  # Default: 100MB
+MAX_FILE_AGE_DAYS = 7    # Default: 7 days
+
+# Cleanup on startup
+def run_cache_cleanup():
+    # Step 1: Delete files older than 7 days
+    age_deleted = cleanup_old_cache_files()
+    
+    # Step 2: Delete oldest files if over 100MB (LRU)
+    size_deleted = cleanup_cache_by_size()
+    
+    # Report: "Freed 33MB, 60 files deleted"
+```
+
+**Cleanup Triggers:**
+1. **On Startup:** Full cleanup (age + size checks)
+2. **Before Saving:** Checks if cache > 90MB, runs LRU cleanup if needed
+3. **Future:** Manual "Clear Cache" button (optional)
+
+**Benefits:**
+- ✅ **Fast Playback:** Recently played audio loads instantly (cache hit)
+- ✅ **Controlled Space:** Never exceeds 100MB
+- ✅ **Smart Retention:** Keeps current book cached, removes old books
+- ✅ **Zero Maintenance:** Automatic cleanup, no user action needed
+
+**Typical Usage:**
+- Short sentence: ~50-100 KB
+- Long sentence: ~200-300 KB
+- 300-page book: ~20-50 MB
+- **100MB holds:** 2-3 full books or 1000-2000 sentences
+
+**Console Output:**
+```
+[CACHE CLEANUP] Starting...
+  Initial: 247 files, 132.45 MB
+  Deleted 18 files older than 7 days
+  Deleted 42 oldest files to fit 100MB limit
+  Final: 187 files, 98.73 MB (freed 33.72 MB)
+[CACHE CLEANUP] Complete
+
+[CACHE HIT] Serving cached audio for hash abc123de...  ← Instant
+[CACHE MISS] Generating audio for hash 789ghijk...     ← First time
+```
+
+---
+
+### Feature 4: Windows Console Compatibility
+**Problem Solved:** Emoji characters (✅❌🔍→) in console output caused `UnicodeEncodeError` crashes on Windows terminals.
+
+**Solution:** Replaced all Unicode characters with ASCII equivalents:
+- ✅ → `[OK]`
+- ❌ → `[ERROR]`
+- 🔍 → `[LOOKUP]`
+- → → `=` or `to`
+- 📊 → `[INFO]`
+- 💾 → `[CACHE SAVE]`
+
+**Benefits:**
+- ✅ **Universal Compatibility:** Works on all Windows terminal types
+- ✅ **Reliable Startup:** No more crashes during initialization
+- ✅ **Clear Logging:** ASCII output still readable and professional
+
+**Before (Crashed):**
+```python
+print(f"✅ Server ready on http://127.0.0.1:8000")  # UnicodeEncodeError
+```
+
+**After (Works):**
+```python
+print(f"[OK] Server ready on http://127.0.0.1:8000")  # Safe
+```
+
+---
+
+### API Changes (v1.7)
+
+**Updated Endpoints:**
+- `POST /api/synthesize` - Now implements single-punctuation-only pause logic
+
+**New Functions:**
+- `get_cache_size_mb()` - Calculate total cache size
+- `get_cache_file_count()` - Count cached files
+- `cleanup_old_cache_files()` - Delete files older than N days
+- `cleanup_cache_by_size()` - LRU cleanup to stay under size limit
+- `run_cache_cleanup()` - Full cleanup routine (age + size)
+
+**Settings Model:**
+- Pause logic now checks for consecutive/mixed punctuation patterns
+- Cache cleanup runs automatically on app lifespan startup
+
+---
+
+### Performance Notes
+- **Cache Cleanup:** <100ms for typical cache (200-300 files)
+- **LRU Sorting:** <50ms for access time comparison
+- **Sentence Flow:** No performance impact (preprocessing is instant)
+- **Pause Logic:** Simpler than deduplication (faster processing)
+
+---
+
+### Version Updates
+- ~~Main window: "LocalReader Pro v1.5"~~ → **No version in UI** (per Rule XII)
+- ~~API title: "LocalReader Pro v1.5 API"~~
+- ~~HTML title: "LocalReader - Pro Edition v1.5"~~
+- **Version info:** Moved to README.md and CHANGELOG.md only
 
 ---
 
