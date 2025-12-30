@@ -64,6 +64,12 @@
 
 ### 🎙️ TTS & Voice Control
 - **Speed Control:** 0.5x to 3.0x playback speed
+- **Custom Pause Settings (v1.7):**
+  - Granular control over pause durations for each punctuation type
+  - Adjustable sliders for: Comma, Period, Question, Exclamation, Colon, Semicolon, and Newline
+  - Range: 0ms to 2000ms per punctuation mark
+  - Real-time preview during playback
+  - Smart logic: Only applies to single punctuation (ignores "...", "?!", etc.)
 - **Natural Speech Flow (v1.7):**
   - Intelligent line joining prevents mid-sentence stops
   - Smart pause logic ignores consecutive punctuation (e.g., "..." no longer creates 3x delays)
@@ -290,6 +296,36 @@ Perfect for technical terms, names, acronyms, or mispronunciations.
 - `ChatGPT` → `Chat G P T` (spell out)
 - `COVID-19` → `COVID nineteen` (pronounce naturally)
 - `\d{4}` → `year` (RegEx: replace 4-digit numbers with "year")
+
+---
+
+### Custom Pause Settings (v1.7)
+
+Fine-tune the pause duration for each punctuation type to match your reading preference.
+
+1. **Open Settings:** Expand the **"Pause Settings"** section in sidebar
+2. **Adjust Sliders:** Drag each slider to set pause duration (0-2000ms):
+   - **Comma (,)** - Default: 250ms - Brief pause for clauses
+   - **Period (.)** - Default: 600ms - Sentence ending pause
+   - **Question (?)** - Default: 600ms - Question ending pause
+   - **Exclamation (!)** - Default: 600ms - Emphasis pause
+   - **Colon (:)** - Default: 500ms - List/explanation pause
+   - **Semicolon (;)** - Default: 500ms - Compound sentence pause
+   - **Newline** - Default: 800ms - Paragraph break pause
+3. **Test Settings:** Play audio to hear the effect
+4. **Auto-Save:** Settings save automatically
+
+**Smart Behavior (v1.7):**
+- **Single Punctuation Only:** Pauses apply only to isolated marks
+- **Consecutive Ignored:** `"..."` creates NO pause (not 3× period pause)
+- **Mixed Ignored:** `"?!"` creates NO pause (natural speech flow)
+- **Natural Reading:** Mimics human reading rhythm
+
+**Use Cases:**
+- **Fast Reading:** Lower all pauses to 100-300ms
+- **Careful Listening:** Increase period/question to 800-1000ms
+- **Audiobook Style:** Balanced defaults (comma: 250ms, period: 600ms)
+- **No Paragraph Breaks:** Set newline to 0ms for continuous flow
 
 ---
 
