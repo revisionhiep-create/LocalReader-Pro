@@ -9,13 +9,15 @@
 ### 📚 Core Reading
 - **Multi-Format Support:** PDF and EPUB files
 - **8 Premium Voices:** American (Sky, Bella, Nicole, Sarah, Adam, Michael) and British (Isabella, Lewis)
+- **Dual-Engine Architecture:** Choose between Performance (CPU) and Quality (GPU) modes
 - **Fast TTS Engine:** Kokoro-82M (~5x real-time synthesis speed)
 - **Auto-Save Progress:** Resume exactly where you left off
 - **Sentence-Level Control:** Click any sentence to start reading from there
 
 ### 🎙️ Smart TTS Controls
-- **Natural Speech Flow:** Intelligent line joining prevents mid-sentence stops
-- **Custom Pause Settings:** Granular control over pause duration for each punctuation type (0-2000ms)
+- **Voice Settings Drawer:** Floating button for quick access to voice, speed, and filter controls
+- **Natural Speech Flow:** Intelligent line joining prevents mid-sentence stops (newline pause removed)
+- **Custom Pause Settings:** Granular control over pause duration for punctuation (0-2000ms)
 - **Smart Pause Logic:** Only single punctuation creates pauses (ignores "...", "?!", "!!!")
 - **Custom Pronunciation Rules:** Fix mispronunciations with RegEx support
 - **Speed Control:** 0.5x to 3.0x playback speed
@@ -31,11 +33,19 @@
 - **Background Processing:** UI stays responsive during export
 - **On-Demand FFMPEG:** Auto-downloads encoder (~100MB) on first export
 
+### ⚙️ Dual-Engine Architecture (New in v1.9)
+- **Performance Mode (CPU):** Quantized Int8 model (~87MB) for faster processing and lower RAM usage
+- **Quality Mode (GPU):** Standard FP32 model (~309MB) for best audio quality
+- **Flexible:** Download either or both models, switch instantly
+- **Smart Fallback:** Auto-switches if selected model is missing
+- **Optimized:** Multi-threaded CPU processing for low-end devices
+
 ### 🔒 Privacy & Performance
 - **100% Offline:** No internet required after initial setup
 - **Local Storage:** All data stays on your machine
 - **No Telemetry:** Zero tracking or analytics
 - **Fast Performance:** ~5x real-time synthesis, 70% faster sentence highlighting
+- **Adaptive:** Choose the engine that fits your hardware
 
 ---
 
@@ -129,10 +139,18 @@ python3.12 main.py
 
 After launching the application:
 
-1. **Setup Voice Engine:**
+1. **Choose Your Engine Mode (New in v1.9):**
+   - Open **Settings** section in sidebar
+   - Find **"Processing Mode"** dropdown
+   - Choose between:
+     - **High Performance (CPU):** Faster, lower RAM (~87MB model)
+     - **High Quality (GPU):** Best audio quality (~309MB model)
+
+2. **Download Voice Engine:**
    - Click **"Setup Voice Engine"** button in sidebar
-   - Downloads Kokoro-82M model (~309MB, one-time)
+   - Downloads the model matching your selected mode
    - Wait for green status indicator (⚫ → 🟢)
+   - **Tip:** You can download both models and switch anytime!
 
 2. **Upload Your First Book:**
    - Click **"Upload Book (PDF/EPUB)"**
@@ -294,7 +312,7 @@ LocalReader_Pro_v1.8/
 **Additional folders created during use:**
 - `bin/` - FFMPEG binaries (auto-downloaded on first export)
 - `.cache/` - Audio cache (~100MB, auto-managed)
-- `models/` - Kokoro-82M model (~309MB, auto-downloaded)
+- `models/` - TTS engine models (auto-downloaded based on your choice)
 
 ### Storage Requirements
 
@@ -303,13 +321,17 @@ LocalReader_Pro_v1.8/
 | **Installer** | ~24 MB |
 | **App Files** | ~10 MB |
 | **Python Dependencies** | ~2 GB (PyTorch, etc.) |
-| **Kokoro-82M Model** | ~309 MB |
+| **TTS Engine (GPU Mode)** | ~309 MB |
+| **TTS Engine (CPU Mode)** | ~87 MB |
+| **Voice Pack (shared)** | ~30 MB |
 | **FFMPEG** | ~100 MB (optional) |
 | **Audio Cache** | ~100 MB max (auto-managed) |
 | **Per Document Cache** | ~1-5 MB |
 | **Exported MP3** | ~1 MB per minute of audio |
 
-**Total:** ~2.6 GB (without exported audio)
+**Total (GPU Mode):** ~2.6 GB (without exported audio)  
+**Total (CPU Mode):** ~2.4 GB (saves ~220MB)  
+**Total (Both Engines):** ~2.8 GB (maximum flexibility)
 
 ### System Requirements
 
@@ -379,12 +401,35 @@ pip install -r requirements.txt
 ### Runtime Issues
 
 **"Voice Engine Failed to Load"**
-- Check RAM: Ensure ~500 MB free memory
+- Check RAM: Ensure ~500 MB free memory (GPU) or ~250 MB (CPU)
 - Check Internet: First-time download requires connection
+- Try Switching Modes:
+  1. Open Settings → Processing Mode
+  2. Switch to "High Performance (CPU)" if on low-end device
+  3. Or switch to "High Quality (GPU)" if you have strong hardware
 - Re-download Model:
   1. Delete `models/` folder
   2. Restart app
-  3. Click "Setup Voice Engine"
+  3. Select desired mode in Settings
+  4. Click "Setup Voice Engine"
+
+**"Engine Mode Not Switching"**
+- Check if target model is downloaded
+- Status indicator shows: GPU: ✅ | CPU: ❌
+- Download missing model before switching
+- Allow 5-10 seconds for engine reload after switch
+
+**"Which Engine Mode Should I Use?"**
+- **Use CPU Mode if:**
+  - You have <4GB RAM
+  - Laptop/low-end device
+  - You prioritize speed over quality
+  - You want to save ~220MB disk space
+- **Use GPU Mode if:**
+  - You have 8GB+ RAM
+  - Desktop with GPU
+  - You prioritize audio quality
+  - Storage is not a concern
 
 **App Won't Start / "File not found"**
 - Use `launch.vbs` instead of terminal
@@ -482,8 +527,8 @@ pip install -r requirements.txt
 
 ---
 
-**Version:** 1.8  
-**Engine:** Kokoro-82M (ONNX)  
+**Version:** 1.9  
+**Engine:** Kokoro-82M (Dual-Mode: CPU/GPU)  
 **Last Updated:** December 2025  
 **Status:** ✅ Stable Release
 

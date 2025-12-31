@@ -204,6 +204,7 @@ safe_init_json(settings_file, {
     "voice_id": "af_bella",
     "speed": 1.0,
     "header_footer_mode": "off",  # Options: "off", "clean", "dim"
+    "engine_mode": "gpu",  # Options: "gpu" (standard), "cpu" (quantized)
     "pause_settings": {
         "comma": 300,
         "period": 600,
@@ -211,7 +212,7 @@ safe_init_json(settings_file, {
         "exclamation": 600,
         "colon": 400,
         "semicolon": 400,
-        "newline": 800
+        "newline": 0
     }
 })
 
@@ -241,6 +242,7 @@ class AppSettings(BaseModel):
     voice_id: Optional[str] = "af_bella"
     speed: Optional[float] = 1.0
     header_footer_mode: Optional[str] = "off"  # "off", "clean", or "dim"
+    engine_mode: Optional[str] = "gpu"  # "gpu" (standard) or "cpu" (quantized)
     pause_settings: Optional[Dict[str, int]] = {
         "comma": 300,
         "period": 600,
@@ -254,13 +256,13 @@ class AppSettings(BaseModel):
 # Import logic
 try:
     from logic.text_normalizer import apply_custom_pronunciations, inject_pauses
-    from logic.downloader import download_kokoro_model
+    from logic.downloader import download_kokoro_model, check_model_exists, get_available_models
     from logic.dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
     from logic.smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
 except ImportError:
     sys.path.append(str(base_dir / "logic"))
     from text_normalizer import apply_custom_pronunciations, inject_pauses
-    from downloader import download_kokoro_model
+    from downloader import download_kokoro_model, check_model_exists, get_available_models
     from dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
     from smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
 
@@ -272,6 +274,11 @@ ffmpeg_status = {"is_installed": False, "is_downloading": False, "progress": 0, 
 ffmpeg_installer = None
 
 class PatchedKokoro(Kokoro):
+    """
+    Patched version for GPU (FP32) models only.
+    GPU models expect 'input_ids' (int64) but kokoro-onnx provides 'tokens'.
+    CPU (INT8) models work fine with default Kokoro class.
+    """
     def _create_audio(self, phonemes: str, voice: np.ndarray, speed: float):
         phonemes = phonemes[:MAX_PHONEME_LENGTH]
         tokens = np.array(self.tokenizer.tokenize(phonemes), dtype=np.int64)
@@ -281,20 +288,105 @@ class PatchedKokoro(Kokoro):
         audio = self.sess.run(None, inputs)[0]
         return audio, SAMPLE_RATE
 
-def load_engine():
+def load_engine(requested_mode: Optional[str] = None):
+    """
+    Load TTS engine with dual-model support and automatic fallback.
+    
+    Args:
+        requested_mode: "gpu" or "cpu". If None, reads from settings.json
+    """
     global kokoro, system_status
     system_status["is_loading"] = True
-    models_dir = base_dir / "models"
-    model_path = models_dir / "kokoro.onnx"
-    voices_path = models_dir / "voices.bin"
-    if model_path.exists() and voices_path.exists():
+    
+    # Determine requested mode
+    if requested_mode is None:
         try:
-            kokoro = PatchedKokoro(str(model_path), str(voices_path))
-            system_status["last_error"] = None
-        except Exception as e:
-            system_status["last_error"] = str(e)
+            with open(settings_file, "r") as f:
+                settings = json.load(f)
+            requested_mode = settings.get("engine_mode", "gpu")
+        except Exception:
+            requested_mode = "gpu"  # Default fallback
+    
+    models_dir = base_dir / "models"
+    voices_path = models_dir / "voices.bin"
+    
+    # Define model paths
+    gpu_model_path = models_dir / "kokoro.onnx"
+    cpu_model_path = models_dir / "kokoro.int8.onnx"
+    
+    # Select primary and fallback models
+    if requested_mode == "cpu":
+        primary_model = cpu_model_path
+        fallback_model = gpu_model_path
+        primary_label = "CPU (Quantized)"
+        fallback_label = "GPU (Standard)"
     else:
-        system_status["last_error"] = "Models missing"
+        primary_model = gpu_model_path
+        fallback_model = cpu_model_path
+        primary_label = "GPU (Standard)"
+        fallback_label = "CPU (Quantized)"
+    
+    # Check voices first
+    if not voices_path.exists():
+        system_status["last_error"] = "Voice pack missing. Please run setup."
+        system_status["is_loading"] = False
+        return
+    
+    # Try to load primary model
+    model_to_load = None
+    actual_mode = requested_mode
+    
+    if primary_model.exists():
+        model_to_load = primary_model
+        print(f"[ENGINE] Loading {primary_label} model: {primary_model.name}")
+    elif fallback_model.exists():
+        model_to_load = fallback_model
+        actual_mode = "cpu" if requested_mode == "gpu" else "gpu"
+        fallback_msg = f"Requested {primary_label} model not found. Using {fallback_label} model instead."
+        print(f"[ENGINE] {fallback_msg}")
+        system_status["last_error"] = fallback_msg
+    else:
+        system_status["last_error"] = "No TTS models found. Please run setup."
+        system_status["is_loading"] = False
+        return
+    
+    # Load the selected model
+    try:
+        # CRITICAL: Close old model first if switching
+        if kokoro is not None:
+            print(f"[ENGINE] Unloading previous model...")
+            kokoro = None  # Release old model
+        
+        print(f"[ENGINE] Initializing {actual_mode.upper()} model...")
+        
+        # Use PatchedKokoro for GPU (needs input_ids), regular Kokoro for CPU (uses tokens natively)
+        if actual_mode == "gpu":
+            print(f"[ENGINE] Using PatchedKokoro for GPU model compatibility...")
+            kokoro = PatchedKokoro(str(model_to_load), str(voices_path))
+        else:
+            print(f"[ENGINE] Using default Kokoro for CPU model...")
+            kokoro = Kokoro(str(model_to_load), str(voices_path))
+        
+        # DON'T change user's preference when falling back!
+        # Just warn them and keep their selection
+        if actual_mode != requested_mode:
+            fallback_warning = f"Using {actual_mode.upper()} model (your selected {requested_mode.upper()} model not found)"
+            system_status["last_error"] = fallback_warning
+            print(f"[ENGINE WARNING] {fallback_warning}")
+        else:
+            # Clear error only if we loaded the requested model
+            system_status["last_error"] = None
+        
+        print(f"[ENGINE] Successfully loaded {actual_mode.upper()} model")
+        print(f"[ENGINE] Model file: {model_to_load.name}")
+        print(f"[ENGINE] Available voices: {len(kokoro.get_voices())}")
+        
+    except Exception as e:
+        system_status["last_error"] = f"Failed to load TTS engine: {str(e)}"
+        print(f"[ENGINE ERROR] {system_status['last_error']}")
+        import traceback
+        traceback.print_exc()
+    
     system_status["is_loading"] = False
 
 @asynccontextmanager
@@ -563,26 +655,187 @@ async def delete_library_item(doc_id: str):
 # System API
 @app.get("/api/system/status")
 async def get_status():
+    # Get current engine mode from settings
+    try:
+        with open(settings_file, "r") as f:
+            settings = json.load(f)
+        current_engine_mode = settings.get("engine_mode", "gpu")
+    except Exception:
+        current_engine_mode = "gpu"
+    
+    # Check which models are available
+    models_dir = base_dir / "models"
+    available_models = {
+        "gpu": (models_dir / "kokoro.onnx").exists(),
+        "cpu": (models_dir / "kokoro.int8.onnx").exists(),
+        "voices": (models_dir / "voices.bin").exists()
+    }
+    
     return {
         "model_loaded": kokoro is not None,
         "is_loading": system_status["is_loading"],
         "is_downloading": system_status["is_downloading"],
         "last_error": system_status["last_error"],
-        "voices": kokoro.get_voices() if kokoro else []
+        "voices": kokoro.get_voices() if kokoro else [],
+        "engine_mode": current_engine_mode,
+        "available_models": available_models
     }
 
 @app.post("/api/system/setup")
-async def run_setup(background_tasks: BackgroundTasks):
-    if system_status["is_downloading"]: return {"status": "already_running"}
+async def run_setup(background_tasks: BackgroundTasks, model_type: Optional[str] = None):
+    """
+    Download and setup TTS models.
+    Args:
+        model_type: "gpu", "cpu", or None (uses current engine_mode setting)
+    """
+    if system_status["is_downloading"]: 
+        return {"status": "already_running"}
+    
     def setup_task():
         system_status["is_downloading"] = True
+        system_status["last_error"] = None  # Clear previous errors
         try:
-            download_kokoro_model()
-            load_engine()
-        except Exception as e: system_status["last_error"] = str(e)
-        finally: system_status["is_downloading"] = False
+            # Determine which model to download
+            target_model = model_type
+            if target_model is None:
+                try:
+                    with open(settings_file, "r") as f:
+                        settings = json.load(f)
+                    target_model = settings.get("engine_mode", "gpu")
+                except Exception:
+                    target_model = "gpu"
+            
+            # Validate model type
+            if target_model not in ["gpu", "cpu"]:
+                target_model = "gpu"
+            
+            model_name = "Standard (GPU)" if target_model == "gpu" else "Quantized (CPU)"
+            print(f"\n[SETUP] Starting download for {model_name} model...")
+            print(f"[SETUP] Model type: {target_model}")
+            download_kokoro_model(target_model)
+            print(f"[SETUP] Download complete, loading engine...")
+            load_engine(target_model)
+            print(f"[SETUP] Setup complete!\n")
+        except Exception as e: 
+            error_msg = f"Setup failed: {str(e)}"
+            system_status["last_error"] = error_msg
+            print(f"\n[SETUP ERROR] {error_msg}")
+            import traceback
+            traceback.print_exc()
+        finally: 
+            system_status["is_downloading"] = False
+    
     background_tasks.add_task(setup_task)
     return {"status": "started"}
+
+@app.post("/api/system/switch-engine")
+async def switch_engine(background_tasks: BackgroundTasks, target_mode: str):
+    """
+    Switch between GPU and CPU engines.
+    IMPORTANT: This endpoint only switches if the model already exists.
+    It will NEVER trigger a download. Use /api/system/setup for downloads.
+    
+    Args:
+        target_mode: "gpu" or "cpu"
+    """
+    if target_mode not in ["gpu", "cpu"]:
+        raise HTTPException(status_code=400, detail="Invalid engine mode. Use 'gpu' or 'cpu'.")
+    
+    # Check if currently downloading
+    if system_status["is_downloading"]:
+        return {
+            "status": "busy",
+            "message": "Cannot switch while downloading. Please wait for download to complete."
+        }
+    
+    # Check if target model exists
+    models_dir = base_dir / "models"
+    target_model_path = models_dir / ("kokoro.onnx" if target_mode == "gpu" else "kokoro.int8.onnx")
+    
+    if not target_model_path.exists():
+        print(f"[SWITCH] {target_mode.upper()} model not found at {target_model_path}")
+        return {
+            "status": "model_missing",
+            "message": f"{target_mode.upper()} model not downloaded. Please download it first.",
+            "requires_download": True
+        }
+    
+    # Update settings
+    try:
+        with open(settings_file, "r") as f:
+            settings = json.load(f)
+        settings["engine_mode"] = target_mode
+        safe_save_json(settings_file, settings)
+        print(f"[SWITCH] Updated engine_mode to {target_mode} in settings")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update settings: {str(e)}")
+    
+    # Reload engine in background (non-blocking)
+    def reload_task():
+        if system_status["is_loading"]:
+            print(f"[SWITCH] Already loading, skipping reload")
+            return
+        
+        system_status["is_loading"] = True
+        try:
+            print(f"[SWITCH] Reloading engine with {target_mode} model...")
+            load_engine(target_mode)
+        except Exception as e:
+            error_msg = f"Switch failed: {str(e)}"
+            system_status["last_error"] = error_msg
+            print(f"[SWITCH ERROR] {error_msg}")
+        finally:
+            system_status["is_loading"] = False
+    
+    background_tasks.add_task(reload_task)
+    
+    return {
+        "status": "switching",
+        "target_mode": target_mode,
+        "message": f"Switching to {target_mode.upper()} engine..."
+    }
+
+@app.post("/api/system/download-model")
+async def download_specific_model(background_tasks: BackgroundTasks, model_type: str):
+    """
+    Download a specific model without switching to it.
+    Args:
+        model_type: "gpu" or "cpu"
+    """
+    if model_type not in ["gpu", "cpu"]:
+        raise HTTPException(status_code=400, detail="Invalid model type. Use 'gpu' or 'cpu'.")
+    
+    if system_status["is_downloading"]:
+        return {"status": "already_downloading"}
+    
+    # Check if model already exists
+    models_dir = base_dir / "models"
+    model_path = models_dir / ("kokoro.onnx" if model_type == "gpu" else "kokoro.int8.onnx")
+    
+    if model_path.exists():
+        return {
+            "status": "already_exists",
+            "message": f"{model_type.upper()} model already downloaded."
+        }
+    
+    def download_task():
+        system_status["is_downloading"] = True
+        try:
+            print(f"[DOWNLOAD] Fetching {model_type.upper()} model...")
+            download_kokoro_model(model_type)
+        except Exception as e:
+            system_status["last_error"] = f"Download failed: {str(e)}"
+            print(f"[DOWNLOAD ERROR] {e}")
+        finally:
+            system_status["is_downloading"] = False
+    
+    background_tasks.add_task(download_task)
+    
+    return {
+        "status": "started",
+        "model_type": model_type,
+        "message": f"Downloading {model_type.upper()} model..."
+    }
 
 class SynthesisRequest(BaseModel):
     text: str

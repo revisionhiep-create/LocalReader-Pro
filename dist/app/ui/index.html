@@ -311,6 +311,75 @@
             margin-bottom: 8px;
             display: block;
         }
+        
+        /* Voice Settings Drawer */
+        .voice-settings-drawer {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: linear-gradient(to bottom, #18181b, #09090b);
+            border-left: 1px solid #27272a;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+            transition: right 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .voice-settings-drawer.open {
+            right: 0;
+        }
+        
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .drawer-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .voice-settings-button {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            z-index: 998;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            color: #a1a1aa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .voice-settings-button:hover {
+            background: #3f3f46;
+            color: #e4e4e7;
+            border-color: #52525b;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+        
+        .voice-settings-button.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #2563eb;
+        }
     </style>
 </head>
 <body class="min-h-screen selection:bg-blue-500/30 overflow-hidden">
@@ -390,75 +459,23 @@
             </div>
 
             <!-- Settings -->
-            <div class="p-6 border-t border-border bg-black/20 space-y-4 overflow-y-auto custom-scrollbar max-h-[400px]">
-                <!-- Voice Settings -->
-                <div>
-                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Voice Selection</label>
-                    <select id="voiceSelect" class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500">
-                        <option value="af_sky">AF Sky (Female)</option>
-                        <option value="af_bella" selected>AF Bella (Female)</option>
-                        <option value="af_nicole">AF Nicole (Female)</option>
-                        <option value="af_sarah">AF Sarah (Female)</option>
-                        <option value="am_adam">AM Adam (Male)</option>
-                        <option value="am_michael">AM Michael (Male)</option>
-                        <option value="bf_isabella">BF Isabella (British Female)</option>
-                        <option value="bm_lewis">BM Lewis (British Male)</option>
+            <div class="p-6 border-t border-border bg-black/20 space-y-4">
+                <!-- Processing Mode (v1.9 - Dual-Engine) -->
+                <div class="p-3 bg-blue-900/20 border border-blue-800/30 rounded-lg">
+                    <label class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+                        Processing Mode
+                    </label>
+                    <select id="engineMode" class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500 mb-2">
+                        <option value="gpu">High Quality (GPU) - ~309MB</option>
+                        <option value="cpu">High Performance (CPU) - ~87MB</option>
                     </select>
-                </div>
-                
-                <!-- Speed Control -->
-                <div>
-                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Speed (<span id="speedVal">1.00</span>x)</label>
-                    <input type="range" id="speedRange" min="0.5" max="3.0" step="0.05" value="1.00" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
-                </div>
-                
-                <!-- Header/Footer Filter -->
-                <div>
-                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Header/Footer Filter</label>
-                    <select id="headerFooterMode" class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500">
-                        <option value="off">Off</option>
-                        <option value="clean">Clean (Remove)</option>
-                        <option value="dim">Dim (Show Faded)</option>
-                    </select>
-                    <p class="text-[9px] text-zinc-600 mt-1">Automatically hide repeated page headers & footers</p>
-                </div>
-                
-                <!-- Pause Settings Accordion -->
-                <div class="border border-zinc-800 rounded-lg overflow-hidden">
-                    <button id="pauseSettingsToggle" class="w-full flex items-center justify-between p-3 bg-zinc-900/50 hover:bg-zinc-900 transition-colors">
-                        <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Pause Settings</span>
-                        <i data-lucide="chevron-down" id="pauseChevron" class="w-4 h-4 text-zinc-500 transition-transform"></i>
-                    </button>
-                    <div id="pauseSettingsContent" class="hidden bg-zinc-950/50 p-3 space-y-3">
-                        <div>
-                            <label class="text-[9px] text-zinc-500 mb-1 block">Comma Pause (<span id="pauseCommaVal">300</span>ms)</label>
-                            <input type="range" id="pauseComma" min="0" max="1000" step="50" value="300" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-zinc-500 mb-1 block">Period Pause (<span id="pausePeriodVal">600</span>ms)</label>
-                            <input type="range" id="pausePeriod" min="0" max="1500" step="50" value="600" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-zinc-500 mb-1 block">Question Pause (<span id="pauseQuestionVal">600</span>ms)</label>
-                            <input type="range" id="pauseQuestion" min="0" max="1500" step="50" value="600" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-zinc-500 mb-1 block">Exclamation Pause (<span id="pauseExclamationVal">600</span>ms)</label>
-                            <input type="range" id="pauseExclamation" min="0" max="1500" step="50" value="600" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-zinc-500 mb-1 block">Colon Pause (<span id="pauseColonVal">400</span>ms)</label>
-                            <input type="range" id="pauseColon" min="0" max="1500" step="50" value="400" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-zinc-500 mb-1 block">Semicolon Pause (<span id="pauseSemicolonVal">400</span>ms)</label>
-                            <input type="range" id="pauseSemicolon" min="0" max="1500" step="50" value="400" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                        </div>
-                        <div>
-                            <label class="text-[9px] text-zinc-500 mb-1 block">Newline Pause (<span id="pauseNewlineVal">800</span>ms)</label>
-                            <input type="range" id="pauseNewline" min="0" max="2000" step="50" value="800" class="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                        </div>
+                    <div id="modelStatus" class="text-[9px] text-zinc-400 flex items-center gap-2">
+                        <span id="gpuStatus">GPU: <span class="text-zinc-600">?</span></span>
+                        <span class="text-zinc-700">|</span>
+                        <span id="cpuStatus">CPU: <span class="text-zinc-600">?</span></span>
                     </div>
+                    <p class="text-[9px] text-zinc-500 mt-2">GPU: Best quality | CPU: Faster, low RAM</p>
                 </div>
             </div>
         </aside>
@@ -506,6 +523,141 @@
                 <audio id="audioPlayer" class="hidden"></audio>
             </div>
         </main>
+    </div>
+
+    <!-- Voice Settings Button (Floating) -->
+    <button id="voiceSettingsBtn" class="voice-settings-button" title="Voice & Audio Settings">
+        <i data-lucide="audio-lines" class="w-5 h-5"></i>
+    </button>
+
+    <!-- Drawer Overlay -->
+    <div id="drawerOverlay" class="drawer-overlay"></div>
+
+    <!-- Voice Settings Drawer -->
+    <div id="voiceSettingsDrawer" class="voice-settings-drawer">
+        <!-- Drawer Header -->
+        <div class="p-6 border-b border-zinc-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="audio-lines" class="w-5 h-5 text-blue-500"></i>
+                        Voice & Audio
+                    </h2>
+                    <p class="text-xs text-zinc-500 mt-1">Customize your reading experience</p>
+                </div>
+                <button id="closeDrawerBtn" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-zinc-400"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Drawer Content -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+            <!-- Voice Selection -->
+            <div>
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                    <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                    Voice Selection
+                </label>
+                <select id="voiceSelect" class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                    <option value="af_sky">AF Sky (Female)</option>
+                    <option value="af_bella" selected>AF Bella (Female)</option>
+                    <option value="af_nicole">AF Nicole (Female)</option>
+                    <option value="af_sarah">AF Sarah (Female)</option>
+                    <option value="am_adam">AM Adam (Male)</option>
+                    <option value="am_michael">AM Michael (Male)</option>
+                    <option value="bf_isabella">BF Isabella (British Female)</option>
+                    <option value="bm_lewis">BM Lewis (British Male)</option>
+                </select>
+            </div>
+            
+            <!-- Speed Control -->
+            <div>
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center justify-between">
+                    <span class="flex items-center gap-2">
+                        <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+                        Playback Speed
+                    </span>
+                    <span class="text-blue-400 font-mono"><span id="speedVal">1.00</span>x</span>
+                </label>
+                <input type="range" id="speedRange" min="0.5" max="3.0" step="0.05" value="1.00" class="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <div class="flex justify-between text-[9px] text-zinc-600 mt-1">
+                    <span>0.5x</span>
+                    <span>1.0x</span>
+                    <span>2.0x</span>
+                    <span>3.0x</span>
+                </div>
+            </div>
+            
+            <!-- Header/Footer Filter -->
+            <div>
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                    <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                    Header/Footer Filter
+                </label>
+                <select id="headerFooterMode" class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                    <option value="off">Off</option>
+                    <option value="clean">Clean (Remove)</option>
+                    <option value="dim">Dim (Show Faded)</option>
+                </select>
+                <p class="text-[9px] text-zinc-600 mt-2">Automatically hide repeated page headers & footers</p>
+            </div>
+            
+            <!-- Pause Settings -->
+            <div class="border border-zinc-800 rounded-lg overflow-hidden">
+                <button id="pauseSettingsToggle" class="w-full flex items-center justify-between p-4 bg-zinc-900/50 hover:bg-zinc-900 transition-colors">
+                    <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                        Pause Settings
+                    </span>
+                    <i data-lucide="chevron-down" id="pauseChevron" class="w-4 h-4 text-zinc-500 transition-transform"></i>
+                </button>
+                <div id="pauseSettingsContent" class="hidden bg-zinc-950/50 p-4 space-y-4">
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span>Comma Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseCommaVal">300</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseComma" min="0" max="1000" step="50" value="300" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span>Period Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pausePeriodVal">600</span>ms</span>
+                        </label>
+                        <input type="range" id="pausePeriod" min="0" max="1500" step="50" value="600" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span>Question Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseQuestionVal">600</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseQuestion" min="0" max="1500" step="50" value="600" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span>Exclamation Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseExclamationVal">600</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseExclamation" min="0" max="1500" step="50" value="600" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span>Colon Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseColonVal">400</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseColon" min="0" max="1500" step="50" value="400" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span>Semicolon Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseSemicolonVal">400</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseSemicolon" min="0" max="1500" step="50" value="400" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Toast -->
@@ -661,17 +813,19 @@
         let currentDoc = null, currentPages = [], currentPageIndex = 0, currentSentenceIndex = 0, sentences = [], sentenceElements = [], isPlaying = false, rules = [], ignoreList = [];
         let activeAudioURL = null; // Track active audio URL for cleanup
         let headerFooterMode = 'off'; // Track header/footer filter mode
+        let engineMode = 'gpu'; // Track processing mode: "gpu" (standard) or "cpu" (quantized) - v1.9
         let smartStartPage = 0; // Track the smart start page
         let currentSearchQuery = ''; // Track current search query for highlighting
         let searchDebounceTimer = null; // Debounce timer for search
-        let pauseSettings = { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 800 }; // Pause durations in ms
+        let pauseSettings = { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 0 }; // Pause durations in ms
         const API_URL = 'http://127.0.0.1:8000';
 
         const pdfUpload = document.getElementById('pdfUpload'), uploadArea = document.getElementById('uploadArea'), exportArea = document.getElementById('exportArea'),
               libraryPanel = document.getElementById('libraryPanel'), rulesPanel = document.getElementById('rulesPanel'), 
               ignorePanel = document.getElementById('ignorePanel'), rulesList = document.getElementById('rulesList'), ignoreListUI = document.getElementById('ignoreListUI'), 
               tabLibrary = document.getElementById('tabLibrary'), tabRules = document.getElementById('tabRules'), tabIgnore = document.getElementById('tabIgnore'), 
-              textContent = document.getElementById('textContent'), readerContent = document.getElementById('readerContent'), 
+              textContent = document.getElementById('textContent'), readerContent = document.getElementById('readerContent'),
+              engineModeSelect = document.getElementById('engineMode'), gpuStatusEl = document.getElementById('gpuStatus'), cpuStatusEl = document.getElementById('cpuStatus'), 
               scrollContainer = document.querySelector('.content-area'), emptyState = document.getElementById('emptyState'), 
               docTitle = document.getElementById('docTitle'), pageInput = document.getElementById('pageInput'), pageTotal = document.getElementById('pageTotal'), 
               pageNav = document.getElementById('pageNav'), controls = document.getElementById('controls'), playBtn = document.getElementById('playBtn'), 
@@ -704,7 +858,8 @@
               pauseExclamation = document.getElementById('pauseExclamation'), pauseExclamationVal = document.getElementById('pauseExclamationVal'),
               pauseColon = document.getElementById('pauseColon'), pauseColonVal = document.getElementById('pauseColonVal'),
               pauseSemicolon = document.getElementById('pauseSemicolon'), pauseSemicolonVal = document.getElementById('pauseSemicolonVal'),
-              pauseNewline = document.getElementById('pauseNewline'), pauseNewlineVal = document.getElementById('pauseNewlineVal');
+              voiceSettingsBtn = document.getElementById('voiceSettingsBtn'), voiceSettingsDrawer = document.getElementById('voiceSettingsDrawer'),
+              drawerOverlay = document.getElementById('drawerOverlay'), closeDrawerBtn = document.getElementById('closeDrawerBtn');
 
         lucide.createIcons();
 
@@ -777,6 +932,47 @@
             document.documentElement.style.setProperty('--sidebar-width', savedSidebarWidth);
         }
 
+        // ============================================
+        // FEATURE: Voice Settings Drawer
+        // ============================================
+        function openDrawer() {
+            voiceSettingsDrawer.classList.add('open');
+            drawerOverlay.classList.add('active');
+            voiceSettingsBtn.classList.add('active');
+            renderIcons();
+        }
+
+        function closeDrawer() {
+            voiceSettingsDrawer.classList.remove('open');
+            drawerOverlay.classList.remove('active');
+            voiceSettingsBtn.classList.remove('active');
+        }
+
+        // Open drawer on button click
+        voiceSettingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (voiceSettingsDrawer.classList.contains('open')) {
+                closeDrawer();
+            } else {
+                openDrawer();
+            }
+        });
+
+        // Close drawer on close button click
+        closeDrawerBtn.addEventListener('click', () => {
+            closeDrawer();
+        });
+
+        // Close drawer on overlay click
+        drawerOverlay.addEventListener('click', () => {
+            closeDrawer();
+        });
+
+        // Prevent drawer clicks from closing
+        voiceSettingsDrawer.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             if (exportPollInterval) clearInterval(exportPollInterval);
@@ -797,6 +993,7 @@
                 const savedVoice = settings.voice_id;
                 const savedSpeed = settings.speed;
                 headerFooterMode = settings.header_footer_mode || 'off';
+                engineMode = settings.engine_mode || 'gpu'; // v1.9 - default to GPU for backward compatibility
                 pauseSettings = settings.pause_settings || { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 800 };
 
                 // 2. Set speed independently (immediate)
@@ -808,6 +1005,11 @@
                 // 3. Set header/footer mode
                 if (headerFooterModeSelect) {
                     headerFooterModeSelect.value = headerFooterMode;
+                }
+                
+                // 3b. Set engine mode (v1.9)
+                if (engineModeSelect) {
+                    engineModeSelect.value = engineMode;
                 }
                 
                 // 4. Set pause settings
@@ -834,10 +1036,6 @@
                 if (pauseSemicolon) {
                     pauseSemicolon.value = pauseSettings.semicolon || 400;
                     pauseSemicolonVal.textContent = pauseSettings.semicolon || 400;
-                }
-                if (pauseNewline) {
-                    pauseNewline.value = pauseSettings.newline;
-                    pauseNewlineVal.textContent = pauseSettings.newline;
                 }
 
                 // 3. Wait for UI components to be fully ready for voice selection
@@ -884,6 +1082,7 @@
                     voice_id: voiceSelect.value,
                     speed: parseFloat(speedRange.value),
                     header_footer_mode: headerFooterMode,
+                    engine_mode: engineMode, // v1.9 - Dual-engine support
                     pause_settings: pauseSettings
                 };
                 await fetch(`${API_URL}/api/settings`, { 
@@ -911,6 +1110,36 @@
             // Refresh current page to apply new filter
             if (currentDoc && currentPages.length > 0) {
                 await refreshCurrentPage();
+            }
+        };
+        
+        // Engine Mode handler (v1.9 - Dual-Engine)
+        engineModeSelect.onchange = async () => {
+            const newMode = engineModeSelect.value;
+            
+            // IMPORTANT: Only save to settings, don't trigger switch yet!
+            // Switch happens on next app restart or when user clicks "Setup Voice Engine"
+            engineMode = newMode;
+            await saveSettings();
+            
+            console.log(`[Settings] Engine mode changed to: ${newMode.toUpperCase()}`);
+            
+            // Check if model exists (non-blocking check)
+            try {
+                const res = await fetch(`${API_URL}/api/system/status`);
+                const status = await res.json();
+                
+                const modelExists = newMode === 'gpu' ? status.available_models?.gpu : status.available_models?.cpu;
+                
+                if (modelExists) {
+                    // Model exists - can switch immediately
+                    showToast(`${newMode.toUpperCase()} mode selected. Restart app to switch, or click a sentence to load.`);
+                } else {
+                    // Model missing - need to download first
+                    showToast(`${newMode.toUpperCase()} model not downloaded yet. Click "Setup Voice Engine" to download.`);
+                }
+            } catch (err) {
+                console.error("Status check failed:", err);
             }
         };
         
@@ -959,11 +1188,6 @@
         };
         pauseSemicolon.onchange = saveSettings;
         
-        pauseNewline.oninput = (e) => {
-            pauseSettings.newline = parseInt(e.target.value);
-            pauseNewlineVal.textContent = pauseSettings.newline;
-        };
-        pauseNewline.onchange = saveSettings;
 
         let isEngineReady = false;
         let lastSystemState = null;
@@ -974,7 +1198,31 @@
                     const status = await res.json();
                     isEngineReady = status.model_loaded;
                     
-                    const currentState = `${status.is_downloading}-${status.is_loading}-${status.model_loaded}`;
+                    // Update model status indicators (v1.9)
+                    if (status.available_models) {
+                        const gpuAvailable = status.available_models.gpu;
+                        const cpuAvailable = status.available_models.cpu;
+                        gpuStatusEl.innerHTML = `GPU: <span class="${gpuAvailable ? 'text-green-500' : 'text-zinc-600'}">${gpuAvailable ? '✓' : '✗'}</span>`;
+                        cpuStatusEl.innerHTML = `CPU: <span class="${cpuAvailable ? 'text-green-500' : 'text-zinc-600'}">${cpuAvailable ? '✓' : '✗'}</span>`;
+                    }
+                    
+                    // Show error messages if present
+                    if (status.last_error && !status.is_downloading && !status.is_loading) {
+                        const errorMsg = status.last_error;
+                        // Only show new errors (not the same one repeatedly)
+                        if (errorMsg !== window.lastShownError) {
+                            console.error("[Engine Error]", errorMsg);
+                            showToast(`Error: ${errorMsg}`);
+                            window.lastShownError = errorMsg;
+                        }
+                    }
+                    
+                    // Check if CURRENTLY SELECTED model exists (v1.9 fix)
+                    const selectedModelExists = status.engine_mode === 'gpu' 
+                        ? status.available_models?.gpu 
+                        : status.available_models?.cpu;
+                    
+                    const currentState = `${status.is_downloading}-${status.is_loading}-${status.model_loaded}-${selectedModelExists}`;
                     if (currentState !== lastSystemState) {
                         lastSystemState = currentState;
                         if (status.is_downloading) {
@@ -989,13 +1237,17 @@
                             setupArea.style.display = 'none';
                             uploadArea.style.display = 'block';
                         }
-                        else if (status.model_loaded) { 
+                        else if (status.model_loaded && selectedModelExists) { 
+                            // Model is loaded AND it's the one we want
                             engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"; 
                             setupArea.style.display = 'none';
                             uploadArea.style.display = 'block';
                             if (currentDoc) exportArea.style.display = 'block';
+                            // Clear error tracking on success
+                            window.lastShownError = null;
                         }
                         else { 
+                            // Model not loaded OR wrong model selected → Show setup button
                             engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-red-600"; 
                             setupArea.style.display = 'block';
                             uploadArea.style.display = 'none';
@@ -1010,7 +1262,25 @@
             poll();
         }
 
-        setupBtn.onclick = () => fetch(`${API_URL}/api/system/setup`, { method: 'POST' });
+        // Setup button - pass engine mode to backend (v1.9)
+        setupBtn.onclick = async () => {
+            const selectedMode = engineModeSelect ? engineModeSelect.value : 'gpu';
+            console.log(`[Setup] Requesting ${selectedMode.toUpperCase()} model download...`);
+            
+            try {
+                const res = await fetch(`${API_URL}/api/system/setup?model_type=${selectedMode}`, { method: 'POST' });
+                const result = await res.json();
+                
+                if (result.status === 'started') {
+                    showToast(`Downloading ${selectedMode.toUpperCase()} model... Check terminal for progress.`);
+                } else if (result.status === 'already_running') {
+                    showToast('Download already in progress');
+                }
+            } catch (err) {
+                console.error('[Setup Error]', err);
+                showToast(`Setup failed: ${err.message}`);
+            }
+        };
         function showToast(msg) { document.getElementById('toastMsg').textContent = msg; toast.classList.remove('hidden'); setTimeout(() => toast.classList.add('hidden'), 5000); }
 
         // Reusable tab switcher to reduce code duplication
@@ -1554,10 +1824,61 @@
                         stopPlayback();
                     });
                 }
+                
+                // PRE-CACHE next 2 sentences while current one plays (v1.9)
+                preCacheNextSentences();
+                
             } catch (e) { 
                 console.error("Synthesis error:", e);
                 showToast(e.message); 
                 stopPlayback(); 
+            }
+        }
+        
+        // Pre-cache next sentences for seamless playback
+        async function preCacheNextSentences() {
+            const sentencesToPreCache = 2; // Pre-generate next 2 sentences
+            
+            for (let i = 1; i <= sentencesToPreCache; i++) {
+                const nextIndex = currentSentenceIndex + i;
+                
+                // Check if next sentence exists
+                if (nextIndex >= sentences.length) {
+                    // Check if there's a next page
+                    if (currentPageIndex < currentPages.length - 1) {
+                        // We could pre-cache first sentence of next page, but skip for simplicity
+                        break;
+                    } else {
+                        // End of document
+                        break;
+                    }
+                }
+                
+                const nextText = sentences[nextIndex];
+                if (!nextText || typeof nextText !== 'string') continue;
+                
+                const cleanText = stripHTML(nextText);
+                
+                // Fire-and-forget: Pre-generate in background (don't await)
+                fetch(`${API_URL}/api/synthesize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: cleanText,
+                        voice: voiceSelect.value,
+                        speed: parseFloat(speedRange.value),
+                        rules,
+                        ignore_list: ignoreList,
+                        pause_settings: pauseSettings
+                    })
+                }).then(res => {
+                    if (res.ok) {
+                        // Backend will cache it, we don't need the response
+                        return res.blob().then(() => {}); // Consume response
+                    }
+                }).catch(() => {
+                    // Silently fail - pre-caching is optional
+                });
             }
         }
 

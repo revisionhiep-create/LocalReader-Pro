@@ -1,5 +1,230 @@
 # LocalReader Pro - Changelog
 
+## 🚀 v1.9.1 - UI Polish & Production Cleanup (Dec 2025)
+
+### UI Improvements
+
+#### 1. Voice Settings Drawer
+**New Feature:** Floating speaker icon button with slide-out drawer for settings
+
+**UI Changes:**
+- **Voice Settings Button:** New speaker icon (🔊) positioned on the right side of the screen
+- **Sliding Drawer:** Contains Voice Selection, Speed Control, Header/Footer Filter, and Pause Settings
+- **Auto-Close:** Drawer closes when clicking away or clicking the button again
+- **Cleaner Sidebar:** Processing Mode (GPU/CPU) selector remains in main settings
+
+**Benefits:**
+- ✅ **Cleaner UI:** Settings are hidden until needed
+- ✅ **Easy Access:** One-click to open settings drawer
+- ✅ **Better Organization:** Separates voice controls from system settings
+- ✅ **Responsive:** Drawer slides smoothly with animations
+
+#### 2. Newline Pause Removed
+**Change:** Removed newline pause control from UI
+
+**Reason:**
+- Newline pauses were causing unnatural flow in PDF reading
+- Most PDFs have line breaks mid-sentence due to text wrapping
+- Newline pause is now hardcoded to 0ms for optimal reading flow
+
+**Impact:**
+- ✅ **Simpler UI:** One less slider to configure
+- ✅ **Better Default:** Natural reading flow without configuration
+- ✅ **Cleaner Settings:** Focus on punctuation pauses that matter
+
+### Technical Changes
+
+**Frontend (index.html):**
+- Removed newline pause slider from drawer UI
+- Removed DOM references and event listeners for `pauseNewline`
+- Set default `newline` pause to 0ms in `pauseSettings` object
+- Added voice settings drawer with toggle functionality
+- Added click-away listener to auto-close drawer
+- Optimized pre-cache function (removed debug logging for production)
+
+**Backend (server.py):**
+- Updated default `newline` value in `settings.json` initialization to 0ms
+- No other changes (maintains backward compatibility)
+
+### Production Cleanup
+
+**Files Removed (Test/Context Files):**
+- Removed `TEST_CPU_GPU_SWITCH.py` (internal testing)
+- Removed `VERIFY_DUAL_ENGINE.py` (internal testing)
+- Removed `test_dual_engine.py` (internal testing)
+- Removed `CACHE_BEHAVIOR.md` (context documentation)
+- Removed `CACHE_EXPLAINED_SIMPLE.md` (context documentation)
+- Removed `FIXES_APPLIED_FINAL.md` (development notes)
+- Removed `FIXES_APPLIED_UI_BUTTON.md` (development notes)
+- Removed `HOW_TO_RUN_v1.9.md` (development notes)
+- Removed `QUICK_FIX_OPTIONS.md` (development notes)
+- Removed `TEST_RESULTS_V1.9.md` (testing notes)
+- Removed `TESTING_v1.9.md` (testing notes)
+- Removed `UI_IMPROVEMENTS_SUMMARY.md` (development notes)
+- Removed `CODE_REVIEW_v1.9.md` (development notes)
+
+**Files Retained (User Documentation):**
+- ✅ `CHANGELOG.md` (version history)
+- ✅ `README.md` (setup and features)
+- ✅ `INSTALL.txt` (installation guide)
+
+### Code Quality
+
+**Code Review Results:**
+- ✅ No critical issues found
+- ✅ Excellent error handling and logging
+- ✅ Smart cache management (LRU, 100MB limit)
+- ✅ Path anchoring system prevents CWD bugs
+- ✅ Clean dual-engine architecture with fallback
+- ✅ Production-ready console output (no debug spam)
+
+**Dependencies Verified:**
+- ✅ All required packages in `requirements.txt`
+- ✅ Version constraints appropriate for production
+- ✅ No missing or unused dependencies
+
+### Migration from v1.9
+
+**No Breaking Changes:**
+- Existing settings.json files will continue to work
+- Newline pause setting ignored if present (treated as 0ms)
+- All v1.9 features remain functional
+
+---
+
+## 🚀 v1.9 - Dual-Engine Architecture (Dec 2025)
+
+### Major Feature: Choose Your TTS Engine
+
+**Problem Solved:** Single model size (~309MB) was overkill for low-end devices, and users couldn't optimize for their hardware.
+
+**Solution: Dual-Engine Architecture**
+- **Performance Mode (CPU):** Quantized Int8 model (~87MB) - Faster, lower RAM, laptop-friendly
+- **Quality Mode (GPU):** Standard FP32 model (~309MB) - Best audio quality, GPU-accelerated
+
+### New Features
+
+#### 1. Engine Mode Selection
+**User Control:**
+- New "Processing Mode" dropdown in Settings
+- Choose between Performance (CPU) and Quality (GPU) modes
+- Switch engines on-the-fly without restart
+
+**Options:**
+- **High Performance (CPU)**
+  - Quantized Int8 model (~87MB)
+  - Faster processing, lower RAM usage
+  - Optimized for laptops and low-end devices
+  - Uses all CPU cores for multi-threaded synthesis
+  
+- **High Quality (GPU)**
+  - Standard FP32 model (~309MB)
+  - Best audio quality
+  - GPU-accelerated (if available)
+  - Recommended for high-end systems
+
+#### 2. Smart Model Management
+**Intelligent Download System:**
+- Download either or both models on-demand
+- Visual indicators show which models are downloaded (GPU: ✅ | CPU: ❌)
+- Download specific models without switching modes
+- Size estimates and progress indicators
+
+**Automatic Fallback:**
+- If selected model is missing, automatically uses the available one
+- Notifies user via status indicator
+- Updates settings to reflect actual loaded model
+
+#### 3. Optimized Performance
+**CPU Mode Enhancements:**
+- Multi-threaded ONNX Runtime configuration
+- Optimized for `kokoro.int8.onnx` quantized model
+- Lower memory footprint (~200MB vs ~400MB)
+- Faster synthesis on CPUs without GPU
+
+**GPU Mode:**
+- Unchanged from v1.8 (maintains quality)
+- Auto-detects GPU providers (CUDA, DirectML, CoreML)
+- Uses default ONNX Runtime settings for best quality
+
+### Technical Changes
+
+**Backend (server.py):**
+- Added `engine_mode` field to `settings.json` (default: `"gpu"`)
+- Refactored `load_engine()` with dual-model support and fallback logic
+- New endpoints:
+  - `POST /api/system/switch-engine` - Switch between modes
+  - `POST /api/system/download-model?type=cpu|gpu` - Download specific model
+- Updated `GET /api/system/status` to include:
+  - `engine_mode`: Current active mode
+  - `available_models`: Which models are downloaded
+
+**Downloader (logic/downloader.py):**
+- Refactored `download_kokoro_model()` to accept `model_type` parameter
+- Support for two model sources:
+  - GPU: HuggingFace (`onnx-community/Kokoro-82M-v1.0-ONNX`)
+  - CPU: GitHub releases (direct download of `kokoro-v0_19.int8.onnx`)
+- New helper functions:
+  - `check_model_exists(model_type)` - Verify model availability
+  - `get_available_models()` - Return download status for all models
+- Shared `voices.bin` file (compatible with both engines)
+
+**Model Files:**
+| Model Type | File Name | Size | Source |
+|------------|-----------|------|--------|
+| Standard (GPU) | `kokoro.onnx` | ~309MB | HuggingFace |
+| Quantized (CPU) | `kokoro.int8.onnx` | ~87MB | GitHub Releases |
+| Voice Pack | `voices.bin` | ~30MB | GitHub Releases (shared) |
+
+### Benefits
+
+**For Users:**
+- ✅ **Choice:** Pick the model that fits your hardware
+- ✅ **Space Saving:** Only download the model you need (saves ~220MB if using CPU mode)
+- ✅ **Performance:** Faster synthesis on low-end devices with CPU mode
+- ✅ **Quality:** Keep using GPU mode for best audio quality
+- ✅ **Flexibility:** Download both and switch based on task
+
+**For Low-End Devices:**
+- ✅ **Lower RAM:** ~200MB vs ~400MB memory usage
+- ✅ **Faster Processing:** Multi-threaded CPU optimization
+- ✅ **Smaller Download:** 87MB vs 309MB model size
+
+**For High-End Devices:**
+- ✅ **Unchanged Quality:** Same performance as v1.8
+- ✅ **GPU Support:** Auto-detection still works
+- ✅ **Backward Compatible:** Defaults to GPU mode (v1.8 behavior)
+
+### Migration Notes
+
+**For Existing v1.8 Users:**
+- Default mode is `"gpu"` (same behavior as before)
+- No breaking changes
+- Opt-in to CPU mode for better performance on low-end devices
+
+**For New Users:**
+- Setup wizard detects system specs and recommends appropriate mode
+- Low RAM systems (<4GB) default to CPU mode
+- High-end systems default to GPU mode
+
+### Storage Impact
+
+**Before (v1.8):**
+- Required: `kokoro.onnx` (~309MB) + `voices.bin` (~30MB)
+- Total: ~340MB
+
+**After (v1.9 - CPU Mode Only):**
+- Required: `kokoro.int8.onnx` (~87MB) + `voices.bin` (~30MB)
+- Total: ~117MB
+- **Savings: ~220MB** (65% reduction)
+
+**After (v1.9 - Both Modes):**
+- Optional: Both models + voices
+- Total: ~426MB
+- Use case: Power users who switch based on task
+
+---
+
 ## 🐛 v1.8.1 - Critical Bug Fix (Dec 2025)
 
 ### Bug Fix: Variable Scope Error in TTS Synthesis
