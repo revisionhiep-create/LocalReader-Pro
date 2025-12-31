@@ -520,7 +520,6 @@
                         <span id="bookmarkStatus" class="text-[9px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5"><i data-lucide="bookmark" class="w-3 h-3"></i> Auto-Saving</span>
                     </div>
                 </div>
-                <audio id="audioPlayer" class="hidden"></audio>
             </div>
         </main>
     </div>
@@ -811,7 +810,13 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
 
         let currentDoc = null, currentPages = [], currentPageIndex = 0, currentSentenceIndex = 0, sentences = [], sentenceElements = [], isPlaying = false, rules = [], ignoreList = [];
-        let activeAudioURL = null; // Track active audio URL for cleanup
+        
+        // Web Audio API components (v1.9.3 - Zero-latency playback)
+        let audioContext = null;
+        let currentAudioSource = null;
+        const audioBufferCache = new Map(); // Pre-decoded audio cache
+        const MAX_AUDIO_CACHE = 10; // Cache last 10 decoded buffers
+        
         let headerFooterMode = 'off'; // Track header/footer filter mode
         let engineMode = 'gpu'; // Track processing mode: "gpu" (standard) or "cpu" (quantized) - v1.9
         let smartStartPage = 0; // Track the smart start page
@@ -830,7 +835,7 @@
               docTitle = document.getElementById('docTitle'), pageInput = document.getElementById('pageInput'), pageTotal = document.getElementById('pageTotal'), 
               pageNav = document.getElementById('pageNav'), controls = document.getElementById('controls'), playBtn = document.getElementById('playBtn'), 
               playIcon = document.getElementById('playIcon'), currentSentencePreview = document.getElementById('currentSentencePreview'), 
-              audioPlayer = document.getElementById('audioPlayer'), speedRange = document.getElementById('speedRange'), speedVal = document.getElementById('speedVal'), 
+              speedRange = document.getElementById('speedRange'), speedVal = document.getElementById('speedVal'), 
               voiceSelect = document.getElementById('voiceSelect'), addRuleBtn = document.getElementById('addRuleBtn'), setupArea = document.getElementById('setupArea'), 
               setupBtn = document.getElementById('setupBtn'), engineStatusDot = document.getElementById('engineStatusDot'), toast = document.getElementById('toast'),
               exportBtn = document.getElementById('exportBtn'), exportModal = document.getElementById('exportModal'),
@@ -1115,6 +1120,10 @@
                     console.error('[CACHE] Failed to clear recent cache:', err);
                 }
             }
+            
+            // Clear audio buffer cache (voice changed)
+            audioBufferCache.clear();
+            console.log('[WebAudio] Cache cleared due to voice change');
             
             // Save the new voice setting
             saveSettings();
@@ -1796,6 +1805,16 @@
             // Strip HTML before sending to TTS
             const cleanText = stripHTML(text);
             console.log(`Synthesizing sentence ${currentSentenceIndex}: "${cleanText.substring(0, 30)}..."`);
+            
+            // Check if audio is already cached (instant playback)
+            const lookupKey = `${currentSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
+            if (audioBufferCache.has(lookupKey)) {
+                const cachedBuffer = audioBufferCache.get(lookupKey);
+                console.log(`[WebAudio] CACHE HIT - Playing cached buffer instantly`);
+                playAudioBuffer(cachedBuffer);
+                return; // Skip fetch and decode
+            }
+            
             try {
                 const res = await fetch(`${API_URL}/api/synthesize`, { 
                     method: 'POST', 
@@ -1821,34 +1840,25 @@
                     console.warn("Audio blob is suspiciously small.");
                 }
                 
-                // Revoke previous URL to prevent memory leak
-                if (activeAudioURL) {
-                    URL.revokeObjectURL(activeAudioURL);
+                // Initialize AudioContext on first play
+                initAudioContext();
+                
+                // Convert blob to ArrayBuffer and decode
+                const arrayBuffer = await blob.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                // Cache for potential replay (e.g., user jumps back)
+                const cacheKey = `${currentSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
+                audioBufferCache.set(cacheKey, audioBuffer);
+                
+                // Cleanup old cache entries (LRU)
+                if (audioBufferCache.size > MAX_AUDIO_CACHE) {
+                    const firstKey = audioBufferCache.keys().next().value;
+                    audioBufferCache.delete(firstKey);
                 }
                 
-                const url = URL.createObjectURL(blob);
-                activeAudioURL = url;
-                audioPlayer.src = url;
-                
-                audioPlayer.onended = () => { 
-                    URL.revokeObjectURL(url); 
-                    activeAudioURL = null;
-                    currentSentenceIndex++; 
-                    console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
-                    playNext();
-                    
-                    // Pre-cache next sentences for seamless playback
-                    preCacheNextSentences();
-                };
-
-                const playPromise = audioPlayer.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.error("Audio play failed:", error);
-                        showToast("Playback error: " + error.message);
-                        stopPlayback();
-                    });
-                }
+                // Play audio via AudioBufferSourceNode
+                playAudioBuffer(audioBuffer);
                 
             } catch (e) { 
                 console.error("Synthesis error:", e);
@@ -1860,6 +1870,9 @@
         // Pre-cache next sentences for seamless playback
         async function preCacheNextSentences() {
             const sentencesToPreCache = 2; // Pre-generate next 2 sentences
+            
+            // Ensure AudioContext is initialized
+            if (!audioContext) return;
             
             for (let i = 1; i <= sentencesToPreCache; i++) {
                 const nextIndex = currentSentenceIndex + i;
@@ -1881,6 +1894,13 @@
                 
                 const cleanText = stripHTML(nextText);
                 
+                // Before fetch, check cache
+                const cacheKey = `${nextIndex}_${voiceSelect.value}_${speedRange.value}`;
+                if (audioBufferCache.has(cacheKey)) {
+                    console.log(`[PreCache] Already cached: sentence ${nextIndex}`);
+                    continue; // Skip fetch
+                }
+                
                 // Fire-and-forget: Pre-generate in background (don't await)
                 fetch(`${API_URL}/api/synthesize`, {
                     method: 'POST',
@@ -1893,10 +1913,18 @@
                         ignore_list: ignoreList,
                         pause_settings: pauseSettings
                     })
-                }).then(res => {
+                }).then(async res => {
                     if (res.ok) {
-                        // Backend will cache it, we don't need the response
-                        return res.blob().then(() => {}); // Consume response
+                        const blob = await res.blob();
+                        const arrayBuffer = await blob.arrayBuffer();
+                        
+                        // Decode in background (non-blocking)
+                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                        
+                        // Store in frontend cache for instant playback
+                        audioBufferCache.set(cacheKey, audioBuffer);
+                        
+                        console.log(`[PreCache] Decoded sentence ${nextIndex} (${audioBuffer.duration.toFixed(2)}s)`);
                     }
                 }).catch(() => {
                     // Silently fail - pre-caching is optional
@@ -1913,23 +1941,76 @@
             }
         }
 
+        // Initialize Web Audio API context
+        function initAudioContext() {
+            if (!audioContext) {
+                // Create AudioContext on first user interaction (autoplay policy)
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('[WebAudio] AudioContext initialized');
+            }
+            // Resume if suspended (iOS autoplay policy)
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
+        // Play audio using Web Audio API
+        function playAudioBuffer(audioBuffer) {
+            // Stop previous audio if playing
+            if (currentAudioSource) {
+                try {
+                    currentAudioSource.stop();
+                    currentAudioSource.disconnect();
+                } catch (e) {
+                    // Ignore if already stopped
+                }
+            }
+            
+            // Create new source node (one-shot)
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
+            
+            // Handle playback end
+            source.onended = () => {
+                currentAudioSource = null;
+                currentSentenceIndex++;
+                console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
+                playNext();
+                
+                // Pre-cache next sentences
+                preCacheNextSentences();
+            };
+            
+            currentAudioSource = source;
+            source.start(0);
+            console.log(`[WebAudio] Playing buffer: ${audioBuffer.duration.toFixed(2)}s`);
+        }
+
         function stopPlayback() { 
             isPlaying = false; 
             setPlayIcon('play');
-            audioPlayer.pause(); 
-            audioPlayer.src = "";
             
-            // Clean up object URL to prevent memory leak
-            if (activeAudioURL) {
-                URL.revokeObjectURL(activeAudioURL);
-                activeAudioURL = null;
+            // Stop Web Audio API source
+            if (currentAudioSource) {
+                try {
+                    currentAudioSource.stop();
+                    currentAudioSource.disconnect();
+                } catch (e) {
+                    // Ignore if already stopped
+                }
+                currentAudioSource = null;
             }
+            // Keep audioBufferCache (user might resume)
         }
 
         function togglePlayback() {
             if (isPlaying) {
                 stopPlayback(); 
-            } else { 
+            } else {
+                // Initialize AudioContext on first user interaction
+                initAudioContext();
+                
                 isPlaying = true; 
                 setPlayIcon('pause');
                 playNext(); 
@@ -1979,15 +2060,22 @@
 
         async function jumpToSentence(i) { 
             // Stop current audio completely to prevent onended race condition
-            if (audioPlayer && !audioPlayer.paused) {
-                audioPlayer.pause();
-                audioPlayer.currentTime = 0;
-                audioPlayer.src = "";
+            if (currentAudioSource) {
+                try {
+                    currentAudioSource.stop();
+                    currentAudioSource.disconnect();
+                } catch (e) {
+                    // Ignore if already stopped
+                }
+                currentAudioSource = null;
             }
             
             currentSentenceIndex = i; 
             await renderPage(); 
-            if (!isPlaying) { 
+            if (!isPlaying) {
+                // Initialize AudioContext before starting playback
+                initAudioContext();
+                
                 isPlaying = true; 
                 setPlayIcon('pause');
             } 
