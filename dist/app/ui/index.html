@@ -1096,7 +1096,29 @@
             }
         }
 
-        voiceSelect.onchange = saveSettings;
+        voiceSelect.onchange = async () => {
+            // If audio is currently playing, stop it and clear recent cache
+            if (isPlaying) {
+                console.log('[VOICE CHANGE] Stopping playback and clearing recent cache...');
+                stopPlayback();
+                
+                // Clear recent cache files (they're for the old voice)
+                try {
+                    const response = await fetch(`${API_URL}/api/system/clear-recent-cache`, {
+                        method: 'POST'
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log(`[CACHE] Cleared ${result.deleted_count} recent cache files`);
+                    }
+                } catch (err) {
+                    console.error('[CACHE] Failed to clear recent cache:', err);
+                }
+            }
+            
+            // Save the new voice setting
+            saveSettings();
+        };
         speedRange.oninput = (e) => {
             const val = parseFloat(e.target.value).toFixed(2);
             speedVal.textContent = val;
@@ -1809,11 +1831,17 @@
                 audioPlayer.src = url;
                 
                 audioPlayer.onended = () => { 
-                    URL.revokeObjectURL(url); 
-                    activeAudioURL = null;
-                    currentSentenceIndex++; 
-                    console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
-                    playNext(); 
+                    // Only proceed if audio completed naturally (not paused/stopped)
+                    if (!audioPlayer.paused && audioPlayer.currentTime > 0) {
+                        URL.revokeObjectURL(url); 
+                        activeAudioURL = null;
+                        currentSentenceIndex++; 
+                        console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
+                        playNext();
+                        
+                        // Pre-cache next sentences for seamless playback
+                        preCacheNextSentences();
+                    }
                 };
 
                 const playPromise = audioPlayer.play();
@@ -1824,9 +1852,6 @@
                         stopPlayback();
                     });
                 }
-                
-                // PRE-CACHE next 2 sentences while current one plays (v1.9)
-                preCacheNextSentences();
                 
             } catch (e) { 
                 console.error("Synthesis error:", e);
@@ -1956,8 +1981,13 @@
         };
 
         async function jumpToSentence(i) { 
-            audioPlayer.pause();
-            audioPlayer.src = "";
+            // Stop current audio completely to prevent onended race condition
+            if (audioPlayer && !audioPlayer.paused) {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                audioPlayer.src = "";
+            }
+            
             currentSentenceIndex = i; 
             await renderPage(); 
             if (!isPlaying) { 

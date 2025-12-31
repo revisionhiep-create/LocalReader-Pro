@@ -155,6 +155,37 @@ def cleanup_cache_by_size(max_size_mb: float = MAX_CACHE_SIZE_MB) -> int:
     
     return deleted_count
 
+def cleanup_recent_cache_files(max_files: int = 10) -> int:
+    """
+    Delete the most recent cache files (by modification time).
+    Used when switching voices to clear cache for old voice.
+    Returns number of files deleted.
+    """
+    deleted_count = 0
+    
+    try:
+        # Get all cache files with their modification times
+        files_with_time = []
+        for file_path in cache_dir.glob("*.wav"):
+            if file_path.is_file():
+                mod_time = file_path.stat().st_mtime
+                files_with_time.append((file_path, mod_time))
+        
+        # Sort by modification time (newest first)
+        files_with_time.sort(key=lambda x: x[1], reverse=True)
+        
+        # Delete the newest N files (most recent cache)
+        for i, (file_path, _) in enumerate(files_with_time):
+            if i >= max_files:
+                break
+            file_path.unlink()
+            deleted_count += 1
+            
+    except Exception as e:
+        print(f"[WARNING] Error during recent cache cleanup: {e}")
+    
+    return deleted_count
+
 def run_cache_cleanup():
     """
     Run full cache cleanup: age-based and size-based.
@@ -836,6 +867,24 @@ async def download_specific_model(background_tasks: BackgroundTasks, model_type:
         "model_type": model_type,
         "message": f"Downloading {model_type.upper()} model..."
     }
+
+@app.post("/api/system/clear-recent-cache")
+async def clear_recent_cache():
+    """
+    Clear the most recent cache files (last 10).
+    Used when switching voices during playback to clear old voice cache.
+    """
+    try:
+        deleted_count = cleanup_recent_cache_files(max_files=10)
+        print(f"[CACHE] Cleared {deleted_count} recent cache files")
+        return {
+            "status": "success",
+            "deleted_count": deleted_count,
+            "message": f"Cleared {deleted_count} recent cache files"
+        }
+    except Exception as e:
+        print(f"[CACHE ERROR] Failed to clear recent cache: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
 
 class SynthesisRequest(BaseModel):
     text: str
