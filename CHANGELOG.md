@@ -1,5 +1,174 @@
 # LocalReader Pro - Changelog
 
+## 🐛 v1.9.2 - Critical Bug Fixes (Dec 2025)
+
+### Critical Bug Fixes
+
+#### 1. Sentence Jumping Race Condition ⚠️ CRITICAL FIX
+**Problem Solved:** Clicking on a new sentence while audio was playing would skip that sentence and play the next one instead.
+
+**Root Cause:**
+- When user clicked a new sentence, `currentSentenceIndex` updated immediately
+- Old audio's `audioPlayer.onended` event would still fire after the click
+- The `onended` handler would increment `currentSentenceIndex` again
+- Result: User clicks sentence 50, but app plays sentence 51 (skipped!)
+
+**Solution:**
+```javascript
+// Enhanced jumpToSentence() function
+async function jumpToSentence(i) { 
+    // Stop current audio completely to prevent onended race condition
+    if (audioPlayer && !audioPlayer.paused) {
+        audioPlayer.pause();
+        audioPlayer.currentTime = 0;  // Resets playback position
+        audioPlayer.src = "";         // Clears audio source
+    }
+    // ... continues with jumping logic
+}
+```
+
+**Benefits:**
+- ✅ **Correct Playback:** Clicked sentence always plays (no more skipping)
+- ✅ **Reliable Navigation:** Sentence jumps work exactly as expected
+- ✅ **Better UX:** Users can confidently click any sentence
+
+---
+
+#### 2. Pre-Caching Breaking After Sentence Jumps ⚠️ HIGH FIX
+**Problem Solved:** Pre-caching system would cache wrong sentences after user clicked around, causing lag.
+
+**Root Cause:**
+- Pre-cache was called immediately after starting audio playback
+- When user jumped to new sentence, old `onended` would still trigger
+- Pre-cache would fire for sentences user wouldn't hear
+- Example: Jump to sentence 50 → pre-caches 11, 12 instead of 51, 52
+
+**Solution:**
+```javascript
+audioPlayer.onended = () => { 
+    // Only proceed if audio completed naturally (not paused/stopped)
+    if (!audioPlayer.paused && audioPlayer.currentTime > 0) {
+        currentSentenceIndex++; 
+        playNext();
+        preCacheNextSentences(); // ← Moved here (only on natural completion)
+    }
+};
+```
+
+**Optimizations:**
+- Removed redundant pre-cache call after audio starts
+- Pre-cache only runs after audio completes successfully
+- Guards against interrupted/stopped audio triggering cache
+
+**Benefits:**
+- ✅ **Smart Caching:** Only caches sentences user will actually hear
+- ✅ **No Waste:** Prevents caching for abandoned playback
+- ✅ **Smooth Jumps:** Pre-cache resumes correctly after navigation
+- ✅ **Reduced Lag:** Cache hits remain high even with jumping
+
+---
+
+#### 3. Voice Settings Button Stability 🎨 UX FIX
+**Problem Solved:** Voice settings button would shift position on hover, causing accidental misclicks.
+
+**Root Cause:**
+- Button had `transform: scale(1.05)` on hover
+- This overrode the `translateY(-50%)` centering
+- Button would move unexpectedly when mouse hovered over it
+
+**Solution:**
+- Removed `scale()` transform from hover state
+- Button stays in fixed position (no movement)
+- Only colors and shadows animate on hover
+- Maintains perfect vertical centering
+
+**Benefits:**
+- ✅ **Stable Position:** Button never moves or shifts
+- ✅ **Predictable Clicks:** Users can click confidently
+- ✅ **Better UX:** Visual feedback without position changes
+
+---
+
+#### 4. Voice Switching Cache Cleanup 🔊 MEDIUM FIX
+**Problem Solved:** Switching voices during playback would break pre-caching system.
+
+**Root Cause:**
+- Pre-cached audio was generated with old voice
+- Switching to new voice didn't clear that cache
+- System would try to play old voice audio after new voice audio
+- Cache hashing was voice-agnostic, causing mismatches
+
+**Solution:**
+
+**Backend (`server.py`):**
+```python
+def cleanup_recent_cache_files(max_files: int = 10) -> int:
+    """Delete the most recent cache files (by modification time).
+    Used when switching voices to clear cache for old voice."""
+    # Deletes last 10 cache files (most recent)
+
+@app.post("/api/system/clear-recent-cache")
+async def clear_recent_cache():
+    """API endpoint to clear recent cache when voice changes"""
+```
+
+**Frontend (`index.html`):**
+```javascript
+voiceSelect.onchange = async () => {
+    // If audio is currently playing, stop it and clear recent cache
+    if (isPlaying) {
+        stopPlayback();
+        
+        // Clear recent cache files (they're for the old voice)
+        await fetch('/api/system/clear-recent-cache', {method: 'POST'});
+    }
+    saveSettings();
+};
+```
+
+**Benefits:**
+- ✅ **Clean Voice Switch:** Playback stops when voice changes
+- ✅ **Clear Indication:** UI returns to play button (user must resume)
+- ✅ **Fresh Cache:** Old voice cache removed automatically
+- ✅ **Reliable Pre-Cache:** System works correctly with new voice
+- ✅ **Both Modes:** Works for CPU and GPU engines
+
+---
+
+### Technical Changes
+
+**Backend (`server.py`):**
+- Added `cleanup_recent_cache_files(max_files: int = 10)` function
+- Added `POST /api/system/clear-recent-cache` endpoint
+- Works for both CPU and GPU modes
+
+**Frontend (`index.html`):**
+- Enhanced `jumpToSentence()` with proper audio cleanup
+- Improved `audioPlayer.onended` handler with completion guard
+- Voice change handler stops playback and clears cache
+- Optimized pre-cache trigger timing (only on natural completion)
+- Fixed voice settings button hover behavior (removed scale transform)
+
+### Files Changed
+- `dist/app/server.py` - New cache cleanup function and endpoint
+- `dist/app/ui/index.html` - Fixed jump logic, pre-cache timing, button hover
+- `dist/setup.exe` - Fresh build with all bug fixes (20.7 MB)
+- `dist/uninstall.exe` - Rebuilt (9.9 MB)
+
+### Migration from v1.9.1
+
+**No Breaking Changes:**
+- All v1.9.1 features preserved
+- Cache cleanup is automatic (no user action needed)
+- Existing workflows continue to work
+
+**Improvements:**
+- More reliable sentence navigation
+- Smarter cache management
+- Better voice switching experience
+
+---
+
 ## 🚀 v1.9.1 - UI Polish & Production Cleanup (Dec 2025)
 
 ### UI Improvements
