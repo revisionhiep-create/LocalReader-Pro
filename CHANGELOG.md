@@ -1,5 +1,43 @@
 # LocalReader Pro - Changelog
 
+## 🚀 v1.9.4 - Cross-Page Cache Collision Fix (Dec 2025)
+
+### Critical Bug Fix
+
+#### Audio Looping Bug - Wrong Audio Playing Across Pages 🐛 CRITICAL FIX
+**Problem Solved:** After 10-20 sentences, audio would loop back and play incorrect sentences from previous pages, causing text/audio mismatch.
+
+**Root Cause:**
+- Cache keys used `${sentenceIndex}_${voice}_${speed}` format ❌
+- **Missing page number** in cache key caused cross-page collisions
+- When moving from Page 0 → Page 1, sentence indices reset to 0
+- Cache key `"8_af_bella_1.05"` existed from Page 0
+- Playing Page 1's sentence 8 retrieved **Page 0's sentence 8 audio**
+
+**Example Bug:**
+- User sees: **"Fine."** (Page 1, Sentence 8)
+- TTS plays: *"glass like flame"* (Page 0, Sentence 8)
+
+**Solution:**
+```javascript
+// BEFORE (Broken)
+const cacheKey = `${sentenceIdx}_${voice}_${speed}`;
+
+// AFTER (Fixed)
+const cacheKey = `${pageIdx}_${sentenceIdx}_${voice}_${speed}`;
+```
+
+**Impact:**
+- ✅ **Unique Keys:** Each page's audio isolated (e.g., `"0_8_..."` vs `"1_8_..."`)
+- ✅ **No Collisions:** Text always matches audio across all pages
+- ✅ **CPU & GPU:** Fix applies to both processing modes
+- ✅ **Seamless Reading:** No more unexpected audio loops
+
+**Files Changed:**
+- `dist/app/ui/index.html` - Updated 3 cache key locations (playback, storage, pre-cache)
+
+---
+
 ## 🚀 v1.9.3 - Zero-Latency Playback Fix (Dec 2025)
 
 ### Critical Performance Fix

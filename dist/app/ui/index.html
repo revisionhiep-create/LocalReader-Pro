@@ -1807,7 +1807,8 @@
             console.log(`Synthesizing sentence ${currentSentenceIndex}: "${cleanText.substring(0, 30)}..."`);
             
             // Check if audio is already cached (instant playback)
-            const lookupKey = `${currentSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
+            const lookupKey = `${currentPageIndex}_${currentSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
+            
             if (audioBufferCache.has(lookupKey)) {
                 const cachedBuffer = audioBufferCache.get(lookupKey);
                 console.log(`[WebAudio] CACHE HIT - Playing cached buffer instantly`);
@@ -1848,7 +1849,7 @@
                 const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
                 
                 // Cache for potential replay (e.g., user jumps back)
-                const cacheKey = `${currentSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
+                const cacheKey = `${currentPageIndex}_${currentSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
                 audioBufferCache.set(cacheKey, audioBuffer);
                 
                 // Cleanup old cache entries (LRU)
@@ -1895,7 +1896,7 @@
                 const cleanText = stripHTML(nextText);
                 
                 // Before fetch, check cache
-                const cacheKey = `${nextIndex}_${voiceSelect.value}_${speedRange.value}`;
+                const cacheKey = `${currentPageIndex}_${nextIndex}_${voiceSelect.value}_${speedRange.value}`;
                 if (audioBufferCache.has(cacheKey)) {
                     console.log(`[PreCache] Already cached: sentence ${nextIndex}`);
                     continue; // Skip fetch
