@@ -1831,17 +1831,14 @@
                 audioPlayer.src = url;
                 
                 audioPlayer.onended = () => { 
-                    // Only proceed if audio completed naturally (not paused/stopped)
-                    if (!audioPlayer.paused && audioPlayer.currentTime > 0) {
-                        URL.revokeObjectURL(url); 
-                        activeAudioURL = null;
-                        currentSentenceIndex++; 
-                        console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
-                        playNext();
-                        
-                        // Pre-cache next sentences for seamless playback
-                        preCacheNextSentences();
-                    }
+                    URL.revokeObjectURL(url); 
+                    activeAudioURL = null;
+                    currentSentenceIndex++; 
+                    console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
+                    playNext();
+                    
+                    // Pre-cache next sentences for seamless playback
+                    preCacheNextSentences();
                 };
 
                 const playPromise = audioPlayer.play();
