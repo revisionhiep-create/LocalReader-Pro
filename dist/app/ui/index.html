@@ -31,7 +31,7 @@
         /* RESPONSIVE VARIABLES */
         :root {
           /* Sidebar: User-resizable (JavaScript controlled) */
-          --sidebar-width: 320px;
+          --sidebar-width: 336px;  /* Increased by 5% for multilingual text (320px -> 336px) */
           --sidebar-min-width: 200px;
           --sidebar-max-width: 600px;
           
@@ -397,20 +397,23 @@
                         </div>
                         <h1 class="font-bold text-lg tracking-tight text-white">LocalReader</h1>
                     </div>
-                    <div id="engineStatusDot" class="w-2.5 h-2.5 rounded-full bg-zinc-700 shadow-[0_0_8px_rgba(0,0,0,0.5)]" title="Engine Status"></div>
+                    <div class="flex items-center gap-2">
+                        <button id="languageToggle" class="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30 rounded-md text-xs font-bold transition-all" title="Switch Language">EN</button>
+                        <div id="engineStatusDot" class="w-2.5 h-2.5 rounded-full bg-zinc-700 shadow-[0_0_8px_rgba(0,0,0,0.5)]" title="Engine Status"></div>
+                    </div>
                 </div>
                 
                 <div id="setupArea" class="mb-4" style="display: none;">
                     <button id="setupBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20">
                         <i data-lucide="download-cloud" class="w-4 h-4"></i>
-                        <span class="text-sm font-bold">Setup Voice Engine</span>
+                        <span class="text-sm font-bold" data-i18n="sidebar.setup_engine">Setup Voice Engine</span>
                     </button>
                 </div>
 
                 <div id="uploadArea" class="mb-4" style="display: none;">
                     <label class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg cursor-pointer transition-all border border-zinc-700">
                         <i data-lucide="plus" class="w-4 h-4"></i>
-                        <span class="text-sm font-semibold">Upload Book (PDF/EPUB)</span>
+                        <span class="text-sm font-semibold" data-i18n="sidebar.upload">Upload Book (PDF/EPUB)</span>
                         <input type="file" id="pdfUpload" class="hidden" accept=".pdf,.epub">
                     </label>
                 </div>
@@ -418,24 +421,24 @@
                 <div id="exportArea" class="mb-4" style="display: none;">
                     <button id="exportBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all shadow-lg shadow-purple-900/20">
                         <i data-lucide="download" class="w-4 h-4"></i>
-                        <span class="text-sm font-bold">Export Audio (MP3)</span>
+                        <span class="text-sm font-bold" data-i18n="export.title">Export Audio (MP3)</span>
                     </button>
                 </div>
             </div>
 
             <!-- Tabs (Compact with Icons) -->
             <div class="flex border-b border-border">
-                <button id="tabLibrary" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5" title="Library">
+                <button id="tabLibrary" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5" data-i18n-title="tabs.library" title="Library">
                     <i data-lucide="library" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">Library</span>
+                    <span class="hidden sm:inline" data-i18n="tabs.library">Library</span>
                 </button>
-                <button id="tabRules" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300" title="Pronunciation Rules">
+                <button id="tabRules" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300" data-i18n-title="tabs.rules" title="Pronunciation Rules">
                     <i data-lucide="type" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">Rules</span>
+                    <span class="hidden sm:inline" data-i18n="tabs.rules">Rules</span>
                 </button>
-                <button id="tabIgnore" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300" title="Ignore List">
+                <button id="tabIgnore" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300" data-i18n-title="tabs.ignore" title="Ignore List">
                     <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">Ignore</span>
+                    <span class="hidden sm:inline" data-i18n="tabs.ignore">Ignore</span>
                 </button>
             </div>
 
@@ -444,14 +447,14 @@
                 <div id="libraryPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2"></div>
                 <div id="rulesPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden">
                     <div class="flex justify-between items-center">
-                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Pronunciation Rules</h3>
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500" data-i18n="settings.pronunciation_rules">Pronunciation Rules</h3>
                         <button id="addRuleBtn" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
                     </div>
                     <div id="rulesList" class="space-y-3"></div>
                 </div>
                 <div id="ignorePanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden">
                     <div class="flex justify-between items-center">
-                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500">Ignore List</h3>
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500" data-i18n="settings.ignore_list">Ignore List</h3>
                         <button id="addIgnoreBtn" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
                     </div>
                     <div id="ignoreListUI" class="space-y-2"></div>
@@ -482,7 +485,7 @@
 
         <main class="content-area">
             <header class="h-16 border-b border-border flex items-center px-4 lg:px-6 bg-card/80 backdrop-blur-md shrink-0 gap-2">
-                <span id="docTitle" class="font-semibold text-xs lg:text-sm truncate text-zinc-300 italic flex-1 min-w-0 mr-2">No document selected</span>
+                <span id="docTitle" class="font-semibold text-xs lg:text-sm truncate text-zinc-300 italic flex-1 min-w-0 mr-2" data-i18n="reader.no_document">No document selected</span>
                 <button id="searchBtn" class="hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors shrink-0" title="Search in book (Ctrl+F)">
                     <i data-lucide="search" class="w-4 h-4 text-zinc-400 hover:text-blue-400"></i>
                 </button>
@@ -500,8 +503,8 @@
             <div id="readerContent" class="custom-scrollbar">
                 <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center space-y-4">
                     <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-700"><i data-lucide="file-text" class="w-10 h-10"></i></div>
-                    <h2 class="text-xl font-bold text-zinc-300">Welcome to LocalReader</h2>
-                    <p class="text-zinc-500 text-sm max-w-sm">Select a document or upload a new PDF.</p>
+                    <h2 class="text-xl font-bold text-zinc-300" data-i18n="reader.welcome">Welcome to LocalReader</h2>
+                    <p class="text-zinc-500 text-sm max-w-sm" data-i18n="reader.select_prompt">Select a document or upload a new PDF.</p>
                 </div>
                 <div id="textContent" class="chapter-text hidden"></div>
             </div>
@@ -512,7 +515,7 @@
                     <i data-lucide="play" id="playIcon" class="w-6 h-6 fill-current"></i>
                 </button>
                 <div class="flex flex-col flex-1 min-w-0">
-                    <span id="currentSentencePreview" class="player-text">Ready</span>
+                    <span id="currentSentencePreview" class="player-text" data-i18n="status.ready">Ready</span>
                     <div class="flex items-center gap-4 mt-1.5">
                         <button id="skipBack" class="text-zinc-500 hover:text-white p-1"><i data-lucide="skip-back" class="w-5 h-5"></i></button>
                         <button id="skipForward" class="text-zinc-500 hover:text-white p-1"><i data-lucide="skip-forward" class="w-5 h-5"></i></button>
@@ -556,17 +559,27 @@
             <div>
                 <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
                     <i data-lucide="user" class="w-3.5 h-3.5"></i>
-                    Voice Selection
+                    <span data-i18n="settings.voice_selection">Voice Selection</span>
                 </label>
                 <select id="voiceSelect" class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                    <!-- English (American) -->
                     <option value="af_sky">AF Sky (Female)</option>
                     <option value="af_bella" selected>AF Bella (Female)</option>
                     <option value="af_nicole">AF Nicole (Female)</option>
                     <option value="af_sarah">AF Sarah (Female)</option>
                     <option value="am_adam">AM Adam (Male)</option>
                     <option value="am_michael">AM Michael (Male)</option>
+                    <!-- British English -->
+                    <option value="bf_emma">BF Emma (British Female)</option>
                     <option value="bf_isabella">BF Isabella (British Female)</option>
+                    <option value="bm_george">BM George (British Male)</option>
                     <option value="bm_lewis">BM Lewis (British Male)</option>
+                    <!-- French -->
+                    <option value="ff_siwis">FF Siwis (French Female)</option>
+                    <!-- Spanish -->
+                    <option value="ef_dora">EF Dora (Spanish Female)</option>
+                    <option value="em_alex">EM Alex (Spanish Male)</option>
+                    <option value="em_santa">EM Santa (Spanish Male)</option>
                 </select>
             </div>
             
@@ -607,7 +620,7 @@
                 <button id="pauseSettingsToggle" class="w-full flex items-center justify-between p-4 bg-zinc-900/50 hover:bg-zinc-900 transition-colors">
                     <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
                         <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                        Pause Settings
+                        <span data-i18n="settings.pause_settings">Pause Settings</span>
                     </span>
                     <i data-lucide="chevron-down" id="pauseChevron" class="w-4 h-4 text-zinc-500 transition-transform"></i>
                 </button>
@@ -655,6 +668,15 @@
                         <input type="range" id="pauseSemicolon" min="0" max="1500" step="50" value="400" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
                     </div>
                 </div>
+            </div>
+            
+            <!-- Clear Cache Button -->
+            <div>
+                <button id="clearCacheBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-900/20 hover:bg-red-900/30 text-red-400 border border-red-800/30 hover:border-red-700/50 rounded-lg transition-all">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <span class="text-sm font-semibold">Clear Audio Cache</span>
+                </button>
+                <p class="text-[9px] text-zinc-600 mt-2 text-center">Clear cached audio files to free up space</p>
             </div>
         </div>
     </div>
@@ -864,7 +886,99 @@
               pauseColon = document.getElementById('pauseColon'), pauseColonVal = document.getElementById('pauseColonVal'),
               pauseSemicolon = document.getElementById('pauseSemicolon'), pauseSemicolonVal = document.getElementById('pauseSemicolonVal'),
               voiceSettingsBtn = document.getElementById('voiceSettingsBtn'), voiceSettingsDrawer = document.getElementById('voiceSettingsDrawer'),
-              drawerOverlay = document.getElementById('drawerOverlay'), closeDrawerBtn = document.getElementById('closeDrawerBtn');
+              drawerOverlay = document.getElementById('drawerOverlay'), closeDrawerBtn = document.getElementById('closeDrawerBtn'),
+              languageToggle = document.getElementById('languageToggle'),
+              clearCacheBtn = document.getElementById('clearCacheBtn');
+
+        // ========================================================================
+        // MULTILINGUAL SUPPORT (v2.0)
+        // ========================================================================
+        const languages = ['en', 'fr', 'es'];
+        let currentLangIndex = 0;
+        let currentTranslations = {};
+        
+        // Default voice mapping for each language
+        const defaultVoices = {
+            'en': 'af_bella',
+            'fr': 'ff_siwis',
+            'es': 'ef_dora'
+        };
+
+        async function loadLocale(lang) {
+            try {
+                const response = await fetch(`${API_URL}/api/locale/${lang}`);
+                if (!response.ok) throw new Error(`Failed to load locale: ${lang}`);
+                
+                currentTranslations = await response.json();
+                
+                // Update all elements with data-i18n attribute
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const keys = el.dataset.i18n.split('.');
+                    let value = currentTranslations;
+                    keys.forEach(key => value = value?.[key]);
+                    
+                    if (value) {
+                        if (el.hasAttribute('placeholder')) {
+                            el.placeholder = value;
+                        } else {
+                            el.textContent = value;
+                        }
+                    }
+                });
+                
+                // Update title attributes
+                document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                    const keys = el.dataset.i18nTitle.split('.');
+                    let value = currentTranslations;
+                    keys.forEach(key => value = value?.[key]);
+                    if (value) el.title = value;
+                });
+                
+                // Update voice dropdown labels
+                updateVoiceLabels();
+                
+                console.log(`[i18n] Loaded locale: ${lang}`);
+            } catch (error) {
+                console.error(`[i18n] Error loading locale ${lang}:`, error);
+            }
+        }
+
+        function updateVoiceLabels() {
+            if (!currentTranslations.voices) return;
+            
+            const voiceOptions = voiceSelect.querySelectorAll('option');
+            voiceOptions.forEach(option => {
+                const voiceId = option.value;
+                if (currentTranslations.voices[voiceId]) {
+                    option.textContent = currentTranslations.voices[voiceId];
+                }
+            });
+        }
+
+        function switchLanguage(lang) {
+            loadLocale(lang);
+            
+            // Auto-switch voice to match language (optional, but good UX)
+            const defaultVoice = defaultVoices[lang];
+            if (defaultVoice && voiceSelect.value !== defaultVoice) {
+                voiceSelect.value = defaultVoice;
+            }
+            
+            // Save language preference
+            saveSettings();
+        }
+
+        // Language toggle button handler
+        languageToggle.onclick = () => {
+            currentLangIndex = (currentLangIndex + 1) % languages.length;
+            const newLang = languages[currentLangIndex];
+            languageToggle.textContent = newLang.toUpperCase();
+            switchLanguage(newLang);
+        };
+
+        // ========================================================================
+        // END MULTILINGUAL SUPPORT
+        // ========================================================================
 
         lucide.createIcons();
 
@@ -1000,6 +1114,13 @@
                 headerFooterMode = settings.header_footer_mode || 'off';
                 engineMode = settings.engine_mode || 'gpu'; // v1.9 - default to GPU for backward compatibility
                 pauseSettings = settings.pause_settings || { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 800 };
+                
+                // v2.0 - Load saved language
+                const savedLanguage = settings.ui_language || 'en';
+                currentLangIndex = languages.indexOf(savedLanguage);
+                if (currentLangIndex === -1) currentLangIndex = 0; // Fallback to English
+                languageToggle.textContent = languages[currentLangIndex].toUpperCase();
+                await loadLocale(languages[currentLangIndex]);
 
                 // 2. Set speed independently (immediate)
                 if (savedSpeed) {
@@ -1088,6 +1209,7 @@
                     speed: parseFloat(speedRange.value),
                     header_footer_mode: headerFooterMode,
                     engine_mode: engineMode, // v1.9 - Dual-engine support
+                    ui_language: languages[currentLangIndex], // v2.0 - Multilingual support
                     pause_settings: pauseSettings
                 };
                 await fetch(`${API_URL}/api/settings`, { 
@@ -1180,6 +1302,35 @@
             pauseSettingsContent.classList.toggle('hidden');
             pauseChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
             renderIcons();
+        };
+        
+        // Clear Audio Cache Button
+        clearCacheBtn.onclick = async () => {
+            if (!confirm('Clear all cached audio files? This will free up disk space but audio will need to be regenerated.')) {
+                return;
+            }
+            
+            try {
+                clearCacheBtn.disabled = true;
+                clearCacheBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span class="text-sm font-semibold">Clearing...</span>';
+                renderIcons();
+                
+                const response = await fetch(`${API_URL}/api/system/clear-cache`, { method: 'POST' });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showToast(`✓ Cache cleared! Freed ${result.freed_mb?.toFixed(1) || 0} MB (${result.files_deleted || 0} files)`);
+                } else {
+                    showToast('Failed to clear cache');
+                }
+            } catch (err) {
+                console.error('Clear cache error:', err);
+                showToast('Error clearing cache');
+            } finally {
+                clearCacheBtn.disabled = false;
+                clearCacheBtn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i><span class="text-sm font-semibold">Clear Audio Cache</span>';
+                renderIcons();
+            }
         };
         
         // Pause Settings Handlers

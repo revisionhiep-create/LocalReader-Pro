@@ -1,0 +1,128 @@
+{
+  "app": {
+    "title": "LocalReader Pro",
+    "welcome": "Bienvenue sur LocalReader Pro"
+  },
+  "sidebar": {
+    "library": "Bibliothèque",
+    "upload": "Télécharger Livre (PDF/EPUB)",
+    "export": "Exporter Audio (MP3)",
+    "settings": "Paramètres",
+    "setup_engine": "Configurer le Moteur Vocal",
+    "drag_pdf": "Glissez un PDF ici ou cliquez pour télécharger",
+    "empty_library": "La bibliothèque est vide. Téléchargez un PDF pour commencer.",
+    "pages": "pages",
+    "last_read": "Dernière lecture"
+  },
+  "reader": {
+    "no_document": "Aucun document sélectionné",
+    "welcome": "Bienvenue sur LocalReader",
+    "select_prompt": "Sélectionnez un document ou téléchargez un nouveau PDF.",
+    "select_book": "Sélectionnez un livre de votre bibliothèque pour commencer à lire",
+    "page": "Page",
+    "of": "sur",
+    "search_placeholder": "Rechercher dans le livre...",
+    "search_results": "résultats",
+    "searching": "Recherche en cours...",
+    "no_results": "Aucun résultat trouvé",
+    "jump_to_page": "Aller à la page"
+  },
+  "player": {
+    "play": "Lecture",
+    "pause": "Pause",
+    "previous": "Phrase Précédente",
+    "next": "Phrase Suivante",
+    "speed": "Vitesse",
+    "generating": "Génération de l'audio..."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "language": "Langue",
+    "voice_selection": "Sélection de la Voix",
+    "speed_control": "Contrôle de la Vitesse",
+    "header_footer": "Mode En-tête et Pied de Page",
+    "header_footer_off": "Tout Afficher",
+    "header_footer_clean": "Masquer",
+    "header_footer_dim": "Atténuer",
+    "header_footer_desc": "Masquer automatiquement les en-têtes et pieds de page répétés",
+    "pause_settings": "Paramètres de Pause",
+    "comma_pause": "Pause Virgule",
+    "period_pause": "Pause Point",
+    "question_pause": "Pause Point d'Interrogation",
+    "exclamation_pause": "Pause Point d'Exclamation",
+    "colon_pause": "Pause Deux-Points",
+    "semicolon_pause": "Pause Point-Virgule",
+    "newline_pause": "Pause Nouvelle Ligne",
+    "pronunciation_rules": "Règles de Prononciation",
+    "add_rule": "Ajouter une Règle",
+    "original": "Original",
+    "replacement": "Remplacement",
+    "match_case": "Respecter la casse",
+    "word_boundary": "Mots entiers uniquement",
+    "ignore_list": "Liste d'Ignorance",
+    "ignore_desc": "Mots à ignorer pendant la génération audio",
+    "add_word": "Ajouter un Mot"
+  },
+  "export": {
+    "title": "Exporter Audio",
+    "select_book": "Sélectionner un Livre",
+    "select_voice": "Sélectionner une Voix",
+    "start_export": "Démarrer l'Exportation",
+    "cancel": "Annuler",
+    "progress": "Progression",
+    "completed": "Exportation Terminée !",
+    "download": "Télécharger MP3",
+    "open_folder": "Ouvrir le Dossier",
+    "error": "Erreur d'Exportation",
+    "close": "Fermer"
+  },
+  "setup": {
+    "title": "Configuration Requise",
+    "model_missing": "Modèle TTS Introuvable",
+    "download_model": "Télécharger le Modèle",
+    "downloading": "Téléchargement...",
+    "ffmpeg_required": "FFMPEG Requis",
+    "ffmpeg_desc": "FFMPEG est requis pour l'export audio (conversion MP3)",
+    "install_ffmpeg": "Installer FFMPEG",
+    "installing": "Installation..."
+  },
+  "status": {
+    "loading": "Chargement...",
+    "ready": "Prêt",
+    "error": "Erreur",
+    "success": "Succès",
+    "processing": "Traitement..."
+  },
+  "voices": {
+    "af_sky": "AF Sky (Féminin)",
+    "af_bella": "AF Bella (Féminin)",
+    "af_nicole": "AF Nicole (Féminin)",
+    "af_sarah": "AF Sarah (Féminin)",
+    "am_adam": "AM Adam (Masculin)",
+    "am_michael": "AM Michael (Masculin)",
+    "bf_emma": "BF Emma (Britannique Féminin)",
+    "bf_isabella": "BF Isabella (Britannique Féminin)",
+    "bm_george": "BM George (Britannique Masculin)",
+    "bm_lewis": "BM Lewis (Britannique Masculin)",
+    "ff_siwis": "FF Siwis (Français Féminin)",
+    "jf_alpha": "JF Alpha (Japonais Féminin)",
+    "jf_gongitsune": "JF Gongitsune (Japonais Féminin)",
+    "jf_nezumi": "JF Nezumi (Japonais Féminin)",
+    "jf_tebukuro": "JF Tebukuro (Japonais Féminin)",
+    "ef_dora": "EF Dora (Espagnol Féminin)",
+    "em_alex": "EM Alex (Espagnol Masculin)",
+    "em_santa": "EM Santa (Espagnol Masculin)"
+  },
+  "languages": {
+    "en": "English",
+    "fr": "Français",
+    "ja": "日本語",
+    "es": "Español"
+  },
+  "tabs": {
+    "library": "BIBLIOTHÈQUE",
+    "rules": "RÈGLES",
+    "ignore": "IGNORER"
+  }
+}
+

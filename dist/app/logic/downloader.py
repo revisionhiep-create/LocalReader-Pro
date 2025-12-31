@@ -21,9 +21,10 @@ def download_kokoro_model(model_type: Literal["gpu", "cpu"] = "gpu") -> None:
 
     # Determine model configuration
     if model_type == "cpu":
-        model_url = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/kokoro-v0_19.int8.onnx"
+        # v2.0: Use v1.0 quantized model for multilingual support (FR/ES/JP)
+        model_url = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.int8.onnx"
         model_dest = os.path.join(target_dir, "kokoro.int8.onnx")
-        model_label = "Quantized CPU Model (Int8)"
+        model_label = "Quantized CPU Model (Int8 - Multilingual)"
         model_size = "~87MB"
     else:  # "gpu"
         model_repo = "onnx-community/Kokoro-82M-v1.0-ONNX"
@@ -79,7 +80,8 @@ def download_kokoro_model(model_type: Literal["gpu", "cpu"] = "gpu") -> None:
         print(f"{model_label} already exists.")
 
     # Download Voices (Shared resource - only download if missing)
-    voices_url = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files/voices.bin"
+    # MULTILINGUAL MODEL: voices-v1.0.bin (~30MB with FR/ES/JP support)
+    voices_url = "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin"
     voices_dest = os.path.join(target_dir, "voices.bin")
     
     if not os.path.exists(voices_dest):

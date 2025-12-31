@@ -236,6 +236,7 @@ safe_init_json(settings_file, {
     "speed": 1.0,
     "header_footer_mode": "off",  # Options: "off", "clean", "dim"
     "engine_mode": "gpu",  # Options: "gpu" (standard), "cpu" (quantized)
+    "ui_language": "en",  # Options: "en", "fr", "es"
     "pause_settings": {
         "comma": 300,
         "period": 600,
@@ -274,6 +275,7 @@ class AppSettings(BaseModel):
     speed: Optional[float] = 1.0
     header_footer_mode: Optional[str] = "off"  # "off", "clean", or "dim"
     engine_mode: Optional[str] = "gpu"  # "gpu" (standard) or "cpu" (quantized)
+    ui_language: Optional[str] = "en"  # "en", "fr", or "es"
     pause_settings: Optional[Dict[str, int]] = {
         "comma": 300,
         "period": 600,
@@ -423,6 +425,25 @@ def load_engine(requested_mode: Optional[str] = None):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global ffmpeg_status
+    
+    # Validate voice model on startup
+    print("[STARTUP] Validating TTS models...")
+    voices_path = get_app_anchored_path("app/models/voices.bin")
+    
+    if not voices_path.exists():
+        print("[WARNING] voices.bin not found - multilingual voices unavailable")
+        print("          Run 'Setup Voice Engine' to download the model")
+    else:
+        file_size_mb = voices_path.stat().st_size / (1024 * 1024)
+        print(f"[OK] Voice model loaded: {file_size_mb:.1f} MB")
+        
+        if file_size_mb < 25:
+            print("[WARNING] Legacy voice model detected (English-only, ~5MB)")
+            print("          For French/Spanish support, download multilingual model:")
+            print("          https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin")
+        else:
+            print("[OK] Multilingual voice model detected (26 voices: EN/FR/ES/JP/GB)")
+    
     threading.Thread(target=load_engine, daemon=True).start()
     # Check FFMPEG on startup
     installer = FFMPEGInstaller()
@@ -461,6 +482,61 @@ def safe_save_json(path: Path, data: Any):
 async def save_settings(settings: AppSettings):
     safe_save_json(settings_file, settings.model_dump())
     return {"status": "ok"}
+
+# Locale API (v2.0 - Multilingual Support)
+@app.get("/api/locale/{lang}")
+async def get_locale(lang: str):
+    """Serve translation JSON for specified language (en, fr, es)"""
+    if lang not in ["en", "fr", "es"]:
+        raise HTTPException(status_code=400, detail=f"Unsupported language: {lang}")
+    
+    locale_path = base_dir / "locales" / f"{lang}.json"
+    
+    if not locale_path.exists():
+        raise HTTPException(status_code=404, detail=f"Translation file not found: {lang}.json")
+    
+    with open(locale_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+@app.get("/api/voices/available")
+async def get_available_voices():
+    """Return list of available voice IDs based on loaded voice model"""
+    voices_path = get_app_anchored_path("app/models/voices.bin")
+    
+    if not voices_path.exists():
+        return {
+            "model": "none",
+            "voices": [],
+            "size_mb": 0
+        }
+    
+    # Check file size to determine model type
+    file_size_mb = voices_path.stat().st_size / (1024 * 1024)
+    
+    if file_size_mb > 25:  # Multilingual model (~30MB)
+        return {
+            "model": "multilingual",
+            "size_mb": round(file_size_mb, 1),
+            "voices": [
+                # English (American)
+                "af_sky", "af_bella", "af_nicole", "af_sarah",
+                "am_adam", "am_michael",
+                # British English
+                "bf_emma", "bf_isabella", "bm_george", "bm_lewis",
+                # French
+                "ff_siwis",
+                # Spanish
+                "ef_dora", "em_alex", "em_santa",
+                # Japanese
+                "jf_alpha", "jf_gongitsune", "jf_nezumi", "jf_tebukuro"
+            ]
+        }
+    else:  # Legacy English-only model (~5MB)
+        return {
+            "model": "english-only",
+            "size_mb": round(file_size_mb, 1),
+            "voices": ["af_sky", "af_bella", "af_nicole", "af_sarah", "am_adam", "am_michael"]
+        }
 
 # Library API
 @app.post("/api/convert/epub")
@@ -886,6 +962,43 @@ async def clear_recent_cache():
         print(f"[CACHE ERROR] Failed to clear recent cache: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
 
+@app.post("/api/system/clear-cache")
+async def clear_all_cache():
+    """
+    Clear ALL cached audio files.
+    Used by the "Clear Audio Cache" button in Voice Settings.
+    Returns the number of files deleted and space freed.
+    """
+    try:
+        initial_count = get_cache_file_count()
+        initial_size_mb = get_cache_size_mb()
+        
+        print(f"[CACHE] Clearing all cache files...")
+        print(f"  Initial: {initial_count} files, {initial_size_mb:.2f} MB")
+        
+        # Delete all .wav files in cache directory
+        deleted_count = 0
+        for file_path in cache_dir.glob("*.wav"):
+            if file_path.is_file():
+                file_path.unlink()
+                deleted_count += 1
+        
+        # All files deleted - freed space equals initial size
+        freed_mb = initial_size_mb
+        
+        print(f"  Final: {deleted_count} files deleted, {freed_mb:.2f} MB freed")
+        print(f"[CACHE] Clear complete")
+        
+        return {
+            "status": "success",
+            "files_deleted": deleted_count,
+            "freed_mb": round(freed_mb, 2),
+            "message": f"Cleared {deleted_count} cache files, freed {freed_mb:.1f} MB"
+        }
+    except Exception as e:
+        print(f"[CACHE ERROR] Failed to clear cache: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
+
 class SynthesisRequest(BaseModel):
     text: str
     voice: str = "af_sky"
@@ -902,6 +1015,31 @@ class SynthesisRequest(BaseModel):
         "newline": 800
     }
 
+def get_language_from_voice(voice: str) -> str:
+    """
+    Detect language from voice ID prefix.
+    Returns appropriate language code for Kokoro TTS.
+    
+    Voice prefix mappings:
+    - af_, am_ = American English (en-us)
+    - bf_, bm_ = British English (en-gb)
+    - ff_, fm_ = French (fr-fr)
+    - jf_, jm_ = Japanese (ja)
+    - ef_, em_ = Spanish (es)
+    """
+    if voice.startswith(('af_', 'am_')):
+        return 'en-us'
+    elif voice.startswith(('bf_', 'bm_')):
+        return 'en-gb'
+    elif voice.startswith(('ff_', 'fm_')):
+        return 'fr-fr'
+    elif voice.startswith(('jf_', 'jm_')):
+        return 'ja'
+    elif voice.startswith(('ef_', 'em_')):
+        return 'es'
+    else:
+        return 'en-us'  # Default fallback
+
 def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: Dict[str, int]) -> tuple:
     """
     Synthesize text with custom pauses using audio stitching.
@@ -910,8 +1048,10 @@ def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: 
     
     Returns: (audio_samples, sample_rate)
     """
+    lang = get_language_from_voice(voice)
     print(f"\n{'='*60}")
     print(f"[PAUSE LOGIC] Processing: '{text[:100]}{'...' if len(text) > 100 else ''}'")
+    print(f"[LANG] Detected language: {lang} from voice: {voice}")
     print(f"{'='*60}")
     
     # NEW APPROACH: Split by punctuation but capture sequences (not individual chars)
@@ -977,7 +1117,7 @@ def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: 
             # Generate audio for text segment
             if re.search(r'[a-zA-Z0-9]', segment):
                 try:
-                    samples, _ = kokoro.create(segment, voice=voice, speed=speed, lang="en-us")
+                    samples, _ = kokoro.create(segment, voice=voice, speed=speed, lang=lang)
                     audio_segments.append(samples.flatten())
                     word_count = len(segment.split())
                     print(f"  [{i}] AUDIO: '{segment[:40]}{'...' if len(segment) > 40 else ''}' ({word_count} words)")
@@ -1004,10 +1144,14 @@ def generate_cache_key(text: str, voice: str, speed: float, pause_settings: Dict
     Generate MD5 hash for caching based on all synthesis parameters.
     If ANY parameter changes, the hash MUST change to force re-generation.
     """
+    # Detect language from voice to include in cache key (v2.0 multilingual fix)
+    lang = get_language_from_voice(voice)
+    
     # Create a deterministic string from all parameters
     cache_data = {
         "text": text,
         "voice": voice,
+        "language": lang,  # Include language in cache key
         "speed": speed,
         "pause_settings": pause_settings,
         "rules": [str(r) for r in rules],  # Convert to strings for hashing
@@ -1083,8 +1227,10 @@ async def synthesize(request: SynthesisRequest):
                 samples, sample_rate = synthesize_with_pauses(text, selected_voice, float(request.speed or 1.0), pause_settings)
             else:
                 # Use standard synthesis (faster for simple text)
+                lang = get_language_from_voice(selected_voice)
                 print(f"  [MODE] Using standard synthesis (no punctuation or no pause settings)")
-                samples, sample_rate = kokoro.create(text, voice=selected_voice, speed=float(request.speed or 1.0), lang="en-us")
+                print(f"  [LANG] Detected language: {lang} from voice: {selected_voice}")
+                samples, sample_rate = kokoro.create(text, voice=selected_voice, speed=float(request.speed or 1.0), lang=lang)
         
         # Check cache size before saving (cleanup if needed)
         current_cache_size = get_cache_size_mb()
@@ -1228,12 +1374,13 @@ async def export_audio(request: ExportRequest, background_tasks: BackgroundTasks
                     # Then apply pronunciation rules
                     processed_text = apply_custom_pronunciations(filtered_paragraph, rules_data, request.ignore_list)
                     
-                    # Generate audio
+                    # Generate audio with language detection
+                    lang = get_language_from_voice(request.voice)
                     samples, sample_rate = kokoro.create(
                         processed_text,
                         voice=request.voice,
                         speed=float(request.speed),
-                        lang="en-us"
+                        lang=lang
                     )
                     
                     # Convert to AudioSegment

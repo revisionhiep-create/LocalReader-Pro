@@ -1,5 +1,193 @@
 # LocalReader Pro - Changelog
 
+## 🌍 v2.0 - Multilingual Expansion (Dec 2025)
+
+### Major Feature: Full Multilingual Support
+
+**New Feature:** LocalReader Pro now supports **3 languages** with full UI translation and native voice pronunciation!
+
+### What's New
+
+#### 1. Multilingual User Interface
+**One-Click Language Toggle:**
+- New language button in sidebar (top-right)
+- Cycle through: **English** → **French (Français)** → **Spanish (Español)**
+- **Instant Translation:** All UI elements update in real-time
+- **Persistent:** Language preference saved across sessions
+
+**Fully Translated UI:**
+- ✅ All buttons, labels, and menus
+- ✅ Settings panel
+- ✅ Voice dropdown labels
+- ✅ Export and setup dialogs
+- ✅ Status messages
+
+**Implementation:**
+- JSON-based translation system (`app/locales/`)
+- `data-i18n` attribute system for dynamic updates
+- No page reload required
+
+#### 2. Multilingual Voice Support
+**New Voices Added:**
+- 🇫🇷 **French:** FF Siwis (Female)
+- 🇪🇸 **Spanish:** EF Dora (Female), EM Alex (Male), EM Santa (Male)
+- 🇬🇧 **British English:** BF Emma, BM George (added to dropdown)
+
+**Total Voices:** **17** (previously 8)
+
+**Language-Aware TTS:**
+- Automatic language detection from voice ID
+- Correct phoneme mapping for each language
+- Spanish voices speak Spanish (not English with Spanish voice!)
+- French voices speak French pronunciation
+- Separate codes for US English (`en-us`) vs British (`en-gb`)
+
+**Technical Implementation:**
+```python
+def get_language_from_voice(voice: str) -> str:
+    # Maps voice prefixes to Kokoro language codes
+    # ef_/em_ → 'es' (Spanish)
+    # ff_/fm_ → 'fr-fr' (French)
+    # af_/am_ → 'en-us' (American)
+    # bf_/bm_ → 'en-gb' (British)
+```
+
+#### 3. Multilingual Model Upgrade
+**Voices Model:**
+- **Old:** `voices.bin` (~5MB, English-only, 11 voices)
+- **New:** `voices-v1.0.bin` (~30MB, Multilingual, 26 voices)
+- **Download:** Auto-updates via "Setup Voice Engine" button
+
+**CPU Model Upgrade:**
+- **Old:** `kokoro-v0_19.int8.onnx` (English-only)
+- **New:** `kokoro-v1.0.int8.onnx` (Multilingual)
+- Both CPU and GPU models now support French/Spanish/Japanese
+
+**Startup Validation:**
+- Server checks `voices.bin` file size on startup
+- Warns if legacy (<25MB) English-only model detected
+- Console displays: "Multilingual voice model detected (26 voices: EN/FR/ES/JP/GB)"
+
+#### 4. UI/UX Improvements
+**Wider Sidebar:**
+- Increased from 320px → 336px (+5%)
+- Prevents text overflow in French/Spanish translations
+- Maintains responsive resizing (drag handle)
+
+**Clear Cache Button:**
+- New button in Voice Settings drawer (below Pause Settings)
+- Red-themed for visibility
+- Shows confirmation dialog before clearing
+- Displays freed space: "✓ Cache cleared! Freed 12.3 MB (45 files)"
+- API endpoint: `POST /api/system/clear-cache`
+
+**Auto-Voice Switching:**
+- Selecting French UI → Auto-selects French voice (FF Siwis)
+- Selecting Spanish UI → Auto-selects Spanish voice (EF Dora)
+- Improves UX by matching language with appropriate voice
+
+#### 5. Bug Fixes
+**Critical Fix: Cache Language Isolation**
+- **Problem:** Old cached audio (English pronunciation) was served for Spanish/French voices
+- **Solution:** Cache key now includes `language` parameter
+- Prevents stale cache from serving wrong pronunciation
+
+**Cache Optimization:**
+- Removed redundant `get_cache_size_mb()` call after deletion
+- More accurate freed space reporting
+
+### Technical Changes
+
+**Backend (`server.py`):**
+- Added `ui_language` field to `AppSettings` model
+- Added `GET /api/locale/{lang}` - Serve translation JSON
+- Added `GET /api/voices/available` - Detect multilingual model
+- Added `POST /api/system/clear-cache` - Clear all cached audio
+- Added `get_language_from_voice()` - Map voice IDs to language codes
+- Updated all `kokoro.create()` calls to include `lang` parameter
+- Updated cache key generation to include language
+- Startup validation checks `voices.bin` file size
+
+**Downloader (`logic/downloader.py`):**
+- **Voices URL:** Updated to `model-files-v1.0/voices-v1.0.bin` (~30MB)
+- **CPU Model URL:** Updated to `model-files-v1.0/kokoro-v1.0.int8.onnx` (multilingual)
+
+**Frontend (`ui/index.html`):**
+- Added language toggle button (EN/FR/ES)
+- Added `data-i18n` attributes to all UI text elements
+- Implemented `loadLocale()` function for dynamic translation
+- Added voice label translation system
+- Added clear cache button and handler
+- Updated sidebar width CSS variable (320px → 336px)
+- Added 10 new voice options to dropdown (removed 4 Japanese)
+
+**Localization Files:**
+- Created `app/locales/en.json` (English, 127 lines)
+- Created `app/locales/fr.json` (French, 127 lines)
+- Created `app/locales/es.json` (Spanish, 127 lines)
+
+### Migration from v1.9
+
+**Automatic Upgrades:**
+- Settings file auto-adds `ui_language: "en"` field
+- Existing users default to English (no breaking changes)
+- Voice preferences preserved
+
+**Action Required:**
+1. **Re-download Voice Model:**
+   - Click "Setup Voice Engine" to get multilingual voices
+   - Old 5MB model will be replaced with 30MB multilingual model
+   - Progress shown in UI
+
+2. **Update CPU Model (if using CPU mode):**
+   - Switch to CPU mode in settings
+   - Click "Setup Voice Engine" to download v1.0 CPU model
+   - Old model replaced with multilingual version
+
+**Backward Compatibility:**
+- Legacy `voices.bin` still works (English-only)
+- Server warns in console but continues operating
+- No data loss or corruption
+
+### Benefits
+
+**For Users:**
+- ✅ Read books in your native language (UI)
+- ✅ Hear proper pronunciation in French/Spanish
+- ✅ Easy language switching (one button)
+- ✅ No manual configuration needed
+
+**For Developers:**
+- ✅ Clean JSON-based translation system
+- ✅ Easy to add new languages (just add `{lang}.json`)
+- ✅ Type-safe voice-to-language mapping
+- ✅ Cached translations for performance
+
+### Known Limitations
+
+**Languages Supported:**
+- UI: English, French, Spanish (Japanese UI not yet implemented)
+- Voices: English (US/GB), French, Spanish, Japanese
+
+**Model Requirements:**
+- Multilingual voices require 30MB `voices-v1.0.bin` (vs 5MB legacy)
+- CPU multilingual model is 87MB (same as v1.9)
+- GPU model is 309MB (same as v1.9)
+
+### Files Changed
+- `dist/app/server.py` - Locale API, language detection, cache management
+- `dist/app/logic/downloader.py` - Multilingual model URLs
+- `dist/app/ui/index.html` - i18n system, language toggle, cache button
+- `dist/app/locales/*.json` - Translation files (NEW)
+- `dist/setup.exe` - Rebuilt with v2.0 (20.7 MB)
+- `dist/uninstall.exe` - Rebuilt (9.9 MB)
+
+### Version String Policy
+- **UI:** No version numbers displayed (per Rule XIII)
+- **Documentation:** Version tracked in README.md, CHANGELOG.md only
+
+---
+
 ## 🚀 v1.9.4 - Cross-Page Cache Collision Fix (Dec 2025)
 
 ### Critical Bug Fix

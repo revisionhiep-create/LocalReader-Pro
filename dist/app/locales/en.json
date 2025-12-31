@@ -1,0 +1,128 @@
+{
+  "app": {
+    "title": "LocalReader Pro",
+    "welcome": "Welcome to LocalReader Pro"
+  },
+  "sidebar": {
+    "library": "Library",
+    "upload": "Upload Book (PDF/EPUB)",
+    "export": "Export Audio (MP3)",
+    "settings": "Settings",
+    "setup_engine": "Setup Voice Engine",
+    "drag_pdf": "Drag PDF here or click to upload",
+    "empty_library": "Library is empty. Upload a PDF to start.",
+    "pages": "pages",
+    "last_read": "Last read"
+  },
+  "reader": {
+    "no_document": "No document selected",
+    "welcome": "Welcome to LocalReader",
+    "select_prompt": "Select a document or upload a new PDF.",
+    "select_book": "Select a book from your library to start reading",
+    "page": "Page",
+    "of": "of",
+    "search_placeholder": "Search in book...",
+    "search_results": "results",
+    "searching": "Searching...",
+    "no_results": "No results found",
+    "jump_to_page": "Jump to page"
+  },
+  "player": {
+    "play": "Play",
+    "pause": "Pause",
+    "previous": "Previous Sentence",
+    "next": "Next Sentence",
+    "speed": "Speed",
+    "generating": "Generating audio..."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "voice_selection": "Voice Selection",
+    "speed_control": "Speed Control",
+    "header_footer": "Header & Footer Mode",
+    "header_footer_off": "Show All",
+    "header_footer_clean": "Hide",
+    "header_footer_dim": "Dim",
+    "header_footer_desc": "Automatically hide repeated page headers & footers",
+    "pause_settings": "Pause Settings",
+    "comma_pause": "Comma Pause",
+    "period_pause": "Period Pause",
+    "question_pause": "Question Pause",
+    "exclamation_pause": "Exclamation Pause",
+    "colon_pause": "Colon Pause",
+    "semicolon_pause": "Semicolon Pause",
+    "newline_pause": "Newline Pause",
+    "pronunciation_rules": "Pronunciation Rules",
+    "add_rule": "Add Rule",
+    "original": "Original",
+    "replacement": "Replacement",
+    "match_case": "Match case",
+    "word_boundary": "Whole words only",
+    "ignore_list": "Ignore List",
+    "ignore_desc": "Words to skip during audio generation",
+    "add_word": "Add Word"
+  },
+  "export": {
+    "title": "Export Audio",
+    "select_book": "Select Book",
+    "select_voice": "Select Voice",
+    "start_export": "Start Export",
+    "cancel": "Cancel",
+    "progress": "Progress",
+    "completed": "Export Completed!",
+    "download": "Download MP3",
+    "open_folder": "Open Folder",
+    "error": "Export Error",
+    "close": "Close"
+  },
+  "setup": {
+    "title": "Setup Required",
+    "model_missing": "TTS Model Not Found",
+    "download_model": "Download Model",
+    "downloading": "Downloading...",
+    "ffmpeg_required": "FFMPEG Required",
+    "ffmpeg_desc": "FFMPEG is required for audio export (MP3 conversion)",
+    "install_ffmpeg": "Install FFMPEG",
+    "installing": "Installing..."
+  },
+  "status": {
+    "loading": "Loading...",
+    "ready": "Ready",
+    "error": "Error",
+    "success": "Success",
+    "processing": "Processing..."
+  },
+  "voices": {
+    "af_sky": "AF Sky (Female)",
+    "af_bella": "AF Bella (Female)",
+    "af_nicole": "AF Nicole (Female)",
+    "af_sarah": "AF Sarah (Female)",
+    "am_adam": "AM Adam (Male)",
+    "am_michael": "AM Michael (Male)",
+    "bf_emma": "BF Emma (British Female)",
+    "bf_isabella": "BF Isabella (British Female)",
+    "bm_george": "BM George (British Male)",
+    "bm_lewis": "BM Lewis (British Male)",
+    "ff_siwis": "FF Siwis (French Female)",
+    "jf_alpha": "JF Alpha (Japanese Female)",
+    "jf_gongitsune": "JF Gongitsune (Japanese Female)",
+    "jf_nezumi": "JF Nezumi (Japanese Female)",
+    "jf_tebukuro": "JF Tebukuro (Japanese Female)",
+    "ef_dora": "EF Dora (Spanish Female)",
+    "em_alex": "EM Alex (Spanish Male)",
+    "em_santa": "EM Santa (Spanish Male)"
+  },
+  "languages": {
+    "en": "English",
+    "fr": "Français",
+    "ja": "日本語",
+    "es": "Español"
+  },
+  "tabs": {
+    "library": "LIBRARY",
+    "rules": "RULES",
+    "ignore": "IGNORE"
+  }
+}
+

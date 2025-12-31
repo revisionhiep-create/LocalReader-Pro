@@ -1,6 +1,6 @@
 # LocalReader Pro
 
-**A modern, privacy-focused PDF/EPUB reader with AI-powered text-to-speech, natural speech flow, and smart audio caching.**
+**A modern, privacy-focused PDF/EPUB reader with AI-powered text-to-speech, multilingual support, and smart audio caching.**
 
 ---
 
@@ -8,9 +8,10 @@
 
 ### 📚 Core Reading
 - **Multi-Format Support:** PDF and EPUB files
-- **8 Premium Voices:** American (Sky, Bella, Nicole, Sarah, Adam, Michael) and British (Isabella, Lewis)
+- **17 Premium Voices:** American, British, French, and Spanish voices
+- **Multilingual UI:** Full interface translation (English, French, Spanish)
 - **Dual-Engine Architecture:** Choose between Performance (CPU) and Quality (GPU) modes
-- **Fast TTS Engine:** Kokoro-82M (~5x real-time synthesis speed)
+- **Fast TTS Engine:** Kokoro-82M v1.0 (~5x real-time synthesis speed)
 - **Auto-Save Progress:** Resume exactly where you left off
 - **Sentence-Level Control:** Click any sentence to start reading from there
 
@@ -33,9 +34,17 @@
 - **Background Processing:** UI stays responsive during export
 - **On-Demand FFMPEG:** Auto-downloads encoder (~100MB) on first export
 
-### ⚙️ Dual-Engine Architecture (New in v1.9)
-- **Performance Mode (CPU):** Quantized Int8 model (~87MB) for faster processing and lower RAM usage
-- **Quality Mode (GPU):** Standard FP32 model (~309MB) for best audio quality
+### 🌍 Multilingual Support (New in v2.0)
+- **3 UI Languages:** English, French (Français), Spanish (Español)
+- **One-Click Toggle:** Cycle through languages with a single button
+- **Full Translation:** All UI elements translate instantly
+- **Language-Aware TTS:** Voices automatically speak with correct pronunciation
+- **French Voice:** FF Siwis (Female)
+- **Spanish Voices:** EF Dora (Female), EM Alex (Male), EM Santa (Male)
+
+### ⚙️ Dual-Engine Architecture
+- **Performance Mode (CPU):** Quantized Int8 model (~87MB) - Multilingual support
+- **Quality Mode (GPU):** Standard FP32 model (~309MB) - Best audio quality
 - **Flexible:** Download either or both models, switch instantly
 - **Smart Fallback:** Auto-switches if selected model is missing
 - **Optimized:** Multi-threaded CPU processing for low-end devices
