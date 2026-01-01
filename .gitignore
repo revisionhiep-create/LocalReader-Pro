@@ -20,7 +20,7 @@ wheels/
 *.egg
 
 # PyInstaller
-*.spec
+# *.spec
 
 # User data and generated content
 dist/userdata/
