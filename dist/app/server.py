@@ -55,174 +55,20 @@ userdata_dir = get_app_anchored_path("userdata")
 library_file = userdata_dir / "library.json"
 content_dir = userdata_dir / "content"
 settings_file = userdata_dir / "settings.json"
-cache_dir = get_app_anchored_path(".cache")  # Audio cache directory
+cache_db_path = userdata_dir / "audio_cache.db"  # SQLite cache database
 
 # Cache Management Settings
-MAX_CACHE_SIZE_MB = 100  # Maximum cache size in megabytes
-MAX_FILE_AGE_DAYS = 7    # Delete files older than this many days
+MAX_CACHE_SIZE_MB = 200  # Maximum cache size in megabytes (SQLite DB)
 
 # Ensure dirs exist (with clear logging)
 try:
     userdata_dir.mkdir(exist_ok=True)
     content_dir.mkdir(exist_ok=True)
-    cache_dir.mkdir(exist_ok=True)
     print(f"[OK] Storage initialized at: {userdata_dir}")
-    print(f"[OK] Audio cache initialized at: {cache_dir}")
+    print(f"[OK] Audio cache (SQLite) at: {cache_db_path}")
 except Exception as e:
     print(f"[CRITICAL] Failed to create storage dirs: {e}")
     print(f"           Attempted path: {userdata_dir}")
-
-# =============================================================================
-# CACHE MANAGEMENT FUNCTIONS
-# =============================================================================
-
-def get_cache_size_mb() -> float:
-    """Calculate total size of cache directory in MB."""
-    total_size = 0
-    try:
-        for file_path in cache_dir.glob("*.wav"):
-            if file_path.is_file():
-                total_size += file_path.stat().st_size
-    except Exception as e:
-        print(f"[WARNING] Failed to calculate cache size: {e}")
-    return total_size / (1024 * 1024)  # Convert bytes to MB
-
-def get_cache_file_count() -> int:
-    """Count number of files in cache directory."""
-    try:
-        return len(list(cache_dir.glob("*.wav")))
-    except Exception:
-        return 0
-
-def cleanup_old_cache_files(max_age_days: int = MAX_FILE_AGE_DAYS) -> int:
-    """
-    Delete cache files older than max_age_days.
-    Returns number of files deleted.
-    """
-    deleted_count = 0
-    current_time = time.time()
-    max_age_seconds = max_age_days * 24 * 60 * 60
-    
-    try:
-        for file_path in cache_dir.glob("*.wav"):
-            if file_path.is_file():
-                file_age = current_time - file_path.stat().st_mtime
-                if file_age > max_age_seconds:
-                    file_path.unlink()
-                    deleted_count += 1
-    except Exception as e:
-        print(f"[WARNING] Error during age-based cleanup: {e}")
-    
-    return deleted_count
-
-def cleanup_cache_by_size(max_size_mb: float = MAX_CACHE_SIZE_MB) -> int:
-    """
-    Delete oldest cache files (LRU) until total size is under max_size_mb.
-    Returns number of files deleted.
-    """
-    deleted_count = 0
-    current_size = get_cache_size_mb()
-    
-    if current_size <= max_size_mb:
-        return 0  # Cache is within limit
-    
-    try:
-        # Get all cache files with their access times
-        files_with_time = []
-        for file_path in cache_dir.glob("*.wav"):
-            if file_path.is_file():
-                # Use atime (access time) for LRU, fallback to mtime
-                try:
-                    access_time = file_path.stat().st_atime
-                except:
-                    access_time = file_path.stat().st_mtime
-                file_size = file_path.stat().st_size / (1024 * 1024)  # MB
-                files_with_time.append((file_path, access_time, file_size))
-        
-        # Sort by access time (oldest first)
-        files_with_time.sort(key=lambda x: x[1])
-        
-        # Delete oldest files until we're under the limit
-        for file_path, _, file_size in files_with_time:
-            if current_size <= max_size_mb:
-                break
-            file_path.unlink()
-            current_size -= file_size
-            deleted_count += 1
-            
-    except Exception as e:
-        print(f"[WARNING] Error during size-based cleanup: {e}")
-    
-    return deleted_count
-
-def cleanup_recent_cache_files(max_files: int = 10) -> int:
-    """
-    Delete the most recent cache files (by modification time).
-    Used when switching voices to clear cache for old voice.
-    Returns number of files deleted.
-    """
-    deleted_count = 0
-    
-    try:
-        # Get all cache files with their modification times
-        files_with_time = []
-        for file_path in cache_dir.glob("*.wav"):
-            if file_path.is_file():
-                mod_time = file_path.stat().st_mtime
-                files_with_time.append((file_path, mod_time))
-        
-        # Sort by modification time (newest first)
-        files_with_time.sort(key=lambda x: x[1], reverse=True)
-        
-        # Delete the newest N files (most recent cache)
-        for i, (file_path, _) in enumerate(files_with_time):
-            if i >= max_files:
-                break
-            file_path.unlink()
-            deleted_count += 1
-            
-    except Exception as e:
-        print(f"[WARNING] Error during recent cache cleanup: {e}")
-    
-    return deleted_count
-
-def run_cache_cleanup():
-    """
-    Run full cache cleanup: age-based and size-based.
-    Called on app startup and periodically.
-    """
-    print(f"\n[CACHE CLEANUP] Starting...")
-    
-    # Get initial stats
-    initial_count = get_cache_file_count()
-    initial_size = get_cache_size_mb()
-    print(f"  Initial: {initial_count} files, {initial_size:.2f} MB")
-    
-    # Step 1: Delete old files (age-based)
-    age_deleted = cleanup_old_cache_files(MAX_FILE_AGE_DAYS)
-    if age_deleted > 0:
-        print(f"  Deleted {age_deleted} files older than {MAX_FILE_AGE_DAYS} days")
-    
-    # Step 2: Check size limit (LRU-based)
-    size_deleted = cleanup_cache_by_size(MAX_CACHE_SIZE_MB)
-    if size_deleted > 0:
-        print(f"  Deleted {size_deleted} oldest files to fit {MAX_CACHE_SIZE_MB}MB limit")
-    
-    # Get final stats
-    final_count = get_cache_file_count()
-    final_size = get_cache_size_mb()
-    total_deleted = age_deleted + size_deleted
-    
-    if total_deleted > 0:
-        print(f"  Final: {final_count} files, {final_size:.2f} MB (freed {initial_size - final_size:.2f} MB)")
-    else:
-        print(f"  No cleanup needed (within limits)")
-    
-    print(f"[CACHE CLEANUP] Complete\n")
-
-# =============================================================================
-# END CACHE MANAGEMENT
-# =============================================================================
 
 def safe_init_json(path: Path, default_data: Any):
     if not path.exists():
@@ -292,12 +138,17 @@ try:
     from logic.downloader import download_kokoro_model, check_model_exists, get_available_models
     from logic.dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
     from logic.smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
+    from logic.audio_cache import AudioCache
 except ImportError:
     sys.path.append(str(base_dir / "logic"))
     from text_normalizer import apply_custom_pronunciations, inject_pauses
     from downloader import download_kokoro_model, check_model_exists, get_available_models
     from dependency_manager import FFMPEGInstaller, get_ffmpeg_path, configure_pydub
     from smart_content_detector import find_content_start_page, detect_headers_footers, apply_header_footer_filter, filter_text_for_tts
+    from audio_cache import AudioCache
+
+# Initialize SQLite audio cache
+audio_cache = AudioCache(cache_db_path, max_size_mb=MAX_CACHE_SIZE_MB)
 
 # Global engine
 kokoro = None
@@ -448,8 +299,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Check FFMPEG on startup
     installer = FFMPEGInstaller()
     ffmpeg_status["is_installed"] = installer.check_installed()
-    # Run cache cleanup on startup
-    run_cache_cleanup()
+    
+    # Log cache stats on startup
+    try:
+        cache_count = audio_cache.get_count()
+        cache_size = audio_cache.get_size_mb()
+        print(f"[CACHE] Initialized: {cache_count} entries, {cache_size:.2f} MB")
+    except Exception as e:
+        print(f"[CACHE WARNING] Failed to read cache stats: {e}")
+    
     yield
 
 app = FastAPI(title="LocalReader Pro API", lifespan=lifespan)
@@ -944,56 +802,27 @@ async def download_specific_model(background_tasks: BackgroundTasks, model_type:
         "message": f"Downloading {model_type.upper()} model..."
     }
 
-@app.post("/api/system/clear-recent-cache")
-async def clear_recent_cache():
-    """
-    Clear the most recent cache files (last 10).
-    Used when switching voices during playback to clear old voice cache.
-    """
-    try:
-        deleted_count = cleanup_recent_cache_files(max_files=10)
-        print(f"[CACHE] Cleared {deleted_count} recent cache files")
-        return {
-            "status": "success",
-            "deleted_count": deleted_count,
-            "message": f"Cleared {deleted_count} recent cache files"
-        }
-    except Exception as e:
-        print(f"[CACHE ERROR] Failed to clear recent cache: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to clear cache: {str(e)}")
-
 @app.post("/api/system/clear-cache")
 async def clear_all_cache():
     """
-    Clear ALL cached audio files.
+    Clear ALL cached audio from SQLite database.
     Used by the "Clear Audio Cache" button in Voice Settings.
-    Returns the number of files deleted and space freed.
+    Returns the number of entries deleted and space freed.
     """
     try:
-        initial_count = get_cache_file_count()
-        initial_size_mb = get_cache_size_mb()
+        print(f"[CACHE] Clearing all cached audio...")
         
-        print(f"[CACHE] Clearing all cache files...")
-        print(f"  Initial: {initial_count} files, {initial_size_mb:.2f} MB")
+        # Clear all entries from SQLite cache
+        files_deleted, freed_mb = audio_cache.clear_all()
         
-        # Delete all .wav files in cache directory
-        deleted_count = 0
-        for file_path in cache_dir.glob("*.wav"):
-            if file_path.is_file():
-                file_path.unlink()
-                deleted_count += 1
-        
-        # All files deleted - freed space equals initial size
-        freed_mb = initial_size_mb
-        
-        print(f"  Final: {deleted_count} files deleted, {freed_mb:.2f} MB freed")
+        print(f"  Final: {files_deleted} entries deleted, {freed_mb:.2f} MB freed")
         print(f"[CACHE] Clear complete")
         
         return {
             "status": "success",
-            "files_deleted": deleted_count,
+            "files_deleted": files_deleted,
             "freed_mb": round(freed_mb, 2),
-            "message": f"Cleared {deleted_count} cache files, freed {freed_mb:.1f} MB"
+            "message": f"Cleared {files_deleted} cache entries, freed {freed_mb:.1f} MB"
         }
     except Exception as e:
         print(f"[CACHE ERROR] Failed to clear cache: {e}")
@@ -1194,12 +1023,17 @@ async def synthesize(request: SynthesisRequest):
             request.rules,
             request.ignore_list
         )
-        cache_file = cache_dir / f"{cache_key}.wav"
         
-        # Check cache first
-        if cache_file.exists():
+        # Check SQLite cache first
+        cached_audio = audio_cache.get(cache_key)
+        if cached_audio:
             print(f"[CACHE HIT] Serving cached audio for hash {cache_key[:8]}...")
-            return FileResponse(cache_file, media_type="audio/wav")
+            # Return audio from memory
+            return StreamingResponse(
+                io.BytesIO(cached_audio),
+                media_type="audio/wav",
+                headers={"Content-Length": str(len(cached_audio))}
+            )
         
         print(f"[CACHE MISS] Generating audio for hash {cache_key[:8]}...")
         
@@ -1232,18 +1066,21 @@ async def synthesize(request: SynthesisRequest):
                 print(f"  [LANG] Detected language: {lang} from voice: {selected_voice}")
                 samples, sample_rate = kokoro.create(text, voice=selected_voice, speed=float(request.speed or 1.0), lang=lang)
         
-        # Check cache size before saving (cleanup if needed)
-        current_cache_size = get_cache_size_mb()
-        if current_cache_size > MAX_CACHE_SIZE_MB * 0.9:  # Cleanup at 90% threshold
-            print(f"[CACHE] Size {current_cache_size:.1f}MB approaching limit, running cleanup...")
-            cleanup_cache_by_size(MAX_CACHE_SIZE_MB)
+        # Convert audio to WAV bytes
+        buffer = io.BytesIO()
+        sf.write(buffer, samples.flatten(), sample_rate, format='WAV', subtype='PCM_16')
+        audio_bytes = buffer.getvalue()
         
-        # Save to cache
-        sf.write(str(cache_file), samples.flatten(), sample_rate, format='WAV', subtype='PCM_16')
-        print(f"[CACHE SAVE] Audio saved: {cache_file.name}")
+        # Save to SQLite cache (LRU cleanup handled automatically)
+        audio_cache.put(cache_key, audio_bytes)
+        print(f"[CACHE SAVE] Audio saved to DB: {cache_key[:8]}... ({len(audio_bytes)} bytes)")
         
-        # Stream the cached file
-        return FileResponse(cache_file, media_type="audio/wav")
+        # Stream the audio
+        return StreamingResponse(
+            io.BytesIO(audio_bytes),
+            media_type="audio/wav",
+            headers={"Content-Length": str(len(audio_bytes))}
+        )
     except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 # MP3 Export API
@@ -1352,27 +1189,45 @@ async def export_audio(request: ExportRequest, background_tasks: BackgroundTasks
                 export_status["error"] = "Document metadata not found"
                 return
             
-            # 3. Combine all pages into paragraphs
-            full_text = "\n\n".join(doc_data.get("pages", []))
-            paragraphs = [p.strip() for p in full_text.split("\n\n") if p.strip()]
+            # 3. Split text into manageable chunks (avoid MAX_PHONEME_LENGTH truncation)
+            # Split by sentences/paragraphs to ensure each chunk is processable
+            chunks = []
             
-            export_status["total"] = len(paragraphs)
+            for page in doc_data.get("pages", []):
+                # Split page by newlines (paragraphs)
+                page_paragraphs = [p.strip() for p in page.split('\n') if p.strip()]
+                
+                for para in page_paragraphs:
+                    # If paragraph is still too long (>500 chars), split by sentences
+                    if len(para) > 500:
+                        # Split by sentence-ending punctuation
+                        sentences = re.split(r'(?<=[.!?])\s+', para)
+                        chunks.extend([s.strip() for s in sentences if s.strip()])
+                    else:
+                        chunks.append(para)
             
-            # 4. Process each paragraph
+            export_status["total"] = len(chunks)
+            
+            # 4. Process each chunk
             audio_segments = []
             rules_data = [r.model_dump() for r in request.rules]
             
-            for i, paragraph in enumerate(paragraphs):
+            for i, chunk in enumerate(chunks):
                 if not export_status["is_exporting"]:  # Check for cancellation
                     export_status["error"] = "Export cancelled"
                     return
                 
                 try:
                     # First filter out dimmed text (headers/footers)
-                    filtered_paragraph = filter_text_for_tts(paragraph)
+                    filtered_text = filter_text_for_tts(chunk)
+                    
+                    # Skip empty chunks
+                    if not filtered_text or not re.search(r'[a-zA-Z0-9]', filtered_text):
+                        export_status["progress"] = i + 1
+                        continue
                     
                     # Then apply pronunciation rules
-                    processed_text = apply_custom_pronunciations(filtered_paragraph, rules_data, request.ignore_list)
+                    processed_text = apply_custom_pronunciations(filtered_text, rules_data, request.ignore_list)
                     
                     # Generate audio with language detection
                     lang = get_language_from_voice(request.voice)
@@ -1390,13 +1245,13 @@ async def export_audio(request: ExportRequest, background_tasks: BackgroundTasks
                     audio_segment = AudioSegment.from_wav(buffer)
                     audio_segments.append(audio_segment)
                     
-                    # Add small pause between paragraphs (500ms)
-                    silence = AudioSegment.silent(duration=500)
+                    # Add small pause between chunks (300ms)
+                    silence = AudioSegment.silent(duration=300)
                     audio_segments.append(silence)
                     
                 except Exception as e:
-                    print(f"Warning: Failed to process paragraph {i}: {e}")
-                    # Continue with next paragraph
+                    print(f"Warning: Failed to process chunk {i}: {e}")
+                    # Continue with next chunk
                 
                 export_status["progress"] = i + 1
             

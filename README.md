@@ -27,7 +27,7 @@
 - **Smart Start:** Auto-skip blank/cover pages on first open
 - **Header/Footer Filter:** Detect and remove/dim repeated page clutter
 - **Global Search:** Full-book search with instant navigation (Ctrl+F)
-- **Smart Audio Caching:** 100MB LRU cache with automatic cleanup
+- **SQLite Audio Cache:** 200MB LRU cache with automatic cleanup (v2.2+)
 
 ### 🎵 MP3 Export
 - **One-Click Export:** Convert entire document to MP3
@@ -334,7 +334,7 @@ LocalReader_Pro_v1.8/
 | **TTS Engine (CPU Mode)** | ~87 MB |
 | **Voice Pack (shared)** | ~30 MB |
 | **FFMPEG** | ~100 MB (optional) |
-| **Audio Cache** | ~100 MB max (auto-managed) |
+| **Audio Cache (SQLite)** | ~200 MB max (auto-managed) |
 | **Per Document Cache** | ~1-5 MB |
 | **Exported MP3** | ~1 MB per minute of audio |
 
@@ -536,9 +536,9 @@ pip install -r requirements.txt
 
 ---
 
-**Version:** 1.9  
+**Version:** 2.2  
 **Engine:** Kokoro-82M (Dual-Mode: CPU/GPU)  
-**Last Updated:** December 2025  
+**Last Updated:** January 2026  
 **Status:** ✅ Stable Release
 
 ---

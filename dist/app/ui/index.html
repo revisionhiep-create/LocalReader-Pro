@@ -669,15 +669,6 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Clear Cache Button -->
-            <div>
-                <button id="clearCacheBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-900/20 hover:bg-red-900/30 text-red-400 border border-red-800/30 hover:border-red-700/50 rounded-lg transition-all">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    <span class="text-sm font-semibold">Clear Audio Cache</span>
-                </button>
-                <p class="text-[9px] text-zinc-600 mt-2 text-center">Clear cached audio files to free up space</p>
-            </div>
         </div>
     </div>
 
@@ -887,8 +878,7 @@
               pauseSemicolon = document.getElementById('pauseSemicolon'), pauseSemicolonVal = document.getElementById('pauseSemicolonVal'),
               voiceSettingsBtn = document.getElementById('voiceSettingsBtn'), voiceSettingsDrawer = document.getElementById('voiceSettingsDrawer'),
               drawerOverlay = document.getElementById('drawerOverlay'), closeDrawerBtn = document.getElementById('closeDrawerBtn'),
-              languageToggle = document.getElementById('languageToggle'),
-              clearCacheBtn = document.getElementById('clearCacheBtn');
+              languageToggle = document.getElementById('languageToggle');
 
         // ========================================================================
         // MULTILINGUAL SUPPORT (v2.0)
@@ -1302,35 +1292,6 @@
             pauseSettingsContent.classList.toggle('hidden');
             pauseChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
             renderIcons();
-        };
-        
-        // Clear Audio Cache Button
-        clearCacheBtn.onclick = async () => {
-            if (!confirm('Clear all cached audio files? This will free up disk space but audio will need to be regenerated.')) {
-                return;
-            }
-            
-            try {
-                clearCacheBtn.disabled = true;
-                clearCacheBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span class="text-sm font-semibold">Clearing...</span>';
-                renderIcons();
-                
-                const response = await fetch(`${API_URL}/api/system/clear-cache`, { method: 'POST' });
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showToast(`✓ Cache cleared! Freed ${result.freed_mb?.toFixed(1) || 0} MB (${result.files_deleted || 0} files)`);
-                } else {
-                    showToast('Failed to clear cache');
-                }
-            } catch (err) {
-                console.error('Clear cache error:', err);
-                showToast('Error clearing cache');
-            } finally {
-                clearCacheBtn.disabled = false;
-                clearCacheBtn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i><span class="text-sm font-semibold">Clear Audio Cache</span>';
-                renderIcons();
-            }
         };
         
         // Pause Settings Handlers
