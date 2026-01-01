@@ -1,5 +1,5 @@
 """
-LocalReader Pro v1.9 - Self-Contained Installer
+LocalReader Pro v2.3 - Self-Contained Installer
 Installs Python (if needed), dependencies, and creates shortcuts.
 Installs in the CURRENT directory (where setup.exe is located).
 """
@@ -143,7 +143,7 @@ class InstallerGUI:
         self.install_dir = install_dir
         
         self.root = tk.Tk()
-        self.root.title("LocalReader Pro v1.9 - Setup")
+        self.root.title("LocalReader Pro v2.3 - Setup")
         self.root.geometry("500x250")
         self.root.resizable(False, False)
         
@@ -154,7 +154,7 @@ class InstallerGUI:
         self.root.geometry(f"500x250+{x}+{y}")
         
         # UI Components
-        tk.Label(self.root, text="LocalReader Pro v1.9", font=("Arial", 14, "bold")).pack(pady=10)
+        tk.Label(self.root, text="LocalReader Pro v2.3", font=("Arial", 14, "bold")).pack(pady=10)
         
         self.status_label = tk.Label(self.root, text="Ready to install", font=("Arial", 10))
         self.status_label.pack(pady=10)

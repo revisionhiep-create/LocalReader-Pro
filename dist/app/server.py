@@ -872,20 +872,18 @@ def get_language_from_voice(voice: str) -> str:
 def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: Dict[str, int]) -> tuple:
     """
     Synthesize text with custom pauses using audio stitching.
-    NEW LOGIC: Only apply pauses to SINGLE punctuation marks at sentence ends.
-    Ignores consecutive/mixed punctuation (e.g., "...", "?!", "!!!") entirely.
+    v2.3 Logic:
+    - Handles punctuation groups (e.g., "...", "?!") as single pause events (based on last char).
+    - Smart newline handling: Only pauses on newline if NOT preceded by punctuation.
     
     Returns: (audio_samples, sample_rate)
     """
     lang = get_language_from_voice(voice)
     print(f"\n{'='*60}")
-    print(f"[PAUSE LOGIC] Processing: '{text[:100]}{'...' if len(text) > 100 else ''}'")
-    print(f"[LANG] Detected language: {lang} from voice: {voice}")
-    print(f"{'='*60}")
+    print(f"[PAUSE LOGIC v2.3] Processing: '{text[:100]}{'...' if len(text) > 100 else ''}'")
     
-    # NEW APPROACH: Split by punctuation but capture sequences (not individual chars)
-    # This pattern captures groups of punctuation together: "..." stays as "...", not split into 3
     # Pattern: Match text OR punctuation sequences OR newlines
+    # This captures "..." as one segment, and "\n" as another
     segments = re.split(r'([,\.!\?:;]+|\n)', text)
     
     audio_segments = []
@@ -896,69 +894,86 @@ def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: 
     print(f"\n[PROCESSING]")
     
     pause_count = 0
-    skip_count = 0
+    skipped_newline_count = 0
+    last_was_punctuation = False  # Track if previous valid segment was punctuation
     
     for i, segment in enumerate(segments):
-        segment = segment.strip()
-        if not segment:
-            continue
+        # IMPORTANT: Do NOT strip newlines here, or we lose them!
+        clean_segment = segment.strip()
         
-        # Check if segment is punctuation
-        if re.match(r'^[,\.!\?:;]+$', segment):
-            # Check if it's SINGLE punctuation (apply pause) or MULTIPLE (skip)
-            if len(segment) == 1:
-                # Single punctuation - apply pause
-                pause_ms = 0
-                if segment == ',':
-                    pause_ms = pause_settings.get('comma', 300)
-                elif segment == '.':
-                    pause_ms = pause_settings.get('period', 600)
-                elif segment == '?':
-                    pause_ms = pause_settings.get('question', 600)
-                elif segment == '!':
-                    pause_ms = pause_settings.get('exclamation', 600)
-                elif segment == ':':
-                    pause_ms = pause_settings.get('colon', 400)
-                elif segment == ';':
-                    pause_ms = pause_settings.get('semicolon', 400)
+        # 1. Handle Newlines
+        if segment == '\n':
+            if last_was_punctuation:
+                # If we just had a punctuation pause, skip the newline pause (avoid stacking)
+                print(f"  [{i}] SKIP: Newline (already paused for punctuation)")
+                skipped_newline_count += 1
+            else:
+                # Standalone newline (e.g. title or header) -> Apply "soft" pause
+                # Use user setting or fallback to 300ms (to prevent "rushing")
+                pause_ms = pause_settings.get('newline', 300)
+                if pause_ms == 0: pause_ms = 300 # Enforce minimum breathing room
                 
-                # Generate silent audio
                 pause_samples = int((pause_ms / 1000.0) * sample_rate)
                 silence = np.zeros(pause_samples, dtype=np.float32)
                 audio_segments.append(silence)
                 pause_count += 1
-                print(f"  [{i}] PAUSE: '{segment}' = {pause_ms}ms")
-            else:
-                # Multiple/mixed punctuation - SKIP pause entirely
-                skip_count += 1
-                print(f"  [{i}] SKIP: '{segment}' (consecutive/mixed punctuation - ignored)")
-        
-        elif segment == '\n':
-            # Add newline pause
-            pause_ms = pause_settings.get('newline', 800)
+                print(f"  [{i}] PAUSE: Newline = {pause_ms}ms")
+            
+            # Newline resets state (it's a separator, but subsequent newlines should also pause if multiple)
+            # Actually, treating multiple newlines as one pause might be better, but let's stick to simple logic first.
+            last_was_punctuation = False 
+            continue
+
+        # Skip empty strings (artifacts of re.split)
+        if not clean_segment:
+            continue
+
+        # 2. Handle Punctuation (Single or Grouped)
+        if re.match(r'^[,\.!\?:;]+$', clean_segment):
+            # Take the LAST character to determine pause type
+            # e.g. "..." -> "." (600ms), "?!" -> "!" (600ms)
+            last_char = clean_segment[-1]
+            
+            pause_ms = 0
+            if last_char == ',':
+                pause_ms = pause_settings.get('comma', 300)
+            elif last_char == '.':
+                pause_ms = pause_settings.get('period', 600)
+            elif last_char == '?':
+                pause_ms = pause_settings.get('question', 600)
+            elif last_char == '!':
+                pause_ms = pause_settings.get('exclamation', 600)
+            elif last_char == ':':
+                pause_ms = pause_settings.get('colon', 400)
+            elif last_char == ';':
+                pause_ms = pause_settings.get('semicolon', 400)
+            
+            # Generate silent audio
             pause_samples = int((pause_ms / 1000.0) * sample_rate)
             silence = np.zeros(pause_samples, dtype=np.float32)
             audio_segments.append(silence)
             pause_count += 1
-            print(f"  [{i}] PAUSE: newline = {pause_ms}ms")
+            last_was_punctuation = True
+            print(f"  [{i}] PAUSE: '{clean_segment}' (as '{last_char}') = {pause_ms}ms")
         
+        # 3. Handle Text
         else:
-            # Generate audio for text segment
-            if re.search(r'[a-zA-Z0-9]', segment):
+            if re.search(r'[a-zA-Z0-9]', clean_segment):
                 try:
-                    samples, _ = kokoro.create(segment, voice=voice, speed=speed, lang=lang)
+                    samples, _ = kokoro.create(clean_segment, voice=voice, speed=speed, lang=lang)
                     audio_segments.append(samples.flatten())
-                    word_count = len(segment.split())
-                    print(f"  [{i}] AUDIO: '{segment[:40]}{'...' if len(segment) > 40 else ''}' ({word_count} words)")
+                    word_count = len(clean_segment.split())
+                    print(f"  [{i}] AUDIO: '{clean_segment[:40]}{'...' if len(clean_segment) > 40 else ''}' ({word_count} words)")
+                    last_was_punctuation = False
                 except Exception as e:
-                    print(f"  [{i}] ERROR: Synthesis failed for '{segment[:30]}...': {e}")
-    
+                    print(f"  [{i}] ERROR: Synthesis failed for '{clean_segment[:30]}...': {e}")
+
     # Concatenate all audio segments
     if audio_segments:
         final_audio = np.concatenate(audio_segments)
         print(f"\n[COMPLETE]")
         print(f"  Pauses applied: {pause_count}")
-        print(f"  Pauses skipped: {skip_count} (consecutive/mixed)")
+        print(f"  Newlines skipped: {skipped_newline_count}")
         print(f"  Audio length: {len(final_audio)/sample_rate:.2f}s")
         print(f"{'='*60}\n")
         return final_audio, sample_rate

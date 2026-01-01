@@ -1,5 +1,5 @@
 """
-Build script for LocalReader Pro v1.9 installer
+Build script for LocalReader Pro v2.2 installer
 Compiles both setup.exe and uninstall.exe using PyInstaller
 """
 

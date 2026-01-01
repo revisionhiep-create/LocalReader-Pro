@@ -17,9 +17,11 @@
 
 ### 🎙️ Smart TTS Controls
 - **Voice Settings Drawer:** Floating button for quick access to voice, speed, and filter controls
-- **Natural Speech Flow:** Intelligent line joining prevents mid-sentence stops (newline pause removed)
+- **Natural Speech Flow:** Intelligent line joining prevents mid-sentence stops
 - **Custom Pause Settings:** Granular control over pause duration for punctuation (0-2000ms)
-- **Smart Pause Logic:** Only single punctuation creates pauses (ignores "...", "?!", "!!!")
+- **Smart Pause Logic v2:** 
+  - Handles punctuation groups correctly (`...`, `?!` use last character's setting)
+  - Smart "Soft Newlines" prevent rushing without creating double pauses
 - **Custom Pronunciation Rules:** Fix mispronunciations with RegEx support
 - **Speed Control:** 0.5x to 3.0x playback speed
 
@@ -34,13 +36,11 @@
 - **Background Processing:** UI stays responsive during export
 - **On-Demand FFMPEG:** Auto-downloads encoder (~100MB) on first export
 
-### 🌍 Multilingual Support (New in v2.0)
+### 🌍 Multilingual Support
 - **3 UI Languages:** English, French (Français), Spanish (Español)
 - **One-Click Toggle:** Cycle through languages with a single button
 - **Full Translation:** All UI elements translate instantly
 - **Language-Aware TTS:** Voices automatically speak with correct pronunciation
-- **French Voice:** FF Siwis (Female)
-- **Spanish Voices:** EF Dora (Female), EM Alex (Male), EM Santa (Male)
 
 ### ⚙️ Dual-Engine Architecture
 - **Performance Mode (CPU):** Quantized Int8 model (~87MB) - Multilingual support
@@ -91,6 +91,7 @@
 
 ---
 
+
 ### Linux / Manual Installation
 
 **Prerequisites:** Python 3.10 - 3.13 (Recommended: Python 3.12)
@@ -111,8 +112,8 @@ python3.12 --version
 **Step 2: Extract and Navigate**
 
 ```bash
-unzip LocalReader_Pro_v1.8.zip
-cd LocalReader_Pro_v1.8/dist
+unzip LocalReader_Pro_v2.3.zip
+cd LocalReader_Pro_v2.3/dist
 ```
 
 **Step 3: Install Dependencies**
@@ -148,7 +149,7 @@ python3.12 main.py
 
 After launching the application:
 
-1. **Choose Your Engine Mode (New in v1.9):**
+1. **Choose Your Engine Mode:**
    - Open **Settings** section in sidebar
    - Find **"Processing Mode"** dropdown
    - Choose between:
@@ -234,13 +235,14 @@ After launching the application:
    - **Exclamation (!)** - Default: 600ms
    - **Colon (:)** - Default: 500ms
    - **Semicolon (;)** - Default: 500ms
-   - **Newline** - Default: 800ms
+   - **Newline** - Default: 800ms (Hidden, smart auto-adjust)
 3. Settings save automatically
 
 **Smart Behavior:**
-- Pauses apply only to single punctuation
-- `"..."` creates NO pause (not 3× period pause)
-- `"?!"` creates NO pause (natural speech flow)
+- Pauses apply only to single punctuation or the last char of a group
+- `"..."` creates ONE pause (e.g. 600ms), not three
+- `"?!` creates ONE pause (based on `!`)
+- `Title\n` creates a soft pause (300ms)
 
 ### Exporting to MP3
 
@@ -288,7 +290,7 @@ After launching the application:
 ### File Structure
 
 ```
-LocalReader_Pro_v1.8/
+LocalReader_Pro_v2.3/
 ├── Install LocalReader Pro.lnk      # Windows installer shortcut
 ├── Uninstall LocalReader Pro.lnk    # Uninstaller shortcut
 ├── README.md
@@ -522,7 +524,7 @@ pip install -r requirements.txt
 
 ### Found a Bug?
 1. Check **Troubleshooting** section above
-2. Verify you're on latest version (v2.2.1)
+2. Verify you're on latest version (v2.3.0)
 3. Check `CHANGELOG.md` for known issues
 4. Contact developer with:
    - Python version (`python --version`)
@@ -536,7 +538,7 @@ pip install -r requirements.txt
 
 ---
 
-**Version:** 2.2.1  
+**Version:** 2.3.0  
 **Engine:** Kokoro-82M (Dual-Mode: CPU/GPU)  
 **Last Updated:** January 1, 2026  
 **Status:** ✅ Stable Release

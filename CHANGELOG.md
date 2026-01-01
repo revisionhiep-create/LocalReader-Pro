@@ -1,13 +1,48 @@
-# LocalReader Pro v2.2 Changelog
+# LocalReader Pro v2.3 Changelog
 
-## Architecture: Hybrid v2.2
+## Architecture: Hybrid v2.3
 
-**Base:** LocalReader Pro v2.0 (working Python backend + vanilla UI)  
-**New Features:** SQLite-based audio cache with LRU eviction + Export fix + Cross-page prefetching
+**Base:** LocalReader Pro v2.2 (SQLite Audio Cache)  
+**New Features:** Smart Pause Logic v2 + Punctuation Group Handling + Soft Newlines
 
 ---
 
-## v2.2.1 - January 1, 2025
+## v2.3.0 - January 1, 2026
+
+### 🧠 Smart Pause Logic Overhaul (Detailed Breakdown)
+
+**1. Punctuation Group Handling ("The Ellipsis Fix")**
+- **Problem:** Previous versions treated `...` as three separate periods, tripling the pause time (e.g., 600ms × 3 = 1.8s). Or, if filtered, it resulted in 0ms.
+- **New Logic:** The engine now detects consecutive punctuation groups (e.g., `...`, `?!`, `!!`) as a single event.
+- **Mechanism:** It inspects the **last character** of the group to determine the pause type.
+  - `Wait...` → Uses `.` setting (Period Pause)
+  - `Really?!` → Uses `!` setting (Exclamation Pause)
+  - `Hello??` → Uses `?` setting (Question Pause)
+
+**2. Smart Newline Handling ("The Flow Fix")**
+- **Problem:** Previous versions stripped newlines to prevent audio gaps, causing text to "rush" together.
+- **New Logic:** Newlines are preserved but handled conditionally based on context.
+- **State Tracking:** The engine remembers if the previous segment was punctuation.
+  - **Scenario A (Paragraphs):** Text ends with punctuation (`End.
+`).
+    - *Action:* The newline pause is **SKIPPED** to prevent stacking with the period pause.
+  - **Scenario B (Headers/Titles):** Text has no punctuation (`Chapter One
+`).
+    - *Action:* A **"Soft Pause"** (default 300ms) is applied. This separates headers from body text without needing manual punctuation.
+
+**3. Implementation Details**
+- **Regex Update:** Text is split using `([,.
+!?:;]+|
+)`, ensuring delimiters are captured but separated.
+- **Fallback Safety:** If no specific newline setting is provided, it defaults to 300ms (minimum "breathing room") rather than 0ms.
+
+### 🚀 Performance & Stability
+- Maintained all v2.2 caching improvements (SQLite + Prefetching)
+- Optimized regex segmentation for cleaner audio stitching
+
+---
+
+## v2.2.1 - January 1, 2026
 
 ### 🚀 Performance Improvements
 - **FIXED**: Eliminated 5-10 second audio delay when switching pages
