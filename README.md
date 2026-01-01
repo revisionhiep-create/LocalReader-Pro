@@ -522,7 +522,7 @@ pip install -r requirements.txt
 
 ### Found a Bug?
 1. Check **Troubleshooting** section above
-2. Verify you're on latest version (v1.8)
+2. Verify you're on latest version (v2.2.1)
 3. Check `CHANGELOG.md` for known issues
 4. Contact developer with:
    - Python version (`python --version`)
@@ -536,9 +536,9 @@ pip install -r requirements.txt
 
 ---
 
-**Version:** 2.2  
+**Version:** 2.2.1  
 **Engine:** Kokoro-82M (Dual-Mode: CPU/GPU)  
-**Last Updated:** January 2026  
+**Last Updated:** January 1, 2026  
 **Status:** ✅ Stable Release
 
 ---
