@@ -5,7 +5,7 @@ a = Analysis(
     ['installer_logic.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:\\Users\\revis\\art\\Git Hub Projects\\Local Reader Project\\LocalReader-Pro-v2.3\\dist/requirements.txt', '.'), ('C:\\Users\\revis\\art\\Git Hub Projects\\Local Reader Project\\LocalReader-Pro-v2.3\\dist/launch.vbs', '.'), ('C:\\Users\\revis\\art\\Git Hub Projects\\Local Reader Project\\LocalReader-Pro-v2.3\\dist/main.py', '.'), ('C:\\Users\\revis\\art\\Git Hub Projects\\Local Reader Project\\LocalReader-Pro-v2.3\\dist/uninstaller.py', '.'), ('C:\\Users\\revis\\art\\Git Hub Projects\\Local Reader Project\\LocalReader-Pro-v2.3\\dist/app', 'app'), ('C:\\Users\\revis\\art\\Git Hub Projects\\Local Reader Project\\LocalReader-Pro-v2.3\\dist/uninstall.exe', '.')],
+    datas=[('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/requirements.txt', '.'), ('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/launch.vbs', '.'), ('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/main.py', '.'), ('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/uninstaller.py', '.'), ('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/app/locales', 'app/locales'), ('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/app/logic', 'app/logic'), ('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/app/ui', 'app/ui'), ('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/app/server.py', 'app'), ('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/app/__init__.py', 'app'), ('C:\\Users\\revis\\art\\Git Hub Projects\\LocalReader-Pro\\dist/uninstall.exe', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

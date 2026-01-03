@@ -26,27 +26,41 @@ class AudioCache:
     
     def _init_db(self):
         """Create database schema if not exists."""
-        conn = sqlite3.connect(str(self.db_path))
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS audio_cache (
-                cache_key TEXT PRIMARY KEY,
-                audio_data BLOB NOT NULL,
-                size_bytes INTEGER NOT NULL,
-                created_at REAL NOT NULL,
-                accessed_at REAL NOT NULL
-            )
-        """)
-        
-        # Index for LRU cleanup (sort by accessed_at)
-        cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_accessed_at 
-            ON audio_cache(accessed_at)
-        """)
-        
-        conn.commit()
-        conn.close()
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS audio_cache (
+                    cache_key TEXT PRIMARY KEY,
+                    audio_data BLOB NOT NULL,
+                    size_bytes INTEGER NOT NULL,
+                    created_at REAL NOT NULL,
+                    accessed_at REAL NOT NULL
+                )
+            """)
+            
+            # Index for LRU cleanup (sort by accessed_at)
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_accessed_at 
+                ON audio_cache(accessed_at)
+            """)
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[CACHE ERROR] DB Init failed: {e}")
+
+    def _ensure_db_ready(self):
+        """Self-healing: Ensure table exists before any operation."""
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM audio_cache LIMIT 1")
+            conn.close()
+        except sqlite3.OperationalError:
+            print("[CACHE RECOVERY] Table missing, re-initializing database...")
+            self._init_db()
     
     def get(self, cache_key: str) -> Optional[bytes]:
         """
@@ -56,28 +70,33 @@ class AudioCache:
         Returns:
             bytes: WAV audio data, or None if not found
         """
-        conn = sqlite3.connect(str(self.db_path))
-        cursor = conn.cursor()
-        
-        # Get audio data
-        cursor.execute(
-            "SELECT audio_data FROM audio_cache WHERE cache_key = ?",
-            (cache_key,)
-        )
-        row = cursor.fetchone()
-        
-        if row:
-            # Update access time (LRU)
+        self._ensure_db_ready()
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            
+            # Get audio data
             cursor.execute(
-                "UPDATE audio_cache SET accessed_at = ? WHERE cache_key = ?",
-                (time.time(), cache_key)
+                "SELECT audio_data FROM audio_cache WHERE cache_key = ?",
+                (cache_key,)
             )
-            conn.commit()
+            row = cursor.fetchone()
+            
+            if row:
+                # Update access time (LRU)
+                cursor.execute(
+                    "UPDATE audio_cache SET accessed_at = ? WHERE cache_key = ?",
+                    (time.time(), cache_key)
+                )
+                conn.commit()
+                conn.close()
+                return row[0]
+            
             conn.close()
-            return row[0]
-        
-        conn.close()
-        return None
+            return None
+        except sqlite3.OperationalError:
+            self._init_db()
+            return None
     
     def put(self, cache_key: str, audio_data: bytes):
         """
@@ -88,29 +107,34 @@ class AudioCache:
             cache_key: MD5 hash key
             audio_data: WAV file bytes
         """
+        self._ensure_db_ready()
         size_bytes = len(audio_data)
         current_time = time.time()
         
-        conn = sqlite3.connect(str(self.db_path))
-        cursor = conn.cursor()
-        
-        # Insert or replace
-        cursor.execute("""
-            INSERT OR REPLACE INTO audio_cache 
-            (cache_key, audio_data, size_bytes, created_at, accessed_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (cache_key, audio_data, size_bytes, current_time, current_time))
-        
-        conn.commit()
-        conn.close()
-        
-        # Check if cleanup needed
-        self._cleanup_if_needed()
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            
+            # Insert or replace
+            cursor.execute("""
+                INSERT OR REPLACE INTO audio_cache 
+                (cache_key, audio_data, size_bytes, created_at, accessed_at)
+                VALUES (?, ?, ?, ?, ?)
+            """, (cache_key, audio_data, size_bytes, current_time, current_time))
+            
+            conn.commit()
+            conn.close()
+            
+            # Check if cleanup needed
+            self._cleanup_if_needed()
+        except sqlite3.OperationalError:
+            self._init_db()
     
     def _cleanup_if_needed(self):
         """
         Evict oldest entries (LRU) if cache exceeds max size.
         """
+        self._ensure_db_ready()
         total_size_mb = self.get_size_mb()
         
         if total_size_mb <= self.max_size_mb:
@@ -151,25 +175,35 @@ class AudioCache:
     
     def get_size_mb(self) -> float:
         """Get total cache size in MB."""
-        conn = sqlite3.connect(str(self.db_path))
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT SUM(size_bytes) FROM audio_cache")
-        total_bytes = cursor.fetchone()[0] or 0
-        
-        conn.close()
-        return total_bytes / (1024 * 1024)
+        self._ensure_db_ready()
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT SUM(size_bytes) FROM audio_cache")
+            total_bytes = cursor.fetchone()[0] or 0
+            
+            conn.close()
+            return total_bytes / (1024 * 1024)
+        except sqlite3.OperationalError:
+            self._init_db()
+            return 0.0
     
     def get_count(self) -> int:
         """Get total number of cached entries."""
-        conn = sqlite3.connect(str(self.db_path))
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT COUNT(*) FROM audio_cache")
-        count = cursor.fetchone()[0]
-        
-        conn.close()
-        return count
+        self._ensure_db_ready()
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT COUNT(*) FROM audio_cache")
+            count = cursor.fetchone()[0]
+            
+            conn.close()
+            return count
+        except sqlite3.OperationalError:
+            self._init_db()
+            return 0
     
     def clear_all(self) -> Tuple[int, float]:
         """
@@ -178,16 +212,21 @@ class AudioCache:
         Returns:
             (files_deleted, freed_mb)
         """
-        count = self.get_count()
-        size_mb = self.get_size_mb()
-        
-        conn = sqlite3.connect(str(self.db_path))
-        cursor = conn.cursor()
-        
-        cursor.execute("DELETE FROM audio_cache")
-        
-        conn.commit()
-        conn.close()
-        
-        return count, size_mb
+        self._ensure_db_ready()
+        try:
+            count = self.get_count()
+            size_mb = self.get_size_mb()
+            
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            
+            cursor.execute("DELETE FROM audio_cache")
+            
+            conn.commit()
+            conn.close()
+            
+            return count, size_mb
+        except sqlite3.OperationalError:
+            self._init_db()
+            return 0, 0.0
 

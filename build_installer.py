@@ -72,7 +72,12 @@ def build_installer():
         f'--add-data={dist_dir}/launch.vbs;.',
         f'--add-data={dist_dir}/main.py;.',
         f'--add-data={dist_dir}/uninstaller.py;.',
-        f'--add-data={dist_dir}/app;app',
+        # Add app components individually to avoid including models/cache
+        f'--add-data={dist_dir}/app/locales;app/locales',
+        f'--add-data={dist_dir}/app/logic;app/logic',
+        f'--add-data={dist_dir}/app/ui;app/ui',
+        f'--add-data={dist_dir}/app/server.py;app',
+        f'--add-data={dist_dir}/app/__init__.py;app',
         f'--add-data={dist_dir}/uninstall.exe;.',
         '--exclude-module=numpy',
         '--exclude-module=pandas',

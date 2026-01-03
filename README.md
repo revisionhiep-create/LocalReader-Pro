@@ -8,53 +8,33 @@
 
 ### 📚 Core Reading
 - **Multi-Format Support:** PDF and EPUB files
-- **17 Premium Voices:** American, British, French, and Spanish voices
-- **Multilingual UI:** Full interface translation (English, French, Spanish)
+- **Multilingual UI:** Full interface translation (**English, French, Spanish, Chinese**)
 - **Dual-Engine Architecture:** Choose between Performance (CPU) and Quality (GPU) modes
 - **Fast TTS Engine:** Kokoro-82M v1.0 (~5x real-time synthesis speed)
 - **Auto-Save Progress:** Resume exactly where you left off
 - **Sentence-Level Control:** Click any sentence to start reading from there
 
 ### 🎙️ Smart TTS Controls
+- **Dynamic Voice Library:** Automatically loads voices for **English (US/UK), French, Spanish, Chinese, Japanese, Italian, and Portuguese**.
 - **Voice Settings Drawer:** Floating button for quick access to voice, speed, and filter controls
 - **Natural Speech Flow:** Intelligent line joining prevents mid-sentence stops
-- **Custom Pause Settings:** Granular control over pause duration for punctuation (0-2000ms)
-- **Smart Pause Logic v2:** 
-  - Handles punctuation groups correctly (`...`, `?!` use last character's setting)
-  - Smart "Soft Newlines" prevent rushing without creating double pauses
-- **Custom Pronunciation Rules:** Fix mispronunciations with RegEx support
-- **Speed Control:** 0.5x to 3.0x playback speed
+- **Smart Punctuation Logic:**
+  - Supports English (`...`, `?!`) and CJK (`。`, `！`, `？`) punctuation correctly.
+  - Smart "Soft Newlines" prevent rushing without creating double pauses.
+- **Custom Pause Settings:** Granular control over pause duration for punctuation (0-2000ms).
+- **Custom Pronunciation Rules:** Fix mispronunciations with RegEx support.
+- **Speed Control:** 0.5x to 3.0x playback speed.
 
 ### 🧠 Smart Features
 - **Smart Start:** Auto-skip blank/cover pages on first open
 - **Header/Footer Filter:** Detect and remove/dim repeated page clutter
 - **Global Search:** Full-book search with instant navigation (Ctrl+F)
-- **SQLite Audio Cache:** 200MB LRU cache with automatic cleanup (v2.2+)
+- **SQLite Audio Cache:** 200MB LRU cache with automatic cleanup (Self-healing).
 
 ### 🎵 MP3 Export
 - **One-Click Export:** Convert entire document to MP3
 - **Background Processing:** UI stays responsive during export
 - **On-Demand FFMPEG:** Auto-downloads encoder (~100MB) on first export
-
-### 🌍 Multilingual Support
-- **3 UI Languages:** English, French (Français), Spanish (Español)
-- **One-Click Toggle:** Cycle through languages with a single button
-- **Full Translation:** All UI elements translate instantly
-- **Language-Aware TTS:** Voices automatically speak with correct pronunciation
-
-### ⚙️ Dual-Engine Architecture
-- **Performance Mode (CPU):** Quantized Int8 model (~87MB) - Multilingual support
-- **Quality Mode (GPU):** Standard FP32 model (~309MB) - Best audio quality
-- **Flexible:** Download either or both models, switch instantly
-- **Smart Fallback:** Auto-switches if selected model is missing
-- **Optimized:** Multi-threaded CPU processing for low-end devices
-
-### 🔒 Privacy & Performance
-- **100% Offline:** No internet required after initial setup
-- **Local Storage:** All data stays on your machine
-- **No Telemetry:** Zero tracking or analytics
-- **Fast Performance:** ~5x real-time synthesis, 70% faster sentence highlighting
-- **Adaptive:** Choose the engine that fits your hardware
 
 ---
 
@@ -112,8 +92,8 @@ python3.12 --version
 **Step 2: Extract and Navigate**
 
 ```bash
-unzip LocalReader_Pro_v2.3.zip
-cd LocalReader_Pro_v2.3/dist
+unzip LocalReader_Pro_v2.5.zip
+cd LocalReader_Pro_v2.5/dist
 ```
 
 **Step 3: Install Dependencies**
@@ -241,7 +221,7 @@ After launching the application:
 **Smart Behavior:**
 - Pauses apply only to single punctuation or the last char of a group
 - `"..."` creates ONE pause (e.g. 600ms), not three
-- `"?!` creates ONE pause (based on `!`)
+- `"?!` creates ONE pause (based on `!`) 
 - `Title\n` creates a soft pause (300ms)
 
 ### Exporting to MP3
@@ -290,7 +270,7 @@ After launching the application:
 ### File Structure
 
 ```
-LocalReader_Pro_v2.3/
+LocalReader_Pro_v2.5/
 ├── Install LocalReader Pro.lnk      # Windows installer shortcut
 ├── Uninstall LocalReader Pro.lnk    # Uninstaller shortcut
 ├── README.md
@@ -304,10 +284,12 @@ LocalReader_Pro_v2.3/
     │
     ├── app/
     │   ├── server.py                # FastAPI backend
+    │   ├── locales/                 # UI Translations (en, fr, es, zh)
     │   ├── logic/
     │   │   ├── text_normalizer.py        # Pronunciation rules
     │   │   ├── smart_content_detector.py # Smart features
     │   │   ├── downloader.py             # Model downloader
+    │   │   ├── audio_cache.py            # SQLite Cache Manager
     │   │   └── dependency_manager.py     # FFMPEG installer
     │   └── ui/
     │       ├── index.html           # Main SPA
@@ -322,8 +304,8 @@ LocalReader_Pro_v2.3/
 
 **Additional folders created during use:**
 - `bin/` - FFMPEG binaries (auto-downloaded on first export)
-- `.cache/` - Audio cache (~100MB, auto-managed)
 - `models/` - TTS engine models (auto-downloaded based on your choice)
+- `userdata/audio_cache.db` - SQLite Audio Cache
 
 ### Storage Requirements
 
@@ -354,108 +336,6 @@ LocalReader_Pro_v2.3/
 | **Disk Space** | 3 GB free | 5 GB+ free |
 | **CPU** | Dual-core 2.0 GHz | Quad-core 2.5 GHz+ |
 | **Internet** | Required for setup only | Offline after setup |
-
----
-
-## 🔧 Troubleshooting
-
-### Windows Installation Issues
-
-**Installer won't run / "Windows protected your PC"**
-- Click "More info" → "Run anyway"
-- The installer is safe (not signed with expensive code certificate)
-
-**Python installation fails**
-- Check internet connection
-- Ensure ~500 MB free disk space
-- Try running installer as administrator manually
-
-**Dependencies installation stuck**
-- Be patient (PyTorch download is ~2 GB)
-- Check internet connection
-- First install takes 5-10 minutes
-
-**Shortcuts not created**
-- Check Desktop and Start Menu manually
-- Installer may need admin privileges
-
-### Linux / Manual Installation Issues
-
-**"pip is not recognized"**
-```bash
-# Solution: Use python -m pip
-python3.12 -m pip install -r requirements.txt
-```
-
-**"Python was not found"**
-```bash
-# Find Python location
-which python3.12
-
-# Use full path
-/usr/bin/python3.12 -m pip install -r requirements.txt
-```
-
-**"ERROR: ResolutionImpossible" (onnxruntime)**
-- You have Python 3.14+, which is not yet supported
-- Install Python 3.12 instead
-
-**Slow pip install / hanging**
-```bash
-# Clear pip cache
-pip cache purge
-
-# Retry
-pip install -r requirements.txt
-```
-
-### Runtime Issues
-
-**"Voice Engine Failed to Load"**
-- Check RAM: Ensure ~500 MB free memory (GPU) or ~250 MB (CPU)
-- Check Internet: First-time download requires connection
-- Try Switching Modes:
-  1. Open Settings → Processing Mode
-  2. Switch to "High Performance (CPU)" if on low-end device
-  3. Or switch to "High Quality (GPU)" if you have strong hardware
-- Re-download Model:
-  1. Delete `models/` folder
-  2. Restart app
-  3. Select desired mode in Settings
-  4. Click "Setup Voice Engine"
-
-**"Engine Mode Not Switching"**
-- Check if target model is downloaded
-- Status indicator shows: GPU: ✅ | CPU: ❌
-- Download missing model before switching
-- Allow 5-10 seconds for engine reload after switch
-
-**"Which Engine Mode Should I Use?"**
-- **Use CPU Mode if:**
-  - You have <4GB RAM
-  - Laptop/low-end device
-  - You prioritize speed over quality
-  - You want to save ~220MB disk space
-- **Use GPU Mode if:**
-  - You have 8GB+ RAM
-  - Desktop with GPU
-  - You prioritize audio quality
-  - Storage is not a concern
-
-**App Won't Start / "File not found"**
-- Use `launch.vbs` instead of terminal
-- Check Python version: `python --version` (need 3.10-3.13)
-- Verify all files extracted from ZIP
-
-**No Sound During Playback**
-- Check output device in Windows sound settings
-- Close conflicting apps (Discord, Zoom, Teams)
-- Restart the app
-
-**Export Stuck at 0%**
-- Check permissions: Ensure `userdata/` folder is writable
-- Check FFMPEG: Verify `bin/ffmpeg.exe` exists
-- Restart export
 
 ---
 
@@ -524,7 +404,7 @@ pip install -r requirements.txt
 
 ### Found a Bug?
 1. Check **Troubleshooting** section above
-2. Verify you're on latest version (v2.3.0)
+2. Verify you're on latest version (v2.5.0)
 3. Check `CHANGELOG.md` for known issues
 4. Contact developer with:
    - Python version (`python --version`)
@@ -538,9 +418,9 @@ pip install -r requirements.txt
 
 ---
 
-**Version:** 2.3.0  
+**Version:** 2.5.0  
 **Engine:** Kokoro-82M (Dual-Mode: CPU/GPU)  
-**Last Updated:** January 1, 2026  
+**Last Updated:** January 3, 2026  
 **Status:** ✅ Stable Release
 
 ---

@@ -344,8 +344,8 @@ async def save_settings(settings: AppSettings):
 # Locale API (v2.0 - Multilingual Support)
 @app.get("/api/locale/{lang}")
 async def get_locale(lang: str):
-    """Serve translation JSON for specified language (en, fr, es)"""
-    if lang not in ["en", "fr", "es"]:
+    """Serve translation JSON for specified language (en, fr, es, zh)"""
+    if lang not in ["en", "fr", "es", "zh"]:
         raise HTTPException(status_code=400, detail=f"Unsupported language: {lang}")
     
     locale_path = base_dir / "locales" / f"{lang}.json"
@@ -358,43 +358,100 @@ async def get_locale(lang: str):
 
 @app.get("/api/voices/available")
 async def get_available_voices():
-    """Return list of available voice IDs based on loaded voice model"""
+    """Return categorized list of available voice IDs based on loaded voice model"""
     voices_path = get_app_anchored_path("app/models/voices.bin")
     
     if not voices_path.exists():
         return {
             "model": "none",
-            "voices": [],
+            "voices": {},
             "size_mb": 0
         }
     
     # Check file size to determine model type
     file_size_mb = voices_path.stat().st_size / (1024 * 1024)
+    model_type = "multilingual" if file_size_mb > 25 else "english-only"
     
-    if file_size_mb > 25:  # Multilingual model (~30MB)
-        return {
-            "model": "multilingual",
-            "size_mb": round(file_size_mb, 1),
+    # Define voice definitions with metadata
+    # This acts as the "Source of Truth" for the frontend
+    voice_definitions = {
+        "en-us": {
+            "label": "English (American)",
             "voices": [
-                # English (American)
-                "af_sky", "af_bella", "af_nicole", "af_sarah",
-                "am_adam", "am_michael",
-                # British English
-                "bf_emma", "bf_isabella", "bm_george", "bm_lewis",
-                # French
-                "ff_siwis",
-                # Spanish
-                "ef_dora", "em_alex", "em_santa",
-                # Japanese
-                "jf_alpha", "jf_gongitsune", "jf_nezumi", "jf_tebukuro"
+                {"id": "af_bella", "name": "AF Bella (Female)"},
+                {"id": "af_sky", "name": "AF Sky (Female)"},
+                {"id": "af_nicole", "name": "AF Nicole (Female)"},
+                {"id": "af_sarah", "name": "AF Sarah (Female)"},
+                {"id": "am_adam", "name": "AM Adam (Male)"},
+                {"id": "am_michael", "name": "AM Michael (Male)"}
+            ]
+        },
+        "en-gb": {
+            "label": "English (British)",
+            "voices": [
+                {"id": "bf_emma", "name": "BF Emma (Female)"},
+                {"id": "bf_isabella", "name": "BF Isabella (Female)"},
+                {"id": "bm_george", "name": "BM George (Male)"},
+                {"id": "bm_lewis", "name": "BM Lewis (Male)"}
+            ]
+        },
+        "fr-fr": {
+            "label": "French",
+            "voices": [
+                {"id": "ff_siwis", "name": "FF Siwis (Female)"}
+            ]
+        },
+        "es": {
+            "label": "Spanish",
+            "voices": [
+                {"id": "ef_dora", "name": "EF Dora (Female)"},
+                {"id": "em_alex", "name": "EM Alex (Male)"},
+                {"id": "em_santa", "name": "EM Santa (Male)"}
+            ]
+        },
+        "cmn": {
+            "label": "Chinese",
+            "voices": [
+                {"id": "zf_xiaobei", "name": "ZF Xiaobei (Female)"},
+                {"id": "zf_xiaomi", "name": "ZF Xiaomi (Female)"},
+                {"id": "zf_xiaoxiao", "name": "ZF Xiaoxiao (Female)"},
+                {"id": "zf_xiaoyi", "name": "ZF Xiaoyi (Female)"}
+            ]
+        },
+        "it": {
+            "label": "Italian",
+            "voices": [
+                {"id": "if_sara", "name": "IF Sara (Female)"},
+                {"id": "im_nicola", "name": "IM Nicola (Male)"}
+            ]
+        },
+        "pt-br": {
+            "label": "Portuguese",
+            "voices": [
+                {"id": "pf_dora", "name": "PF Dora (Female)"},
+                {"id": "pm_alex", "name": "PM Alex (Male)"}
             ]
         }
-    else:  # Legacy English-only model (~5MB)
-        return {
-            "model": "english-only",
-            "size_mb": round(file_size_mb, 1),
-            "voices": ["af_sky", "af_bella", "af_nicole", "af_sarah", "am_adam", "am_michael"]
+    }
+    
+    # Filter voices based on loaded model
+    available_categories = {}
+    
+    if model_type == "multilingual":
+        # Return all categories
+        available_categories = voice_definitions
+    else:
+        # Return only English categories for legacy model
+        available_categories = {
+            "en-us": voice_definitions["en-us"],
+            "en-gb": voice_definitions["en-gb"]
         }
+        
+    return {
+        "model": model_type,
+        "size_mb": round(file_size_mb, 1),
+        "categories": available_categories
+    }
 
 # Library API
 @app.post("/api/convert/epub")
@@ -680,6 +737,7 @@ async def run_setup(background_tasks: BackgroundTasks, model_type: Optional[str]
             download_kokoro_model(target_model)
             print(f"[SETUP] Download complete, loading engine...")
             load_engine(target_model)
+            
             print(f"[SETUP] Setup complete!\n")
         except Exception as e: 
             error_msg = f"Setup failed: {str(e)}"
@@ -853,8 +911,10 @@ def get_language_from_voice(voice: str) -> str:
     - af_, am_ = American English (en-us)
     - bf_, bm_ = British English (en-gb)
     - ff_, fm_ = French (fr-fr)
-    - jf_, jm_ = Japanese (ja)
     - ef_, em_ = Spanish (es)
+    - zf_, zm_ = Chinese (cmn)
+    - if_, im_ = Italian (it)
+    - pf_, pm_ = Portuguese (pt-br)
     """
     if voice.startswith(('af_', 'am_')):
         return 'en-us'
@@ -862,10 +922,14 @@ def get_language_from_voice(voice: str) -> str:
         return 'en-gb'
     elif voice.startswith(('ff_', 'fm_')):
         return 'fr-fr'
-    elif voice.startswith(('jf_', 'jm_')):
-        return 'ja'
     elif voice.startswith(('ef_', 'em_')):
         return 'es'
+    elif voice.startswith(('zf_', 'zm_')):
+        return 'cmn'  # Chinese (Mandarin)
+    elif voice.startswith(('if_', 'im_')):
+        return 'it'   # Italian
+    elif voice.startswith(('pf_', 'pm_')):
+        return 'pt-br' # Portuguese (Brazil)
     else:
         return 'en-us'  # Default fallback
 
@@ -875,16 +939,17 @@ def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: 
     v2.3 Logic:
     - Handles punctuation groups (e.g., "...", "?!") as single pause events (based on last char).
     - Smart newline handling: Only pauses on newline if NOT preceded by punctuation.
+    - v2.5 Logic: Added support for Chinese/Japanese punctuation (。，！？：；、)
     
     Returns: (audio_samples, sample_rate)
     """
     lang = get_language_from_voice(voice)
     print(f"\n{'='*60}")
-    print(f"[PAUSE LOGIC v2.3] Processing: '{text[:100]}{'...' if len(text) > 100 else ''}'")
+    print(f"[PAUSE LOGIC v2.5] Processing: '{text[:100]}{'...' if len(text) > 100 else ''}'")
     
-    # Pattern: Match text OR punctuation sequences OR newlines
-    # This captures "..." as one segment, and "\n" as another
-    segments = re.split(r'([,\.!\?:;]+|\n)', text)
+    # Pattern: Match text OR punctuation sequences (ASCII + CJK) OR newlines
+    # Added: 。，！？：；、 (Fullwidth/Chinese punctuation)
+    segments = re.split(r'([,\.!\?:;。，！？：；、]+|\n)', text)
     
     audio_segments = []
     sample_rate = SAMPLE_RATE
@@ -929,23 +994,22 @@ def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: 
             continue
 
         # 2. Handle Punctuation (Single or Grouped)
-        if re.match(r'^[,\.!\?:;]+$', clean_segment):
+        if re.match(r'^[,\.!\?:;。，！？：；、]+$', clean_segment):
             # Take the LAST character to determine pause type
-            # e.g. "..." -> "." (600ms), "?!" -> "!" (600ms)
             last_char = clean_segment[-1]
             
             pause_ms = 0
-            if last_char == ',':
+            if last_char in [',', '，', '、']:
                 pause_ms = pause_settings.get('comma', 300)
-            elif last_char == '.':
+            elif last_char in ['.', '。']:
                 pause_ms = pause_settings.get('period', 600)
-            elif last_char == '?':
+            elif last_char in ['?', '？']:
                 pause_ms = pause_settings.get('question', 600)
-            elif last_char == '!':
+            elif last_char in ['!', '！']:
                 pause_ms = pause_settings.get('exclamation', 600)
-            elif last_char == ':':
+            elif last_char in [':', '：']:
                 pause_ms = pause_settings.get('colon', 400)
-            elif last_char == ';':
+            elif last_char in [';', '；']:
                 pause_ms = pause_settings.get('semicolon', 400)
             
             # Generate silent audio
@@ -958,7 +1022,8 @@ def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: 
         
         # 3. Handle Text
         else:
-            if re.search(r'[a-zA-Z0-9]', clean_segment):
+            # Re-add CJK ranges to regex to ensure we don't skip valid text
+            if re.search(r'[a-zA-Z0-9\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]', clean_segment):
                 try:
                     samples, _ = kokoro.create(clean_segment, voice=voice, speed=speed, lang=lang)
                     audio_segments.append(samples.flatten())
@@ -1055,10 +1120,16 @@ async def synthesize(request: SynthesisRequest):
         # Check if custom pause settings are provided (including 0ms pauses)
         # Define these BEFORE any conditional blocks to avoid scope issues
         has_pause_settings = pause_settings and isinstance(pause_settings, dict)
-        has_punctuation = any(p in text for p in [',', '.', '!', '?', ':', ';', '\n'])
         
-        # Heuristic: If text has no alphanumeric characters, return tiny silence
-        if not re.search(r'[a-zA-Z0-9]', text):
+        # Check for ASCII and CJK punctuation
+        punctuation_chars = [',', '.', '!', '?', ':', ';', '\n', '。', '，', '！', '？', '：', '；', '、']
+        has_punctuation = any(p in text for p in punctuation_chars)
+        
+        # Determine language early
+        lang = get_language_from_voice(selected_voice)
+        
+        # Heuristic: If text has no alphanumeric or CJK characters, return tiny silence
+        if not re.search(r'[a-zA-Z0-9\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]', text):
             # 0.1s silence
             samples = np.zeros(int(24000 * 0.1), dtype=np.float32)
             sample_rate = 24000
@@ -1069,6 +1140,7 @@ async def synthesize(request: SynthesisRequest):
             print(f"  Pause settings: {pause_settings}")
             print(f"  Text has punctuation: {has_punctuation}")
             print(f"  Text preview: '{text[:100]}...'")
+            print(f"  Language: {lang}")
             
             if has_pause_settings and has_punctuation:
                 # Use audio stitching with custom pauses (even if some are 0ms)
@@ -1076,9 +1148,7 @@ async def synthesize(request: SynthesisRequest):
                 samples, sample_rate = synthesize_with_pauses(text, selected_voice, float(request.speed or 1.0), pause_settings)
             else:
                 # Use standard synthesis (faster for simple text)
-                lang = get_language_from_voice(selected_voice)
                 print(f"  [MODE] Using standard synthesis (no punctuation or no pause settings)")
-                print(f"  [LANG] Detected language: {lang} from voice: {selected_voice}")
                 samples, sample_rate = kokoro.create(text, voice=selected_voice, speed=float(request.speed or 1.0), lang=lang)
         
         # Convert audio to WAV bytes

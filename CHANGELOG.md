@@ -1,9 +1,42 @@
-# LocalReader Pro v2.3 Changelog
+# LocalReader Pro v2.5 Changelog
 
-## Architecture: Hybrid v2.3
+## v2.5 - January 3, 2026
 
-**Base:** LocalReader Pro v2.2 (SQLite Audio Cache)  
-**New Features:** Smart Pause Logic v2 + Punctuation Group Handling + Soft Newlines
+### 🇨🇳 Chinese Language Support (Full Integration)
+- **New Voice:** Added **Chinese (Mandarin)** voice support (`zf_xiaobei`, `zf_xiaomi`, etc.) powered by Kokoro-82M.
+- **UI Translation:** Fully translated the interface into **Simplified Chinese (简体中文)**.
+- **Smart Punctuation Logic:**
+  - Added support for **Full-width Punctuation**: `，` (comma), `。` (period), `！` (exclamation), `？` (question).
+  - These symbols now correctly trigger the custom pause durations set in the Settings drawer.
+  - **Sentence Splitting:** Fixed an issue where Chinese paragraphs were treated as single massive sentences (causing "Index 510" token errors). The engine now correctly splits by `。` `！` `？`.
+- **Layout Fixes:**
+  - **No Extra Spaces:** Fixed a bug where the PDF converter inserted spaces between Chinese characters (`你 好` → `你好`).
+  - **Terminal Detection:** Improved paragraph detection to prevent merging lines ending in Chinese punctuation.
+
+### 🌍 Multilingual Architecture Overhaul
+- **Dynamic Voice Loading:**
+  - The voice list is no longer hardcoded. It now **dynamically fetches** available voices from the backend based on the loaded model.
+  - Voices are automatically grouped by language (English, French, Spanish, Chinese, etc.) in the dropdown.
+- **Language Codes:** Standardized internal language codes to match `espeak-ng` (`cmn`, `it`, `pt-br`, `fr-fr`, `en-us`).
+- **New Languages Enabled:**
+  - **Italian** (`if_sara`, `im_nicola`)
+  - **Portuguese (Brazil)** (`pf_dora`, `pm_alex`)
+  - *(Note: These require the Multilingual Voice Pack)*
+
+### 🛠️ Core Improvements
+- **Self-Healing Audio Cache:**
+  - The SQLite audio cache (`audio_cache.db`) now automatically detects corruption or missing tables and rebuilds itself without crashing the app.
+  - Added robust checks before every read/write operation.
+- **UI Localization:**
+  - Fixed missing translations for:
+    - **Processing Mode:** "High Quality (GPU)" / "High Performance (CPU)"
+    - **Voice Drawer:** "Playback Speed", "Header/Footer Filter"
+    - **Pause Settings:** All slider labels are now translated.
+
+### 🐛 Bug Fixes
+- **Fixed:** "Index 510 is out of bounds" error when processing long Chinese/Japanese paragraphs.
+- **Fixed:** Japanese text sometimes hallucinating "In Chinese" (Reverted unstable experimental logic).
+- **Fixed:** Layout issues where CJK characters were wrapped with unnecessary whitespace.
 
 ---
 
@@ -173,5 +206,5 @@ If you have an existing v2.0 installation with file-based cache:
 
 ---
 
-**Date:** January 1, 2026  
+**Date:** January 3, 2026  
 **Status:** ✅ Stable

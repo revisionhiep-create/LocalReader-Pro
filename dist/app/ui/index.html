@@ -467,18 +467,18 @@
                 <div class="p-3 bg-blue-900/20 border border-blue-800/30 rounded-lg">
                     <label class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
                         <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
-                        Processing Mode
+                        <span data-i18n="settings.processing_mode">Processing Mode</span>
                     </label>
                     <select id="engineMode" class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500 mb-2">
-                        <option value="gpu">High Quality (GPU) - ~309MB</option>
-                        <option value="cpu">High Performance (CPU) - ~87MB</option>
+                        <option value="gpu" data-i18n="settings.gpu_mode">High Quality (GPU) - ~309MB</option>
+                        <option value="cpu" data-i18n="settings.cpu_mode">High Performance (CPU) - ~87MB</option>
                     </select>
                     <div id="modelStatus" class="text-[9px] text-zinc-400 flex items-center gap-2">
                         <span id="gpuStatus">GPU: <span class="text-zinc-600">?</span></span>
                         <span class="text-zinc-700">|</span>
                         <span id="cpuStatus">CPU: <span class="text-zinc-600">?</span></span>
                     </div>
-                    <p class="text-[9px] text-zinc-500 mt-2">GPU: Best quality | CPU: Faster, low RAM</p>
+                    <p class="text-[9px] text-zinc-500 mt-2" data-i18n="settings.mode_help">GPU: Best quality | CPU: Faster, low RAM</p>
                 </div>
             </div>
         </aside>
@@ -543,9 +543,9 @@
                 <div>
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
                         <i data-lucide="audio-lines" class="w-5 h-5 text-blue-500"></i>
-                        Voice & Audio
+                        <span data-i18n="settings.drawer_title">Voice & Audio</span>
                     </h2>
-                    <p class="text-xs text-zinc-500 mt-1">Customize your reading experience</p>
+                    <p class="text-xs text-zinc-500 mt-1" data-i18n="settings.drawer_subtitle">Customize your reading experience</p>
                 </div>
                 <button id="closeDrawerBtn" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
                     <i data-lucide="x" class="w-5 h-5 text-zinc-400"></i>
@@ -562,24 +562,7 @@
                     <span data-i18n="settings.voice_selection">Voice Selection</span>
                 </label>
                 <select id="voiceSelect" class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
-                    <!-- English (American) -->
-                    <option value="af_sky">AF Sky (Female)</option>
-                    <option value="af_bella" selected>AF Bella (Female)</option>
-                    <option value="af_nicole">AF Nicole (Female)</option>
-                    <option value="af_sarah">AF Sarah (Female)</option>
-                    <option value="am_adam">AM Adam (Male)</option>
-                    <option value="am_michael">AM Michael (Male)</option>
-                    <!-- British English -->
-                    <option value="bf_emma">BF Emma (British Female)</option>
-                    <option value="bf_isabella">BF Isabella (British Female)</option>
-                    <option value="bm_george">BM George (British Male)</option>
-                    <option value="bm_lewis">BM Lewis (British Male)</option>
-                    <!-- French -->
-                    <option value="ff_siwis">FF Siwis (French Female)</option>
-                    <!-- Spanish -->
-                    <option value="ef_dora">EF Dora (Spanish Female)</option>
-                    <option value="em_alex">EM Alex (Spanish Male)</option>
-                    <option value="em_santa">EM Santa (Spanish Male)</option>
+                    <option value="" disabled selected>Loading voices...</option>
                 </select>
             </div>
             
@@ -588,7 +571,7 @@
                 <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center justify-between">
                     <span class="flex items-center gap-2">
                         <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
-                        Playback Speed
+                        <span data-i18n="settings.playback_speed">Playback Speed</span>
                     </span>
                     <span class="text-blue-400 font-mono"><span id="speedVal">1.00</span>x</span>
                 </label>
@@ -605,14 +588,14 @@
             <div>
                 <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
                     <i data-lucide="filter" class="w-3.5 h-3.5"></i>
-                    Header/Footer Filter
+                    <span data-i18n="settings.header_footer">Header/Footer Filter</span>
                 </label>
                 <select id="headerFooterMode" class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
-                    <option value="off">Off</option>
-                    <option value="clean">Clean (Remove)</option>
-                    <option value="dim">Dim (Show Faded)</option>
+                    <option value="off" data-i18n="settings.header_footer_off">Off</option>
+                    <option value="clean" data-i18n="settings.header_footer_clean">Clean (Remove)</option>
+                    <option value="dim" data-i18n="settings.header_footer_dim">Dim (Show Faded)</option>
                 </select>
-                <p class="text-[9px] text-zinc-600 mt-2">Automatically hide repeated page headers & footers</p>
+                <p class="text-[9px] text-zinc-600 mt-2" data-i18n="settings.header_footer_desc">Automatically hide repeated page headers & footers</p>
             </div>
             
             <!-- Pause Settings -->
@@ -627,42 +610,42 @@
                 <div id="pauseSettingsContent" class="hidden bg-zinc-950/50 p-4 space-y-4">
                     <div>
                         <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span>Comma Pause</span>
+                            <span data-i18n="settings.comma_pause">Comma Pause</span>
                             <span class="font-mono text-blue-400"><span id="pauseCommaVal">300</span>ms</span>
                         </label>
                         <input type="range" id="pauseComma" min="0" max="1000" step="50" value="300" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
                     </div>
                     <div>
                         <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span>Period Pause</span>
+                            <span data-i18n="settings.period_pause">Period Pause</span>
                             <span class="font-mono text-blue-400"><span id="pausePeriodVal">600</span>ms</span>
                         </label>
                         <input type="range" id="pausePeriod" min="0" max="1500" step="50" value="600" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
                     </div>
                     <div>
                         <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span>Question Pause</span>
+                            <span data-i18n="settings.question_pause">Question Pause</span>
                             <span class="font-mono text-blue-400"><span id="pauseQuestionVal">600</span>ms</span>
                         </label>
                         <input type="range" id="pauseQuestion" min="0" max="1500" step="50" value="600" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
                     </div>
                     <div>
                         <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span>Exclamation Pause</span>
+                            <span data-i18n="settings.exclamation_pause">Exclamation Pause</span>
                             <span class="font-mono text-blue-400"><span id="pauseExclamationVal">600</span>ms</span>
                         </label>
                         <input type="range" id="pauseExclamation" min="0" max="1500" step="50" value="600" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
                     </div>
                     <div>
                         <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span>Colon Pause</span>
+                            <span data-i18n="settings.colon_pause">Colon Pause</span>
                             <span class="font-mono text-blue-400"><span id="pauseColonVal">400</span>ms</span>
                         </label>
                         <input type="range" id="pauseColon" min="0" max="1500" step="50" value="400" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
                     </div>
                     <div>
                         <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span>Semicolon Pause</span>
+                            <span data-i18n="settings.semicolon_pause">Semicolon Pause</span>
                             <span class="font-mono text-blue-400"><span id="pauseSemicolonVal">400</span>ms</span>
                         </label>
                         <input type="range" id="pauseSemicolon" min="0" max="1500" step="50" value="400" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
@@ -883,7 +866,7 @@
         // ========================================================================
         // MULTILINGUAL SUPPORT (v2.0)
         // ========================================================================
-        const languages = ['en', 'fr', 'es'];
+        const languages = ['en', 'fr', 'es', 'zh'];
         let currentLangIndex = 0;
         let currentTranslations = {};
         
@@ -891,8 +874,60 @@
         const defaultVoices = {
             'en': 'af_bella',
             'fr': 'ff_siwis',
-            'es': 'ef_dora'
+            'es': 'ef_dora',
+            'zh': 'zf_xiaobei'
         };
+
+        // v2.3 - Dynamic Voice Loading
+        async function loadVoices() {
+            try {
+                const response = await fetch(`${API_URL}/api/voices/available`);
+                if (!response.ok) throw new Error("Failed to load voices");
+                
+                const data = await response.json();
+                const categories = data.categories || {};
+                
+                // Clear existing options
+                voiceSelect.innerHTML = '';
+                
+                // Sort categories by label to ensure consistent order (en-us first usually)
+                const sortedKeys = Object.keys(categories).sort((a, b) => {
+                    // Force English to top
+                    if (a.startsWith('en') && !b.startsWith('en')) return -1;
+                    if (!a.startsWith('en') && b.startsWith('en')) return 1;
+                    return a.localeCompare(b);
+                });
+                
+                sortedKeys.forEach(langCode => {
+                    const category = categories[langCode];
+                    const group = document.createElement('optgroup');
+                    group.label = category.label;
+                    
+                    category.voices.forEach(voice => {
+                        const option = document.createElement('option');
+                        option.value = voice.id;
+                        option.textContent = voice.name;
+                        group.appendChild(option);
+                    });
+                    
+                    voiceSelect.appendChild(group);
+                });
+                
+                // If list is empty (no voices downloaded yet)
+                if (voiceSelect.options.length === 0) {
+                    const option = document.createElement('option');
+                    option.textContent = "No voices found (Download Engine)";
+                    option.disabled = true;
+                    voiceSelect.appendChild(option);
+                }
+                
+                return true;
+            } catch (error) {
+                console.error("Error loading voices:", error);
+                voiceSelect.innerHTML = '<option disabled>Error loading voices</option>';
+                return false;
+            }
+        }
 
         async function loadLocale(lang) {
             try {
@@ -924,8 +959,8 @@
                     if (value) el.title = value;
                 });
                 
-                // Update voice dropdown labels
-                updateVoiceLabels();
+                // Note: Voice labels are now handled by loadVoices() from backend data
+                // We might want to translate category labels in future, but names are usually standard
                 
                 console.log(`[i18n] Loaded locale: ${lang}`);
             } catch (error) {
@@ -934,15 +969,7 @@
         }
 
         function updateVoiceLabels() {
-            if (!currentTranslations.voices) return;
-            
-            const voiceOptions = voiceSelect.querySelectorAll('option');
-            voiceOptions.forEach(option => {
-                const voiceId = option.value;
-                if (currentTranslations.voices[voiceId]) {
-                    option.textContent = currentTranslations.voices[voiceId];
-                }
-            });
+            // Deprecated in favor of loadVoices() dynamic loading
         }
 
         function switchLanguage(lang) {
@@ -951,7 +978,11 @@
             // Auto-switch voice to match language (optional, but good UX)
             const defaultVoice = defaultVoices[lang];
             if (defaultVoice && voiceSelect.value !== defaultVoice) {
-                voiceSelect.value = defaultVoice;
+                // Check if voice exists in current list
+                const exists = Array.from(voiceSelect.options).some(opt => opt.value === defaultVoice);
+                if (exists) {
+                    voiceSelect.value = defaultVoice;
+                }
             }
             
             // Save language preference
@@ -1094,6 +1125,7 @@
                 // 1. Start all fetches in parallel
                 const settingsPromise = fetch(`${API_URL}/api/settings`).then(r => r.json());
                 const libraryPromise = loadLibrary();
+                const voicesPromise = loadVoices(); // Load dynamic voices
 
                 const settings = await settingsPromise;
                 
@@ -1154,14 +1186,19 @@
                     pauseSemicolonVal.textContent = pauseSettings.semicolon || 400;
                 }
 
+                // Wait for voices to load before setting selection
+                await voicesPromise;
+
                 // 3. Wait for UI components to be fully ready for voice selection
                 const applyVoice = () => {
                     const optionsReady = voiceSelect.options.length > 0;
                     if (savedVoice && optionsReady) {
+                        // Check if saved voice exists in loaded list
                         const exists = Array.from(voiceSelect.options).some(opt => opt.value === savedVoice);
                         if (exists) {
                             voiceSelect.value = savedVoice;
                         } else {
+                            // If saved voice is missing (e.g. engine mode switch), fallback to default
                             voiceSelect.selectedIndex = 0;
                         }
                         return true;
@@ -1712,16 +1749,17 @@
             text = text
                 // Preserve paragraph breaks (double newlines)
                 .replace(/\n\n/g, '<!PARAGRAPH!>')
-                // Join lines that don't end with sentence punctuation
-                // If line ends with .!?:; keep the newline, otherwise join with space
-                .replace(/([^.!?:;])\n/g, '$1 ')
+                // Join lines that don't end with sentence punctuation (ASCII + CJK)
+                // If line ends with .!?:;。！？：； keep the newline, otherwise join with space
+                .replace(/([^.!?:;。！？：；])\n/g, '$1 ')
                 // Restore paragraph breaks
                 .replace(/<!PARAGRAPH!>/g, '\n\n')
                 // Clean up multiple spaces
                 .replace(/  +/g, ' ');
             
-            // Split by sentence but keep trailing quotes
-            const rawSentences = text.match(/[^.!?]+[.!?]+[\"\'\u201c\u2018\u201d\u2019]*(?:\s|$)|[^.!?]+$/g) || [text];
+            // Split by sentence but keep trailing quotes (ASCII + CJK delimiters)
+            // Supports: "Eng." (space req) OR "CJK。" (no space req)
+            const rawSentences = text.match(/[^.!?。！？]+(?:[.!?]+[\"\'\u201c\u2018\u201d\u2019]*(?:\s|$)|[。！？]+[\"\'\u201c\u2018\u201d\u2019]*)|[^.!?。！？]+$/g) || [text];
             
             // Process sentences: clean up quotes and whitespace
             sentences = [];
@@ -1802,11 +1840,19 @@
                     const verticalGap = Math.abs(currentY - lastY);
                     
                     if (verticalGap > (lastHeight * 0.4)) {
-                        // New line detection
-                        const isTerminal = /[.!?;:]/.test(text.trimEnd().slice(-1));
+                        // New line detection (Check ASCII and CJK terminal punctuation)
+                        const isTerminal = /[.!?;:。！？：；]/.test(text.trimEnd().slice(-1));
+                        
                         // If it's not a terminal punctuation, it's likely a wrapped line
                         if (!isTerminal && verticalGap < (lastHeight * 2.5)) {
-                            if (!text.endsWith(" ") && !str.startsWith(" ")) text += " ";
+                            // Join wrapped line. Add space only if not CJK.
+                            const lastChar = text.trimEnd().slice(-1);
+                            const nextChar = str.trimStart().charAt(0);
+                            const isCJK = (c) => /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/.test(c);
+                            
+                            if (!text.endsWith(" ") && !str.startsWith(" ") && !isCJK(lastChar) && !isCJK(nextChar)) {
+                                text += " ";
+                            }
                         } else {
                             text = text.trimEnd() + "\n";
                         }
@@ -1815,7 +1861,6 @@
                         const gap = currentX - (lastX + lastWidth);
                         
                         // If gap is significant but not too large, add a space
-                        // Proportional to average char width or font height
                         if (gap > Math.max(1.5, avgCharWidth * 0.25)) {
                             const lastChar = text.trimEnd().slice(-1);
                             const nextChar = str.trimStart().charAt(0);
@@ -1823,8 +1868,10 @@
                             // Don't add space if we are inside quotes or brackets
                             const noSpaceBefore = /[\"\'\(\[\{\u201c\u2018]/.test(lastChar);
                             const noSpaceAfter = /[\"\'\)\\\}\]\u201d\u2019]/.test(nextChar);
+                            // Also don't add space between CJK characters
+                            const isCJK = (c) => /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/.test(c);
                             
-                            if (!text.endsWith(" ") && !str.startsWith(" ") && !noSpaceBefore && !noSpaceAfter) {
+                            if (!text.endsWith(" ") && !str.startsWith(" ") && !noSpaceBefore && !noSpaceAfter && (!isCJK(lastChar) || !isCJK(nextChar))) {
                                 text += " ";
                             }
                         }
