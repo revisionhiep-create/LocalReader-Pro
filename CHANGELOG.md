@@ -20,9 +20,6 @@
   - **UI Language**
 - **Settings Data Integrity:** Added `font_size` to the backend settings model and implemented atomic writes to prevent configuration corruption.
 
-### 📦 Maintenance
-- **Cleanup:** Removed deprecated `setup.exe` from the distribution to encourage direct Python execution/portable use.
-
 ---
 
 ## v2.6 - January 4, 2026
