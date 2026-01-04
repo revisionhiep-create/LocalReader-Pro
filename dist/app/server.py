@@ -166,7 +166,9 @@ class PatchedKokoro(Kokoro):
     def _create_audio(self, phonemes: str, voice: np.ndarray, speed: float):
         phonemes = phonemes[:MAX_PHONEME_LENGTH]
         tokens = np.array(self.tokenizer.tokenize(phonemes), dtype=np.int64)
-        voice_style = voice[len(tokens)]
+        # Fix: Clamp index to avoid out of bounds if tokens length matches voice length
+        style_idx = min(len(tokens), len(voice) - 1)
+        voice_style = voice[style_idx]
         tokens = [[0, *tokens, 0]]
         inputs = {"input_ids": tokens, "style": np.array(voice_style, dtype=np.float32), "speed": np.array([speed], dtype=np.float32)}
         audio = self.sess.run(None, inputs)[0]
