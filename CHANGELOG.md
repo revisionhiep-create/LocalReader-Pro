@@ -1,19 +1,31 @@
 # LocalReader Pro Changelog
 
-## v2.6 - January 4, 2026
+## v2.7 - January 4, 2026
 
-### 🚀 Core Performance & Stability
-- **Faster Startup:** Reduced internal server polling interval from 1s to 0.1s. The app window now appears almost instantly once the backend is ready (approx. 0.9s faster launch).
-- **Safety Hardening:** Added explicit file existence checks for the UI. If `index.html` is missing/corrupted, the app now reports a clear error instead of crashing silently or showing a generic 500 page.
+### 🎨 UI/UX & Visual Polish
+- **Dark Mode Refinement:** Updated the "Export Audio" button to a more sophisticated **Deep Indigo** (`#4B0082`) to improve contrast and visual hierarchy in dark mode.
+- **Improved Sidebar Feedback:** UI elements like the "Export" button and the new "Text Size" slider now dynamically show/hide based on document state and engine readiness.
 
-### 🌐 User Experience
-- **Auto-Refresh Voice List:** Fixed a bug where the "Voice Selection" dropdown remained empty after downloading the engine for the first time. The list now automatically refreshes the moment the engine reports "Ready".
-- **Improved Downloads:** Increased the timeout for model downloads from 5 minutes to 10 minutes (600s) to better support users with slower internet connections when fetching the ~300MB GPU models.
+### ✨ New Features
+- **Audio Player Text Resizing:** Added a **"Text Size" Slider** in the sidebar. This allows users to dynamically resize the subtitle/caption text in the bottom player bar (Range: 12px to 24px) for better accessibility and focus.
+- **Smart Line Height:** Caption text now automatically adjusts its line height alongside font size for optimal readability.
 
-### 🐛 Bug Fixes
-- **ROCm/Torch Compatibility:** Fixed a "Index out of bounds" crash that occurred when processing specific text chunks in ROCm environments. This was caused by an edge case in the `PatchedKokoro` class where generated tokens matched the exact length of the voice style array (512). The style index is now safely clamped to prevent this.
+### 🔧 Persistence & Reliability
+- **Persistent Voice Selection:** Fixed a long-standing bug where the chosen voice (e.g., `am_adam`) would reset to the default after app restart. Selection is now saved to disk and restored even after dynamic voice list refreshes.
+- **Global Settings Audit:** Unified persistence for all user preferences including:
+  - **Voice ID**
+  - **Playback Speed**
+  - **Player Text Size**
+  - **Pause Settings**
+  - **UI Language**
+- **Settings Data Integrity:** Added `font_size` to the backend settings model and implemented atomic writes to prevent configuration corruption.
+
+### 📦 Maintenance
+- **Cleanup:** Removed deprecated `setup.exe` from the distribution to encourage direct Python execution/portable use.
 
 ---
+
+## v2.6 - January 4, 2026
 
 # LocalReader Pro v2.5 Changelog
 

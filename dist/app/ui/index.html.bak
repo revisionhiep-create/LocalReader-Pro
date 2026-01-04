@@ -1,0 +1,2802 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalReader Pro</title>
+    <!-- Local Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="lib/lucide.min.js"></script>
+    <script src="lib/pdf.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(240 3.7% 15.9%)",
+                        background: "#000000",
+                        foreground: "#d1d5db",
+                        card: "#09090b",
+                        accent: "#3b82f6",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        /* RESPONSIVE VARIABLES */
+        :root {
+          /* Sidebar: User-resizable (JavaScript controlled) */
+          --sidebar-width: 336px;  /* Increased by 5% for multilingual text (320px -> 336px) */
+          --sidebar-min-width: 200px;
+          --sidebar-max-width: 600px;
+          
+          /* Player Padding: Scales between 1rem and 3rem */
+          --player-padding: clamp(1rem, 5vw, 3rem);
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: #000000; color: #d1d5db; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #09090b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+        
+        /* LAYOUT CONTAINER */
+        .main-container {
+          display: flex;
+          height: 100vh;
+          overflow: hidden;
+          background-color: #0a0a0a;
+        }
+
+        /* SMART SIDEBAR */
+        .sidebar {
+          width: var(--sidebar-width);
+          flex-shrink: 0;
+          border-right: 1px solid rgba(255,255,255,0.1);
+          position: relative;
+          min-width: var(--sidebar-min-width);
+          max-width: var(--sidebar-max-width);
+        }
+
+        /* Drag Handle */
+        .sidebar-drag-handle {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 4px;
+          height: 100%;
+          cursor: ew-resize;
+          background: transparent;
+          z-index: 1000;
+          transition: background 0.2s ease;
+        }
+
+        .sidebar-drag-handle:hover {
+          background: rgba(59, 130, 246, 0.5);
+        }
+
+        .sidebar-drag-handle.dragging {
+          background: rgba(59, 130, 246, 0.8);
+        }
+
+        /* Mobile: Collapse to icon width */
+        @media (max-width: 768px) {
+          .sidebar {
+            width: 70px;
+          }
+          .sidebar-drag-handle {
+            display: none;
+          }
+        }
+
+        /* THE CONTAINER (Right of Sidebar) */
+        .content-area {
+          flex-grow: 1;
+          height: 100vh;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          margin: 0;
+          width: auto;
+          background-color: #000000;
+          position: relative;
+        }
+        
+        /* Sticky Header */
+        .content-area > header {
+          position: sticky;
+          top: 0;
+          z-index: 50;
+          background-color: rgba(9, 9, 11, 0.95);
+          backdrop-filter: blur(12px);
+        }
+        
+        /* Reader Content Area */
+        #readerContent {
+          flex: 1;
+          padding: 2rem;
+          padding-bottom: 150px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        
+        @media (min-width: 1024px) {
+          #readerContent {
+            padding-left: 6rem;
+            padding-right: 6rem;
+          }
+        }
+        
+        @media (min-width: 1280px) {
+          #readerContent {
+            padding-left: 12rem;
+            padding-right: 12rem;
+          }
+        }
+
+        /* THE TEXT ITSELF */
+        .chapter-text {
+          width: 100%;
+          max-width: 900px;
+          font-size: 1.25rem;
+          line-height: 1.8;
+          color: #e0e0e0;
+          text-align: left;
+          column-count: 1 !important;
+          height: auto !important;
+          column-gap: 0;
+        }
+
+        /* SMART PLAYER (Floating - Centered in Reading Pane) */
+        .player-bar {
+          position: fixed;
+          bottom: 2rem;
+          /* Center relative to content area (reading pane) */
+          left: calc(var(--sidebar-width) + (100% - var(--sidebar-width)) / 2);
+          transform: translateX(-50%);
+          width: min(90%, 800px);
+          max-width: calc(100% - var(--sidebar-width) - 4rem);
+          min-height: 70px;
+          padding: 1rem var(--player-padding);
+          background: rgba(30, 30, 30, 0.85);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255,255,255,0.05);
+          border-radius: 20px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+          z-index: 100;
+          display: flex;
+          flex-wrap: nowrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          transition: left 0.1s ease;
+        }
+
+        /* Player Text Element (The Sentence Preview) - Full Display */
+        .player-text {
+          flex: 1 1 auto;
+          white-space: normal;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          margin-left: 1rem;
+          margin-right: 1rem;
+          font-size: 0.85rem;
+          color: #ccc;
+          text-transform: none;
+          letter-spacing: 0.5px;
+          line-height: 1.5;
+          min-width: 0;
+        }
+        
+        .active-sentence { background-color: rgba(59, 130, 246, 0.2); border-left: 3px solid #3b82f6; border-radius: 2px; }
+        .sentence { transition: all 0.2s; padding: 4px 8px; cursor: pointer; display: block; margin-bottom: 0.5rem; }
+        .sentence:hover { background-color: rgba(255, 255, 255, 0.05); }
+        
+        /* Dimmed Text (Headers/Footers) */
+        .dimmed-text {
+            opacity: 0.5;
+            font-size: 0.8em;
+            color: #71717a;
+            font-style: italic;
+        }
+
+        /* Search Highlight */
+        .search-highlight {
+            background-color: #ffeb3b;
+            color: #000;
+            border-radius: 2px;
+            padding: 2px 0;
+            box-shadow: 0 0 5px #ffeb3b;
+            font-weight: 600;
+        }
+
+        /* Search Result Item */
+        .search-result-item {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #27272a;
+            background: #18181b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-result-item:hover {
+            background: #27272a;
+            border-color: #3b82f6;
+        }
+
+        .search-result-snippet {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            color: #a1a1aa;
+        }
+
+        .search-result-snippet mark {
+            background-color: #3b82f6;
+            color: #fff;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-weight: 600;
+        }
+        
+        /* Pronunciation Rules Accordion */
+        .rule-item { transition: all 0.3s ease; overflow: hidden; }
+        .rule-collapsed { cursor: pointer; }
+        .rule-collapsed:hover { background-color: rgba(255, 255, 255, 0.03); }
+        .rule-expanded { background-color: rgba(59, 130, 246, 0.05); border-color: rgba(59, 130, 246, 0.3) !important; }
+        .rule-content { max-height: 0; opacity: 0; transition: max-height 0.3s ease, opacity 0.2s ease; }
+        .rule-content.expanded { max-height: 500px; opacity: 1; }
+        
+        /* Collapsed Rule Layout */
+        .rule-original { 
+            flex: 0 1 40%; 
+            min-width: 0;
+            font-weight: 600;
+            color: #ffffff;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .rule-arrow { 
+            flex-shrink: 0;
+            margin: 0 8px;
+            color: #52525b;
+        }
+        .rule-replacement { 
+            flex: 0 1 40%; 
+            min-width: 0;
+            color: #60a5fa;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .rule-meta {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 8px;
+        }
+        .rule-badge {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .rule-empty {
+            font-style: italic;
+            color: #71717a;
+        }
+        
+        /* Settings Section Styling */
+        .settings-section {
+            background: rgba(9, 9, 11, 0.5);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid rgba(63, 63, 70, 0.3);
+        }
+        
+        .settings-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        /* Voice Settings Drawer */
+        .voice-settings-drawer {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: linear-gradient(to bottom, #18181b, #09090b);
+            border-left: 1px solid #27272a;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+            transition: right 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .voice-settings-drawer.open {
+            right: 0;
+        }
+        
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .drawer-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .voice-settings-button {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            z-index: 998;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            color: #a1a1aa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .voice-settings-button:hover {
+            background: #3f3f46;
+            color: #e4e4e7;
+            border-color: #52525b;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+        
+        .voice-settings-button.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #2563eb;
+        }
+    </style>
+</head>
+<body class="min-h-screen selection:bg-blue-500/30 overflow-hidden">
+
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar bg-card flex flex-col">
+            <!-- Drag Handle -->
+            <div class="sidebar-drag-handle" id="sidebarDragHandle"></div>
+            <div class="p-6 border-b border-border">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-blue-600 rounded-lg text-white">
+                            <i data-lucide="book-open" class="w-5 h-5"></i>
+                        </div>
+                        <h1 class="font-bold text-lg tracking-tight text-white">LocalReader</h1>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="languageToggle" class="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30 rounded-md text-xs font-bold transition-all" title="Switch Language">EN</button>
+                        <div id="engineStatusDot" class="w-2.5 h-2.5 rounded-full bg-zinc-700 shadow-[0_0_8px_rgba(0,0,0,0.5)]" title="Engine Status"></div>
+                    </div>
+                </div>
+                
+                <div id="setupArea" class="mb-4" style="display: none;">
+                    <button id="setupBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20">
+                        <i data-lucide="download-cloud" class="w-4 h-4"></i>
+                        <span class="text-sm font-bold" data-i18n="sidebar.setup_engine">Setup Voice Engine</span>
+                    </button>
+                </div>
+
+                <div id="uploadArea" class="mb-4" style="display: none;">
+                    <label class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg cursor-pointer transition-all border border-zinc-700">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span class="text-sm font-semibold" data-i18n="sidebar.upload">Upload Book (PDF/EPUB)</span>
+                        <input type="file" id="pdfUpload" class="hidden" accept=".pdf,.epub">
+                    </label>
+                </div>
+
+                <div id="exportArea" class="mb-4" style="display: none;">
+                    <button id="exportBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all shadow-lg shadow-purple-900/20">
+                        <i data-lucide="download" class="w-4 h-4"></i>
+                        <span class="text-sm font-bold" data-i18n="export.title">Export Audio (MP3)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs (Compact with Icons) -->
+            <div class="flex border-b border-border">
+                <button id="tabLibrary" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5" data-i18n-title="tabs.library" title="Library">
+                    <i data-lucide="library" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline" data-i18n="tabs.library">Library</span>
+                </button>
+                <button id="tabRules" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300" data-i18n-title="tabs.rules" title="Pronunciation Rules">
+                    <i data-lucide="type" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline" data-i18n="tabs.rules">Rules</span>
+                </button>
+                <button id="tabIgnore" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300" data-i18n-title="tabs.ignore" title="Ignore List">
+                    <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline" data-i18n="tabs.ignore">Ignore</span>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 overflow-hidden flex flex-col">
+                <div id="libraryPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2"></div>
+                <div id="rulesPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500" data-i18n="settings.pronunciation_rules">Pronunciation Rules</h3>
+                        <button id="addRuleBtn" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                    <div id="rulesList" class="space-y-3"></div>
+                </div>
+                <div id="ignorePanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500" data-i18n="settings.ignore_list">Ignore List</h3>
+                        <button id="addIgnoreBtn" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md"><i data-lucide="plus" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                    <div id="ignoreListUI" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="p-6 border-t border-border bg-black/20 space-y-4">
+                <!-- Processing Mode (v1.9 - Dual-Engine) -->
+                <div class="p-3 bg-blue-900/20 border border-blue-800/30 rounded-lg">
+                    <label class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+                        <span data-i18n="settings.processing_mode">Processing Mode</span>
+                    </label>
+                    <select id="engineMode" class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500 mb-2">
+                        <option value="gpu" data-i18n="settings.gpu_mode">High Quality (GPU) - ~309MB</option>
+                        <option value="cpu" data-i18n="settings.cpu_mode">High Performance (CPU) - ~87MB</option>
+                    </select>
+                    <div id="modelStatus" class="text-[9px] text-zinc-400 flex items-center gap-2">
+                        <span id="gpuStatus">GPU: <span class="text-zinc-600">?</span></span>
+                        <span class="text-zinc-700">|</span>
+                        <span id="cpuStatus">CPU: <span class="text-zinc-600">?</span></span>
+                    </div>
+                    <p class="text-[9px] text-zinc-500 mt-2" data-i18n="settings.mode_help">GPU: Best quality | CPU: Faster, low RAM</p>
+                </div>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            <header class="h-16 border-b border-border flex items-center px-4 lg:px-6 bg-card/80 backdrop-blur-md shrink-0 gap-2">
+                <span id="docTitle" class="font-semibold text-xs lg:text-sm truncate text-zinc-300 italic flex-1 min-w-0 mr-2" data-i18n="reader.no_document">No document selected</span>
+                <button id="searchBtn" class="hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors shrink-0" title="Search in book (Ctrl+F)">
+                    <i data-lucide="search" class="w-4 h-4 text-zinc-400 hover:text-blue-400"></i>
+                </button>
+                <div id="pageNav" class="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800 text-xs shrink-0 opacity-50 pointer-events-none" data-inactive="true">
+                    <button id="prevPage" class="hover:text-blue-400 p-1 disabled:opacity-30 disabled:cursor-not-allowed" disabled><i data-lucide="chevron-left" class="w-3 h-3 lg:w-4 lg:h-4"></i></button>
+                    <div class="flex items-center gap-1 lg:gap-1.5 px-0.5 lg:px-1">
+                        <span class="text-zinc-500 font-medium hidden sm:inline">Pg</span>
+                        <input type="number" id="pageInput" class="w-8 lg:w-10 bg-zinc-800 border-none rounded text-center text-zinc-200 outline-none focus:ring-1 focus:ring-blue-500 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" min="1" value="1" disabled>
+                        <span class="text-zinc-500 text-xs">/ <span id="pageTotal">1</span></span>
+                    </div>
+                    <button id="nextPage" class="hover:text-blue-400 p-1 disabled:opacity-30 disabled:cursor-not-allowed" disabled><i data-lucide="chevron-right" class="w-3 h-3 lg:w-4 lg:h-4"></i></button>
+                </div>
+            </header>
+
+            <div id="readerContent" class="custom-scrollbar">
+                <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center space-y-4">
+                    <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-700"><i data-lucide="file-text" class="w-10 h-10"></i></div>
+                    <h2 class="text-xl font-bold text-zinc-300" data-i18n="reader.welcome">Welcome to LocalReader</h2>
+                    <p class="text-zinc-500 text-sm max-w-sm" data-i18n="reader.select_prompt">Select a document or upload a new PDF.</p>
+                </div>
+                <div id="textContent" class="chapter-text hidden"></div>
+            </div>
+
+            <!-- Controls -->
+            <div id="controls" class="player-bar hidden">
+                <button id="playBtn" class="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-900/40 shrink-0">
+                    <i data-lucide="play" id="playIcon" class="w-6 h-6 fill-current"></i>
+                </button>
+                <div class="flex flex-col flex-1 min-w-0">
+                    <span id="currentSentencePreview" class="player-text" data-i18n="status.ready">Ready</span>
+                    <div class="flex items-center gap-4 mt-1.5">
+                        <button id="skipBack" class="text-zinc-500 hover:text-white p-1"><i data-lucide="skip-back" class="w-5 h-5"></i></button>
+                        <button id="skipForward" class="text-zinc-500 hover:text-white p-1"><i data-lucide="skip-forward" class="w-5 h-5"></i></button>
+                        <div class="h-4 w-px bg-zinc-800 mx-1"></div>
+                        <span id="bookmarkStatus" class="text-[9px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5"><i data-lucide="bookmark" class="w-3 h-3"></i> Auto-Saving</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Voice Settings Button (Floating) -->
+    <button id="voiceSettingsBtn" class="voice-settings-button" title="Voice & Audio Settings">
+        <i data-lucide="audio-lines" class="w-5 h-5"></i>
+    </button>
+
+    <!-- Drawer Overlay -->
+    <div id="drawerOverlay" class="drawer-overlay"></div>
+
+    <!-- Voice Settings Drawer -->
+    <div id="voiceSettingsDrawer" class="voice-settings-drawer">
+        <!-- Drawer Header -->
+        <div class="p-6 border-b border-zinc-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="audio-lines" class="w-5 h-5 text-blue-500"></i>
+                        <span data-i18n="settings.drawer_title">Voice & Audio</span>
+                    </h2>
+                    <p class="text-xs text-zinc-500 mt-1" data-i18n="settings.drawer_subtitle">Customize your reading experience</p>
+                </div>
+                <button id="closeDrawerBtn" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                    <i data-lucide="x" class="w-5 h-5 text-zinc-400"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Drawer Content -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+            <!-- Voice Selection -->
+            <div>
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                    <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                    <span data-i18n="settings.voice_selection">Voice Selection</span>
+                </label>
+                <select id="voiceSelect" class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                    <option value="" disabled selected>Loading voices...</option>
+                </select>
+            </div>
+            
+            <!-- Speed Control -->
+            <div>
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center justify-between">
+                    <span class="flex items-center gap-2">
+                        <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+                        <span data-i18n="settings.playback_speed">Playback Speed</span>
+                    </span>
+                    <span class="text-blue-400 font-mono"><span id="speedVal">1.00</span>x</span>
+                </label>
+                <input type="range" id="speedRange" min="0.5" max="3.0" step="0.05" value="1.00" class="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <div class="flex justify-between text-[9px] text-zinc-600 mt-1">
+                    <span>0.5x</span>
+                    <span>1.0x</span>
+                    <span>2.0x</span>
+                    <span>3.0x</span>
+                </div>
+            </div>
+            
+            <!-- Header/Footer Filter -->
+            <div>
+                <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                    <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                    <span data-i18n="settings.header_footer">Header/Footer Filter</span>
+                </label>
+                <select id="headerFooterMode" class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
+                    <option value="off" data-i18n="settings.header_footer_off">Off</option>
+                    <option value="clean" data-i18n="settings.header_footer_clean">Clean (Remove)</option>
+                    <option value="dim" data-i18n="settings.header_footer_dim">Dim (Show Faded)</option>
+                </select>
+                <p class="text-[9px] text-zinc-600 mt-2" data-i18n="settings.header_footer_desc">Automatically hide repeated page headers & footers</p>
+            </div>
+            
+            <!-- Pause Settings -->
+            <div class="border border-zinc-800 rounded-lg overflow-hidden">
+                <button id="pauseSettingsToggle" class="w-full flex items-center justify-between p-4 bg-zinc-900/50 hover:bg-zinc-900 transition-colors">
+                    <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                        <span data-i18n="settings.pause_settings">Pause Settings</span>
+                    </span>
+                    <i data-lucide="chevron-down" id="pauseChevron" class="w-4 h-4 text-zinc-500 transition-transform"></i>
+                </button>
+                <div id="pauseSettingsContent" class="hidden bg-zinc-950/50 p-4 space-y-4">
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span data-i18n="settings.comma_pause">Comma Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseCommaVal">300</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseComma" min="0" max="1000" step="50" value="300" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span data-i18n="settings.period_pause">Period Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pausePeriodVal">600</span>ms</span>
+                        </label>
+                        <input type="range" id="pausePeriod" min="0" max="1500" step="50" value="600" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span data-i18n="settings.question_pause">Question Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseQuestionVal">600</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseQuestion" min="0" max="1500" step="50" value="600" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span data-i18n="settings.exclamation_pause">Exclamation Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseExclamationVal">600</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseExclamation" min="0" max="1500" step="50" value="600" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span data-i18n="settings.colon_pause">Colon Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseColonVal">400</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseColon" min="0" max="1500" step="50" value="400" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
+                            <span data-i18n="settings.semicolon_pause">Semicolon Pause</span>
+                            <span class="font-mono text-blue-400"><span id="pauseSemicolonVal">400</span>ms</span>
+                        </label>
+                        <input type="range" id="pauseSemicolon" min="0" max="1500" step="50" value="400" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-4 right-4 bg-red-900/95 border border-red-700 text-white px-6 py-4 rounded-xl shadow-2xl hidden z-[9999]">
+        <div class="flex items-center gap-3">
+            <i data-lucide="alert-circle" class="w-5 h-5 text-red-300"></i>
+            <span id="toastMsg" class="text-sm font-semibold"></span>
+        </div>
+    </div>
+
+    <!-- FFMPEG Download Modal -->
+    <div id="ffmpegModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold text-white">Download Required</h3>
+                <button id="cancelFFMPEGBtn" class="text-zinc-500 hover:text-red-500 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <p class="text-sm text-zinc-400">
+                    To export audio to MP3, we need to download the FFMPEG encoder (~100MB).
+                </p>
+                
+                <div id="ffmpegDownloadSection" class="hidden">
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="text-zinc-400">Progress</span>
+                            <span id="ffmpegProgress" class="text-blue-400 font-mono">0%</span>
+                        </div>
+                        <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div id="ffmpegProgressBar" class="h-full bg-gradient-to-r from-blue-600 to-green-600 transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-xs text-zinc-500 text-center">
+                        <span id="ffmpegStatus">Downloading...</span>
+                    </div>
+                </div>
+                
+                <div id="ffmpegComplete" class="hidden bg-green-900/50 border border-green-700 text-green-300 px-4 py-3 rounded-lg text-sm">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
+                        <span>Download complete! Starting export...</span>
+                    </div>
+                </div>
+                
+                <div id="ffmpegError" class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0"></i>
+                        <span id="ffmpegErrorMsg"></span>
+                    </div>
+                </div>
+                
+                <button id="startFFMPEGDownload" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-semibold">
+                    <i data-lucide="download-cloud" class="w-4 h-4"></i>
+                    <span>Download FFMPEG</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Progress Modal -->
+    <div id="exportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-bold text-white">Exporting Audio</h3>
+                <button id="cancelExportBtn" class="text-zinc-500 hover:text-red-500 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="text-zinc-400">Progress</span>
+                        <span id="exportProgress" class="text-blue-400 font-mono">0%</span>
+                    </div>
+                    <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                        <div id="exportProgressBar" class="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div class="text-xs text-zinc-500 text-center">
+                    <span id="exportStatus">Processing paragraphs...</span>
+                </div>
+                
+                <div id="exportComplete" class="hidden space-y-3">
+                    <div class="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3">
+                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Saved to:</div>
+                        <div id="exportFilePath" class="text-xs text-zinc-400 font-mono break-all"></div>
+                    </div>
+                    <button id="openFileLocationBtn" class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all font-semibold">
+                        <i data-lucide="folder-open" class="w-4 h-4"></i>
+                        <span>📂 Open Folder</span>
+                    </button>
+                </div>
+                
+                <div id="exportError" class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0"></i>
+                        <span id="exportErrorMsg"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="searchModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 z-[2000] hidden">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+            <!-- Search Input -->
+            <div class="p-4 border-b border-zinc-800">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="search" class="w-5 h-5 text-zinc-500"></i>
+                    <input type="text" id="searchInput" placeholder="Search in book..." class="flex-1 bg-transparent text-white text-lg outline-none placeholder-zinc-500" autocomplete="off">
+                    <button id="closeSearchBtn" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                        <i data-lucide="x" class="w-5 h-5 text-zinc-500"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Results -->
+            <div id="searchResults" class="max-h-96 overflow-y-auto custom-scrollbar">
+                <div id="searchResultsList" class="p-4 space-y-2">
+                    <!-- Results will be inserted here -->
+                </div>
+                <div id="searchEmpty" class="hidden p-8 text-center text-zinc-500 text-sm">
+                    <i data-lucide="search-x" class="w-12 h-12 mx-auto mb-3 text-zinc-700"></i>
+                    <p>No results found</p>
+                </div>
+                <div id="searchPlaceholder" class="p-8 text-center text-zinc-600 text-sm">
+                    <i data-lucide="search" class="w-12 h-12 mx-auto mb-3 text-zinc-700"></i>
+                    <p>Type to search across all pages</p>
+                    <p class="text-xs mt-2 text-zinc-700">Minimum 2 characters</p>
+                </div>
+            </div>
+
+            <!-- Search Footer (Stats) -->
+            <div id="searchFooter" class="hidden px-4 py-3 border-t border-zinc-800 bg-zinc-900/50">
+                <div class="flex items-center justify-between text-xs text-zinc-500">
+                    <span id="searchStats"></span>
+                    <span class="text-zinc-700">Press ESC to close</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
+
+        let currentDoc = null, currentPages = [], currentPageIndex = 0, currentSentenceIndex = 0, sentences = [], sentenceElements = [], isPlaying = false, rules = [], ignoreList = [];
+        
+        // Web Audio API components (v1.9.3 - Zero-latency playback)
+        let audioContext = null;
+        let currentAudioSource = null;
+        const audioBufferCache = new Map(); // Pre-decoded audio cache
+        const MAX_AUDIO_CACHE = 10; // Cache last 10 decoded buffers
+        
+        let headerFooterMode = 'off'; // Track header/footer filter mode
+        let engineMode = 'gpu'; // Track processing mode: "gpu" (standard) or "cpu" (quantized) - v1.9
+        let smartStartPage = 0; // Track the smart start page
+        let currentSearchQuery = ''; // Track current search query for highlighting
+        let searchDebounceTimer = null; // Debounce timer for search
+        let pauseSettings = { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 0 }; // Pause durations in ms
+        const API_URL = 'http://127.0.0.1:8000';
+
+        const pdfUpload = document.getElementById('pdfUpload'), uploadArea = document.getElementById('uploadArea'), exportArea = document.getElementById('exportArea'),
+              libraryPanel = document.getElementById('libraryPanel'), rulesPanel = document.getElementById('rulesPanel'), 
+              ignorePanel = document.getElementById('ignorePanel'), rulesList = document.getElementById('rulesList'), ignoreListUI = document.getElementById('ignoreListUI'), 
+              tabLibrary = document.getElementById('tabLibrary'), tabRules = document.getElementById('tabRules'), tabIgnore = document.getElementById('tabIgnore'), 
+              textContent = document.getElementById('textContent'), readerContent = document.getElementById('readerContent'),
+              engineModeSelect = document.getElementById('engineMode'), gpuStatusEl = document.getElementById('gpuStatus'), cpuStatusEl = document.getElementById('cpuStatus'), 
+              scrollContainer = document.querySelector('.content-area'), emptyState = document.getElementById('emptyState'), 
+              docTitle = document.getElementById('docTitle'), pageInput = document.getElementById('pageInput'), pageTotal = document.getElementById('pageTotal'), 
+              pageNav = document.getElementById('pageNav'), controls = document.getElementById('controls'), playBtn = document.getElementById('playBtn'), 
+              playIcon = document.getElementById('playIcon'), currentSentencePreview = document.getElementById('currentSentencePreview'), 
+              speedRange = document.getElementById('speedRange'), speedVal = document.getElementById('speedVal'), 
+              voiceSelect = document.getElementById('voiceSelect'), addRuleBtn = document.getElementById('addRuleBtn'), setupArea = document.getElementById('setupArea'), 
+              setupBtn = document.getElementById('setupBtn'), engineStatusDot = document.getElementById('engineStatusDot'), toast = document.getElementById('toast'),
+              exportBtn = document.getElementById('exportBtn'), exportModal = document.getElementById('exportModal'),
+              exportProgress = document.getElementById('exportProgress'), exportProgressBar = document.getElementById('exportProgressBar'),
+              exportStatus = document.getElementById('exportStatus'), exportComplete = document.getElementById('exportComplete'),
+              exportError = document.getElementById('exportError'), exportErrorMsg = document.getElementById('exportErrorMsg'),
+              exportFilePath = document.getElementById('exportFilePath'),
+              cancelExportBtn = document.getElementById('cancelExportBtn'), openFileLocationBtn = document.getElementById('openFileLocationBtn'),
+              ffmpegModal = document.getElementById('ffmpegModal'), ffmpegProgress = document.getElementById('ffmpegProgress'),
+              ffmpegProgressBar = document.getElementById('ffmpegProgressBar'), ffmpegStatus = document.getElementById('ffmpegStatus'),
+              ffmpegDownloadSection = document.getElementById('ffmpegDownloadSection'), ffmpegComplete = document.getElementById('ffmpegComplete'),
+              ffmpegError = document.getElementById('ffmpegError'), ffmpegErrorMsg = document.getElementById('ffmpegErrorMsg'),
+              startFFMPEGDownload = document.getElementById('startFFMPEGDownload'), cancelFFMPEGBtn = document.getElementById('cancelFFMPEGBtn'),
+              headerFooterModeSelect = document.getElementById('headerFooterMode'),
+              searchBtn = document.getElementById('searchBtn'), searchModal = document.getElementById('searchModal'),
+              searchInput = document.getElementById('searchInput'), closeSearchBtn = document.getElementById('closeSearchBtn'),
+              searchResultsList = document.getElementById('searchResultsList'), searchEmpty = document.getElementById('searchEmpty'),
+              searchPlaceholder = document.getElementById('searchPlaceholder'), searchFooter = document.getElementById('searchFooter'),
+              searchStats = document.getElementById('searchStats'),
+              pauseSettingsToggle = document.getElementById('pauseSettingsToggle'), pauseSettingsContent = document.getElementById('pauseSettingsContent'),
+              pauseChevron = document.getElementById('pauseChevron'),
+              pauseComma = document.getElementById('pauseComma'), pauseCommaVal = document.getElementById('pauseCommaVal'),
+              pausePeriod = document.getElementById('pausePeriod'), pausePeriodVal = document.getElementById('pausePeriodVal'),
+              pauseQuestion = document.getElementById('pauseQuestion'), pauseQuestionVal = document.getElementById('pauseQuestionVal'),
+              pauseExclamation = document.getElementById('pauseExclamation'), pauseExclamationVal = document.getElementById('pauseExclamationVal'),
+              pauseColon = document.getElementById('pauseColon'), pauseColonVal = document.getElementById('pauseColonVal'),
+              pauseSemicolon = document.getElementById('pauseSemicolon'), pauseSemicolonVal = document.getElementById('pauseSemicolonVal'),
+              voiceSettingsBtn = document.getElementById('voiceSettingsBtn'), voiceSettingsDrawer = document.getElementById('voiceSettingsDrawer'),
+              drawerOverlay = document.getElementById('drawerOverlay'), closeDrawerBtn = document.getElementById('closeDrawerBtn'),
+              languageToggle = document.getElementById('languageToggle');
+
+        // ========================================================================
+        // MULTILINGUAL SUPPORT (v2.0)
+        // ========================================================================
+        const languages = ['en', 'fr', 'es', 'zh'];
+        let currentLangIndex = 0;
+        let currentTranslations = {};
+        
+        // Default voice mapping for each language
+        const defaultVoices = {
+            'en': 'af_bella',
+            'fr': 'ff_siwis',
+            'es': 'ef_dora',
+            'zh': 'zf_xiaobei'
+        };
+
+        // v2.3 - Dynamic Voice Loading
+        async function loadVoices() {
+            try {
+                const response = await fetch(`${API_URL}/api/voices/available`);
+                if (!response.ok) throw new Error("Failed to load voices");
+                
+                const data = await response.json();
+                const categories = data.categories || {};
+                
+                // Clear existing options
+                voiceSelect.innerHTML = '';
+                
+                // Sort categories by label to ensure consistent order (en-us first usually)
+                const sortedKeys = Object.keys(categories).sort((a, b) => {
+                    // Force English to top
+                    if (a.startsWith('en') && !b.startsWith('en')) return -1;
+                    if (!a.startsWith('en') && b.startsWith('en')) return 1;
+                    return a.localeCompare(b);
+                });
+                
+                sortedKeys.forEach(langCode => {
+                    const category = categories[langCode];
+                    const group = document.createElement('optgroup');
+                    group.label = category.label;
+                    
+                    category.voices.forEach(voice => {
+                        const option = document.createElement('option');
+                        option.value = voice.id;
+                        option.textContent = voice.name;
+                        group.appendChild(option);
+                    });
+                    
+                    voiceSelect.appendChild(group);
+                });
+                
+                // If list is empty (no voices downloaded yet)
+                if (voiceSelect.options.length === 0) {
+                    const option = document.createElement('option');
+                    option.textContent = "No voices found (Download Engine)";
+                    option.disabled = true;
+                    voiceSelect.appendChild(option);
+                }
+                
+                return true;
+            } catch (error) {
+                console.error("Error loading voices:", error);
+                voiceSelect.innerHTML = '<option disabled>Error loading voices</option>';
+                return false;
+            }
+        }
+
+        async function loadLocale(lang) {
+            try {
+                const response = await fetch(`${API_URL}/api/locale/${lang}`);
+                if (!response.ok) throw new Error(`Failed to load locale: ${lang}`);
+                
+                currentTranslations = await response.json();
+                
+                // Update all elements with data-i18n attribute
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const keys = el.dataset.i18n.split('.');
+                    let value = currentTranslations;
+                    keys.forEach(key => value = value?.[key]);
+                    
+                    if (value) {
+                        if (el.hasAttribute('placeholder')) {
+                            el.placeholder = value;
+                        } else {
+                            el.textContent = value;
+                        }
+                    }
+                });
+                
+                // Update title attributes
+                document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                    const keys = el.dataset.i18nTitle.split('.');
+                    let value = currentTranslations;
+                    keys.forEach(key => value = value?.[key]);
+                    if (value) el.title = value;
+                });
+                
+                // Note: Voice labels are now handled by loadVoices() from backend data
+                // We might want to translate category labels in future, but names are usually standard
+                
+                console.log(`[i18n] Loaded locale: ${lang}`);
+            } catch (error) {
+                console.error(`[i18n] Error loading locale ${lang}:`, error);
+            }
+        }
+
+        function updateVoiceLabels() {
+            // Deprecated in favor of loadVoices() dynamic loading
+        }
+
+        function switchLanguage(lang) {
+            loadLocale(lang);
+            
+            // Auto-switch voice to match language (optional, but good UX)
+            const defaultVoice = defaultVoices[lang];
+            if (defaultVoice && voiceSelect.value !== defaultVoice) {
+                // Check if voice exists in current list
+                const exists = Array.from(voiceSelect.options).some(opt => opt.value === defaultVoice);
+                if (exists) {
+                    voiceSelect.value = defaultVoice;
+                }
+            }
+            
+            // Save language preference
+            saveSettings();
+        }
+
+        // Language toggle button handler
+        languageToggle.onclick = () => {
+            currentLangIndex = (currentLangIndex + 1) % languages.length;
+            const newLang = languages[currentLangIndex];
+            languageToggle.textContent = newLang.toUpperCase();
+            switchLanguage(newLang);
+        };
+
+        // ========================================================================
+        // END MULTILINGUAL SUPPORT
+        // ========================================================================
+
+        lucide.createIcons();
+
+        // Debounced icon rendering to batch multiple rapid calls
+        let iconRenderTimeout = null;
+        function renderIcons() {
+            clearTimeout(iconRenderTimeout);
+            iconRenderTimeout = setTimeout(() => lucide.createIcons(), 50);
+        }
+        
+        // Helper: Strip HTML tags and emojis from text (for TTS and preview display)
+        function stripHTML(text) {
+            if (!text) return '';
+            // Remove HTML tags
+            text = text.replace(/<[^>]*>/g, '');
+            // Remove emojis and symbols (comprehensive Unicode ranges)
+            text = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F000}-\u{1F02F}]|[\u{1F0A0}-\u{1F0FF}]/gu, '');
+            return text.trim();
+        }
+
+        // ============================================
+        // FEATURE: Resizable Sidebar (Drag Handle)
+        // ============================================
+        const sidebarDragHandle = document.getElementById('sidebarDragHandle');
+        let isDraggingSidebar = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        sidebarDragHandle.addEventListener('mousedown', (e) => {
+            isDraggingSidebar = true;
+            startX = e.clientX;
+            startWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width'));
+            sidebarDragHandle.classList.add('dragging');
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDraggingSidebar) return;
+            
+            const delta = e.clientX - startX;
+            let newWidth = startWidth + delta;
+            
+            // Enforce min/max constraints
+            const minWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-min-width'));
+            const maxWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-max-width'));
+            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+            
+            // Update CSS variable
+            document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDraggingSidebar) {
+                isDraggingSidebar = false;
+                sidebarDragHandle.classList.remove('dragging');
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                
+                // Save to localStorage
+                const currentWidth = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width');
+                localStorage.setItem('sidebar-width', currentWidth);
+            }
+        });
+
+        // Restore saved sidebar width on load
+        const savedSidebarWidth = localStorage.getItem('sidebar-width');
+        if (savedSidebarWidth) {
+            document.documentElement.style.setProperty('--sidebar-width', savedSidebarWidth);
+        }
+
+        // ============================================
+        // FEATURE: Voice Settings Drawer
+        // ============================================
+        function openDrawer() {
+            voiceSettingsDrawer.classList.add('open');
+            drawerOverlay.classList.add('active');
+            voiceSettingsBtn.classList.add('active');
+            renderIcons();
+        }
+
+        function closeDrawer() {
+            voiceSettingsDrawer.classList.remove('open');
+            drawerOverlay.classList.remove('active');
+            voiceSettingsBtn.classList.remove('active');
+        }
+
+        // Open drawer on button click
+        voiceSettingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (voiceSettingsDrawer.classList.contains('open')) {
+                closeDrawer();
+            } else {
+                openDrawer();
+            }
+        });
+
+        // Close drawer on close button click
+        closeDrawerBtn.addEventListener('click', () => {
+            closeDrawer();
+        });
+
+        // Close drawer on overlay click
+        drawerOverlay.addEventListener('click', () => {
+            closeDrawer();
+        });
+
+        // Prevent drawer clicks from closing
+        voiceSettingsDrawer.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (exportPollInterval) clearInterval(exportPollInterval);
+            if (ffmpegPollInterval) clearInterval(ffmpegPollInterval);
+            if (activeAudioURL) URL.revokeObjectURL(activeAudioURL);
+        });
+
+        async function init() {
+            try {
+                // 1. Start all fetches in parallel
+                const settingsPromise = fetch(`${API_URL}/api/settings`).then(r => r.json());
+                const libraryPromise = loadLibrary();
+                const voicesPromise = loadVoices(); // Load dynamic voices
+
+                const settings = await settingsPromise;
+                
+                rules = settings.pronunciationRules || [];
+                ignoreList = settings.ignoreList || [];
+                const savedVoice = settings.voice_id;
+                const savedSpeed = settings.speed;
+                headerFooterMode = settings.header_footer_mode || 'off';
+                engineMode = settings.engine_mode || 'gpu'; // v1.9 - default to GPU for backward compatibility
+                pauseSettings = settings.pause_settings || { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 800 };
+                
+                // v2.0 - Load saved language
+                const savedLanguage = settings.ui_language || 'en';
+                currentLangIndex = languages.indexOf(savedLanguage);
+                if (currentLangIndex === -1) currentLangIndex = 0; // Fallback to English
+                languageToggle.textContent = languages[currentLangIndex].toUpperCase();
+                await loadLocale(languages[currentLangIndex]);
+
+                // 2. Set speed independently (immediate)
+                if (savedSpeed) {
+                    speedRange.value = savedSpeed;
+                    speedVal.textContent = parseFloat(savedSpeed).toFixed(2);
+                }
+                
+                // 3. Set header/footer mode
+                if (headerFooterModeSelect) {
+                    headerFooterModeSelect.value = headerFooterMode;
+                }
+                
+                // 3b. Set engine mode (v1.9)
+                if (engineModeSelect) {
+                    engineModeSelect.value = engineMode;
+                }
+                
+                // 4. Set pause settings
+                if (pauseComma) {
+                    pauseComma.value = pauseSettings.comma;
+                    pauseCommaVal.textContent = pauseSettings.comma;
+                }
+                if (pausePeriod) {
+                    pausePeriod.value = pauseSettings.period;
+                    pausePeriodVal.textContent = pauseSettings.period;
+                }
+                if (pauseQuestion) {
+                    pauseQuestion.value = pauseSettings.question;
+                    pauseQuestionVal.textContent = pauseSettings.question;
+                }
+                if (pauseExclamation) {
+                    pauseExclamation.value = pauseSettings.exclamation || 600;
+                    pauseExclamationVal.textContent = pauseSettings.exclamation || 600;
+                }
+                if (pauseColon) {
+                    pauseColon.value = pauseSettings.colon || 400;
+                    pauseColonVal.textContent = pauseSettings.colon || 400;
+                }
+                if (pauseSemicolon) {
+                    pauseSemicolon.value = pauseSettings.semicolon || 400;
+                    pauseSemicolonVal.textContent = pauseSettings.semicolon || 400;
+                }
+
+                // Wait for voices to load before setting selection
+                await voicesPromise;
+
+                // 3. Wait for UI components to be fully ready for voice selection
+                const applyVoice = () => {
+                    const optionsReady = voiceSelect.options.length > 0;
+                    if (savedVoice && optionsReady) {
+                        // Check if saved voice exists in loaded list
+                        const exists = Array.from(voiceSelect.options).some(opt => opt.value === savedVoice);
+                        if (exists) {
+                            voiceSelect.value = savedVoice;
+                        } else {
+                            // If saved voice is missing (e.g. engine mode switch), fallback to default
+                            voiceSelect.selectedIndex = 0;
+                        }
+                        return true;
+                    } else if (optionsReady) {
+                        return true;
+                    }
+                    return false;
+                };
+
+                if (!applyVoice()) {
+                    let attempts = 0;
+                    const interval = setInterval(() => {
+                        attempts++;
+                        if (applyVoice() || attempts > 20) clearInterval(interval);
+                    }, 100);
+                }
+
+                // 4. Finalize other systems
+                await libraryPromise;
+                renderRules();
+                renderIgnoreList();
+                startStatusPolling();
+
+            } catch (e) { 
+                console.error("Init error", e);
+            }
+        }
+
+        async function saveSettings() {
+            try {
+                const config = { 
+                    pronunciationRules: rules, 
+                    ignoreList: ignoreList,
+                    voice_id: voiceSelect.value,
+                    speed: parseFloat(speedRange.value),
+                    header_footer_mode: headerFooterMode,
+                    engine_mode: engineMode, // v1.9 - Dual-engine support
+                    ui_language: languages[currentLangIndex], // v2.0 - Multilingual support
+                    pause_settings: pauseSettings
+                };
+                await fetch(`${API_URL}/api/settings`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(config) 
+                });
+            } catch (err) {
+                console.error("Save failed:", err);
+                showToast("Failed to save settings to disk");
+            }
+        }
+
+        voiceSelect.onchange = async () => {
+            // If audio is currently playing, stop it and clear recent cache
+            if (isPlaying) {
+                console.log('[VOICE CHANGE] Stopping playback and clearing recent cache...');
+                stopPlayback();
+                
+                // Clear recent cache files (they're for the old voice)
+                try {
+                    const response = await fetch(`${API_URL}/api/system/clear-recent-cache`, {
+                        method: 'POST'
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log(`[CACHE] Cleared ${result.deleted_count} recent cache files`);
+                    }
+                } catch (err) {
+                    console.error('[CACHE] Failed to clear recent cache:', err);
+                }
+            }
+            
+            // Clear audio buffer cache (voice changed)
+            audioBufferCache.clear();
+            console.log('[WebAudio] Cache cleared due to voice change');
+            
+            // Save the new voice setting
+            saveSettings();
+        };
+        speedRange.oninput = (e) => {
+            const val = parseFloat(e.target.value).toFixed(2);
+            speedVal.textContent = val;
+        };
+        speedRange.onchange = saveSettings; // Save only on release to avoid spamming the FS
+        
+        // Header/Footer Mode handler
+        headerFooterModeSelect.onchange = async () => {
+            headerFooterMode = headerFooterModeSelect.value;
+            await saveSettings();
+            // Refresh current page to apply new filter
+            if (currentDoc && currentPages.length > 0) {
+                await refreshCurrentPage();
+            }
+        };
+        
+        // Engine Mode handler (v1.9 - Dual-Engine)
+        engineModeSelect.onchange = async () => {
+            const newMode = engineModeSelect.value;
+            
+            // IMPORTANT: Only save to settings, don't trigger switch yet!
+            // Switch happens on next app restart or when user clicks "Setup Voice Engine"
+            engineMode = newMode;
+            await saveSettings();
+            
+            console.log(`[Settings] Engine mode changed to: ${newMode.toUpperCase()}`);
+            
+            // Check if model exists (non-blocking check)
+            try {
+                const res = await fetch(`${API_URL}/api/system/status`);
+                const status = await res.json();
+                
+                const modelExists = newMode === 'gpu' ? status.available_models?.gpu : status.available_models?.cpu;
+                
+                if (modelExists) {
+                    // Model exists - can switch immediately
+                    showToast(`${newMode.toUpperCase()} mode selected. Restart app to switch, or click a sentence to load.`);
+                } else {
+                    // Model missing - need to download first
+                    showToast(`${newMode.toUpperCase()} model not downloaded yet. Click "Setup Voice Engine" to download.`);
+                }
+            } catch (err) {
+                console.error("Status check failed:", err);
+            }
+        };
+        
+        // Pause Settings Accordion Toggle
+        pauseSettingsToggle.onclick = () => {
+            const isHidden = pauseSettingsContent.classList.contains('hidden');
+            pauseSettingsContent.classList.toggle('hidden');
+            pauseChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            renderIcons();
+        };
+        
+        // Pause Settings Handlers
+        pauseComma.oninput = (e) => {
+            pauseSettings.comma = parseInt(e.target.value);
+            pauseCommaVal.textContent = pauseSettings.comma;
+        };
+        pauseComma.onchange = saveSettings;
+        
+        pausePeriod.oninput = (e) => {
+            pauseSettings.period = parseInt(e.target.value);
+            pausePeriodVal.textContent = pauseSettings.period;
+        };
+        pausePeriod.onchange = saveSettings;
+        
+        pauseQuestion.oninput = (e) => {
+            pauseSettings.question = parseInt(e.target.value);
+            pauseQuestionVal.textContent = pauseSettings.question;
+        };
+        pauseQuestion.onchange = saveSettings;
+        
+        pauseExclamation.oninput = (e) => {
+            pauseSettings.exclamation = parseInt(e.target.value);
+            pauseExclamationVal.textContent = pauseSettings.exclamation;
+        };
+        pauseExclamation.onchange = saveSettings;
+        
+        pauseColon.oninput = (e) => {
+            pauseSettings.colon = parseInt(e.target.value);
+            pauseColonVal.textContent = pauseSettings.colon;
+        };
+        pauseColon.onchange = saveSettings;
+        
+        pauseSemicolon.oninput = (e) => {
+            pauseSettings.semicolon = parseInt(e.target.value);
+            pauseSemicolonVal.textContent = pauseSettings.semicolon;
+        };
+        pauseSemicolon.onchange = saveSettings;
+        
+
+        let isEngineReady = false;
+        let lastSystemState = null;
+        async function startStatusPolling() {
+            const poll = async () => {
+                try {
+                    const res = await fetch(`${API_URL}/api/system/status?t=${Date.now()}`);
+                    const status = await res.json();
+                    isEngineReady = status.model_loaded;
+                    
+                    // Update model status indicators (v1.9)
+                    if (status.available_models) {
+                        const gpuAvailable = status.available_models.gpu;
+                        const cpuAvailable = status.available_models.cpu;
+                        gpuStatusEl.innerHTML = `GPU: <span class="${gpuAvailable ? 'text-green-500' : 'text-zinc-600'}">${gpuAvailable ? '✓' : '✗'}</span>`;
+                        cpuStatusEl.innerHTML = `CPU: <span class="${cpuAvailable ? 'text-green-500' : 'text-zinc-600'}">${cpuAvailable ? '✓' : '✗'}</span>`;
+                    }
+                    
+                    // Show error messages if present
+                    if (status.last_error && !status.is_downloading && !status.is_loading) {
+                        const errorMsg = status.last_error;
+                        // Only show new errors (not the same one repeatedly)
+                        if (errorMsg !== window.lastShownError) {
+                            console.error("[Engine Error]", errorMsg);
+                            showToast(`Error: ${errorMsg}`);
+                            window.lastShownError = errorMsg;
+                        }
+                    }
+                    
+                    // Check if CURRENTLY SELECTED model exists (v1.9 fix)
+                    const selectedModelExists = status.engine_mode === 'gpu' 
+                        ? status.available_models?.gpu 
+                        : status.available_models?.cpu;
+                    
+                    const currentState = `${status.is_downloading}-${status.is_loading}-${status.model_loaded}-${selectedModelExists}`;
+                    if (currentState !== lastSystemState) {
+                        lastSystemState = currentState;
+                        if (status.is_downloading) {
+                            engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse";
+                            setupArea.style.display = 'block';
+                            uploadArea.style.display = 'none';
+                            setupBtn.disabled = true;
+                            setupBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span class="text-sm font-bold">Downloading...</span>';
+                            renderIcons();
+                        } else if (status.is_loading) { 
+                            engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse"; 
+                            setupArea.style.display = 'none';
+                            uploadArea.style.display = 'block';
+                        }
+                        else if (status.model_loaded && selectedModelExists) { 
+                            // Model is loaded AND it's the one we want
+                            engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"; 
+                            setupArea.style.display = 'none';
+                            uploadArea.style.display = 'block';
+                            if (currentDoc) exportArea.style.display = 'block';
+                            // Clear error tracking on success
+                            window.lastShownError = null;
+
+                            // Refresh voices now that engine is ready
+                            await loadVoices();
+                        }
+                        else { 
+                            // Model not loaded OR wrong model selected → Show setup button
+                            engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-red-600"; 
+                            setupArea.style.display = 'block';
+                            uploadArea.style.display = 'none';
+                            setupBtn.disabled = false;
+                            setupBtn.innerHTML = '<i data-lucide="download-cloud" class="w-4 h-4"></i><span class="text-sm font-bold">Setup Voice Engine</span>';
+                            renderIcons();
+                        }
+                    }
+                } catch (e) { engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-zinc-700"; }
+                setTimeout(poll, 2000);
+            };
+            poll();
+        }
+
+        // Setup button - pass engine mode to backend (v1.9)
+        setupBtn.onclick = async () => {
+            const selectedMode = engineModeSelect ? engineModeSelect.value : 'gpu';
+            console.log(`[Setup] Requesting ${selectedMode.toUpperCase()} model download...`);
+            
+            try {
+                const res = await fetch(`${API_URL}/api/system/setup?model_type=${selectedMode}`, { method: 'POST' });
+                const result = await res.json();
+                
+                if (result.status === 'started') {
+                    showToast(`Downloading ${selectedMode.toUpperCase()} model... Check terminal for progress.`);
+                } else if (result.status === 'already_running') {
+                    showToast('Download already in progress');
+                }
+            } catch (err) {
+                console.error('[Setup Error]', err);
+                showToast(`Setup failed: ${err.message}`);
+            }
+        };
+        function showToast(msg) { document.getElementById('toastMsg').textContent = msg; toast.classList.remove('hidden'); setTimeout(() => toast.classList.add('hidden'), 5000); }
+
+        // Reusable tab switcher to reduce code duplication
+        function switchTab(activeTab, activePanel) {
+            const tabs = [tabLibrary, tabRules, tabIgnore];
+            const panels = [libraryPanel, rulesPanel, ignorePanel];
+            const activeClass = "flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5";
+            const inactiveClass = "flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300";
+            
+            tabs.forEach(tab => tab.className = tab === activeTab ? activeClass : inactiveClass);
+            panels.forEach(panel => panel.classList.toggle('hidden', panel !== activePanel));
+            renderIcons(); // Re-render icons after class change
+        }
+
+        tabLibrary.onclick = () => switchTab(tabLibrary, libraryPanel);
+        tabRules.onclick = () => switchTab(tabRules, rulesPanel);
+        tabIgnore.onclick = () => switchTab(tabIgnore, ignorePanel);
+
+        document.getElementById('addIgnoreBtn').onclick = () => { ignoreList.push(''); renderIgnoreList(); saveSettings(); };
+        function renderIgnoreList() {
+            const fragment = document.createDocumentFragment();
+            ignoreList.forEach((item, i) => {
+                const div = document.createElement('div'); div.className = 'flex items-center gap-2 bg-zinc-900/80 p-2 rounded-lg border border-zinc-800';
+                div.innerHTML = `<input type="text" value="${item}" class="flex-1 bg-black text-[10px] p-1.5 border border-zinc-800 rounded outline-none text-zinc-300" onchange="ignoreList[${i}]=this.value;saveSettings()">
+                                <button onclick="ignoreList.splice(${i},1);renderIgnoreList();saveSettings()" class="text-zinc-600 hover:text-red-500 p-1"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>`;
+                fragment.appendChild(div);
+            });
+            ignoreListUI.innerHTML = '';
+            ignoreListUI.appendChild(fragment);
+            renderIcons();
+        }
+
+        addRuleBtn.onclick = () => { 
+            rules.push({ 
+                id: crypto.randomUUID(), 
+                original: '', 
+                replacement: '', 
+                match_case: false, 
+                word_boundary: true, 
+                is_regex: false, 
+                isExpanded: true  // New rules start expanded for immediate editing
+            }); 
+            renderRules(); 
+            saveSettings(); 
+        };
+        
+        window.updateRule = (id, upd) => { 
+            rules = rules.map(r => r.id === id ? {...r, ...upd} : r); 
+            renderRules(); 
+            saveSettings(); 
+        };
+        
+        window.toggleRule = (id) => {
+            rules = rules.map(r => r.id === id ? {...r, isExpanded: !r.isExpanded} : r);
+            renderRules();
+        };
+        
+        function renderRules() {
+            const fragment = document.createDocumentFragment();
+            rules.forEach(r => {
+                const isExpanded = r.isExpanded || false;
+                const div = document.createElement('div');
+                div.className = `rule-item bg-zinc-900/80 rounded-xl border border-zinc-800 ${isExpanded ? 'rule-expanded' : ''}`;
+                
+                // Collapsed header (always visible)
+                const hasOriginal = r.original && r.original.trim();
+                const hasReplacement = r.replacement && r.replacement.trim();
+                const isEmpty = !hasOriginal && !hasReplacement;
+                
+                // Escape HTML to prevent injection
+                const escapeHtml = (text) => {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                };
+                
+                const originalText = hasOriginal ? escapeHtml(r.original) : '<span class="rule-empty">(Empty)</span>';
+                const replacementText = hasReplacement ? escapeHtml(r.replacement) : '<span class="rule-empty">(Empty)</span>';
+                
+                div.innerHTML = `
+                    <div class="rule-collapsed p-3 flex items-center" onclick="toggleRule('${r.id}')">
+                        ${isEmpty ? 
+                            '<div class="flex-1"><span class="text-xs rule-empty">Empty rule - click to edit</span></div>' :
+                            `<div class="rule-original text-xs">${originalText}</div>
+                             <div class="rule-arrow">
+                                 <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                             </div>
+                             <div class="rule-replacement text-xs">${replacementText}</div>`
+                        }
+                        <div class="rule-meta">
+                            ${r.match_case ? '<span class="rule-badge bg-blue-600/20 text-blue-400">Case</span>' : ''}
+                            ${r.word_boundary ? '<span class="rule-badge bg-green-600/20 text-green-400">Word</span>' : ''}
+                            ${r.is_regex ? '<span class="rule-badge bg-purple-600/20 text-purple-400">Regex</span>' : ''}
+                            <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 text-zinc-500 ml-2"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Expanded content (editing form) -->
+                    <div class="rule-content ${isExpanded ? 'expanded' : ''}" onclick="event.stopPropagation()">
+                        <div class="px-3 pb-3 space-y-3">
+                            <div class="h-px bg-zinc-800"></div>
+                            <div class="grid grid-cols-1 gap-2">
+                                <input type="text" placeholder="Original Text" value="${r.original}" class="bg-black text-xs p-2.5 border border-zinc-800 rounded-md text-zinc-300 placeholder-zinc-600" onchange="updateRule('${r.id}',{original:this.value})" onclick="event.stopPropagation()">
+                                <input type="text" placeholder="Replacement Text" value="${r.replacement}" class="bg-black text-xs p-2.5 border border-zinc-800 rounded-md text-zinc-300 placeholder-zinc-600" onchange="updateRule('${r.id}',{replacement:this.value})" onclick="event.stopPropagation()">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer hover:text-zinc-300" onclick="event.stopPropagation()">
+                                    <input type="checkbox" ${r.match_case?'checked':''} onchange="updateRule('${r.id}',{match_case:this.checked})" class="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-600 focus:ring-offset-0">
+                                    <span>Match Case</span>
+                                </label>
+                                <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer hover:text-zinc-300" onclick="event.stopPropagation()">
+                                    <input type="checkbox" ${r.word_boundary?'checked':''} onchange="updateRule('${r.id}',{word_boundary:this.checked})" class="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-600 focus:ring-offset-0">
+                                    <span>Whole Word</span>
+                                </label>
+                                <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer hover:text-zinc-300" onclick="event.stopPropagation()">
+                                    <input type="checkbox" ${r.is_regex?'checked':''} onchange="updateRule('${r.id}',{is_regex:this.checked})" class="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-600 focus:ring-offset-0">
+                                    <span>Use Pattern Matching</span>
+                                </label>
+                            </div>
+                            <div class="flex justify-between items-center pt-2">
+                                <button onclick="toggleRule('${r.id}');event.stopPropagation()" class="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1">
+                                    <i data-lucide="check" class="w-3 h-3"></i>
+                                    <span>Done</span>
+                                </button>
+                                <button onclick="rules=rules.filter(x=>x.id!=='${r.id}');renderRules();saveSettings();event.stopPropagation()" class="text-zinc-600 hover:text-red-500 p-1.5">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                fragment.appendChild(div);
+            });
+            rulesList.innerHTML = '';
+            rulesList.appendChild(fragment);
+            renderIcons();
+        }
+
+        async function loadLibrary() {
+            try {
+                const res = await fetch(`${API_URL}/api/library?t=${Date.now()}`);
+                const items = await res.json();
+                console.log("Library items loaded:", items);
+                libraryPanel.innerHTML = '';
+                if (!Array.isArray(items) || items.length === 0) {
+                    libraryPanel.innerHTML = '<div class="p-4 text-xs text-zinc-500 italic">Library is empty. Upload a PDF to start.</div>';
+                    return;
+                }
+                const fragment = document.createDocumentFragment();
+                items.sort((a,b) => (b.lastAccessed||0) - (a.lastAccessed||0)).forEach(item => {
+                    const isSelected = currentDoc?.id === item.id;
+                    const div = document.createElement('div'); 
+                    div.className = `group p-3 rounded-xl cursor-pointer border transition-all ${isSelected ? 'bg-blue-600/10 border-blue-600/50 text-blue-400' : 'bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:border-zinc-700'}`;
+                    
+                    div.innerHTML = `
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-start gap-3 min-w-0" onclick="window.selectDocById('${item.id}')">
+                                <i data-lucide="file" class="w-4 h-4 mt-0.5 shrink-0"></i>
+                                <div class="min-w-0">
+                                    <p class="text-xs font-bold leading-tight break-words">${item.fileName}</p>
+                                    <p class="text-[10px] opacity-60 mt-1">Page ${(item.currentPage||0)+1}/${item.totalPages}</p>
+                                </div>
+                            </div>
+                            <button onclick="window.deleteDocument(event, '${item.id}')" class="p-1 hover:bg-red-500/20 hover:text-red-500 rounded-md transition-colors opacity-0 group-hover:opacity-100 shrink-0">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>`;
+                    
+                    fragment.appendChild(div);
+                });
+                libraryPanel.appendChild(fragment);
+                renderIcons();
+            } catch (e) {
+                console.error("Load library error:", e);
+                libraryPanel.innerHTML = '<div class="p-4 text-xs text-red-500 italic">Failed to load library.</div>';
+            }
+        }
+
+        window.selectDocById = async (id) => {
+            try {
+                const res = await fetch(`${API_URL}/api/library`);
+                if (!res.ok) throw new Error('Failed to fetch library');
+                
+                const items = await res.json();
+                const item = items.find(i => i.id === id);
+                
+                if (item) {
+                    selectDocument(item);
+                } else {
+                    console.warn(`Document not found: ${id}`);
+                    showToast("Document not found in library");
+                }
+            } catch (e) {
+                console.error("selectDocById error:", e);
+                showToast("Failed to load document");
+            }
+        };
+
+        window.deleteDocument = async (e, id) => {
+            e.stopPropagation();
+            if (!confirm("Delete this document?")) return;
+            try {
+                const res = await fetch(`${API_URL}/api/library/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    if (currentDoc?.id === id) {
+                        currentDoc = null;
+                        currentPages = [];
+                        textContent.innerHTML = '';
+                        docTitle.textContent = 'No document selected';
+                        // Deactivate page navigation
+                        pageNav.classList.add('opacity-50', 'pointer-events-none');
+                        pageNav.setAttribute('data-inactive', 'true');
+                        document.getElementById('prevPage').disabled = true;
+                        document.getElementById('nextPage').disabled = true;
+                        document.getElementById('pageInput').disabled = true;
+                        controls.classList.add('hidden');
+                        exportArea.style.display = 'none';
+                        emptyState.classList.remove('hidden');
+                        textContent.classList.add('hidden');
+                        stopPlayback();
+                    }
+                    loadLibrary();
+                }
+            } catch (e) { showToast("Failed to delete document"); }
+        };
+
+        async function selectDocument(item) {
+            currentDoc = item;
+            const res = await fetch(`${API_URL}/api/library/content/${item.id}`);
+            const data = await res.json();
+            currentPages = data.pages;
+            smartStartPage = data.smart_start_page || 0;
+            
+            // Apply Smart Start if this is first time opening (currentPage is 0)
+            if ((item.currentPage || 0) === 0 && smartStartPage > 0) {
+                currentPageIndex = smartStartPage;
+                currentSentenceIndex = 0;
+                showToast(`⚡ Skipped to start of content (Page ${smartStartPage + 1})`);
+            } else {
+                currentPageIndex = item.currentPage || 0;
+                currentSentenceIndex = item.lastSentenceIndex || 0;
+            }
+            
+            docTitle.textContent = item.fileName; 
+            // Activate page navigation
+            pageNav.classList.remove('opacity-50', 'pointer-events-none');
+            pageNav.removeAttribute('data-inactive');
+            document.getElementById('prevPage').disabled = false;
+            document.getElementById('nextPage').disabled = false;
+            document.getElementById('pageInput').disabled = false;
+            controls.classList.remove('hidden'); 
+            emptyState.classList.add('hidden'); 
+            textContent.classList.remove('hidden');
+            if (isEngineReady) exportArea.style.display = 'block';
+            renderPage(); 
+            loadLibrary();
+        }
+
+        async function renderPage() {
+            // Add safety check for valid page
+            if (!currentPages || !currentPages[currentPageIndex]) {
+                console.error(`Invalid page index: ${currentPageIndex}`);
+                textContent.innerHTML = '<div class="text-zinc-500 p-4">Error: Page not found</div>';
+                return;
+            }
+            
+            let text = currentPages[currentPageIndex];
+            
+            // Apply header/footer filter if enabled
+            if (headerFooterMode !== 'off' && currentDoc) {
+                try {
+                    const filterRes = await fetch(`${API_URL}/api/library/content/${currentDoc.id}/page/${currentPageIndex}`);
+                    if (filterRes.ok) {
+                        const filterData = await filterRes.json();
+                        text = filterData.filtered_text;
+                    }
+                } catch (e) {
+                    console.error("Filter fetch failed:", e);
+                    // Fallback to original text
+                }
+            }
+            
+            // PREPROCESSING: Join broken lines for natural TTS flow
+            // PDFs often have line breaks mid-sentence due to text wrapping
+            // This joins lines that don't end with sentence-ending punctuation
+            text = text
+                // Preserve paragraph breaks (double newlines)
+                .replace(/\n\n/g, '<!PARAGRAPH!>')
+                // Join lines that don't end with sentence punctuation (ASCII + CJK)
+                // If line ends with .!?:;。！？：； keep the newline, otherwise join with space
+                .replace(/([^.!?:;。！？：；])\n/g, '$1 ')
+                // Restore paragraph breaks
+                .replace(/<!PARAGRAPH!>/g, '\n\n')
+                // Clean up multiple spaces
+                .replace(/  +/g, ' ');
+            
+            // Split by sentence but keep trailing quotes (ASCII + CJK delimiters)
+            // Supports: "Eng." (space req) OR "CJK。" (no space req)
+            const rawSentences = text.match(/[^.!?。！？]+(?:[.!?]+[\"\'\u201c\u2018\u201d\u2019]*(?:\s|$)|[。！？]+[\"\'\u201c\u2018\u201d\u2019]*)|[^.!?。！？]+$/g) || [text];
+            
+            // Process sentences: clean up quotes and whitespace
+            sentences = [];
+            for (let i = 0; i < rawSentences.length; i++) {
+                let s = rawSentences[i].trim()
+                    .replace(/^[\"\'\u201c\u2018\u201d\u2019]+(?=[\"\'\u201c\u2018\u201d\u2019])/, '') // Deduplicate leading quotes
+                    .replace(/[\"\'\u201c\u2018\u201d\u2019]+$/, (match) => match.length > 1 ? match[0] : match); // Deduplicate trailing quotes
+
+                if (s) {
+                    sentences.push(s);
+                }
+            }
+
+            const fragment = document.createDocumentFragment();
+            sentences.forEach((s, i) => {
+                const span = document.createElement('span'); 
+                span.className = `sentence ${i===currentSentenceIndex?'active-sentence':''}`; 
+                
+                // Check if sentence contains [DIM] markers
+                if (s.includes('[DIM]')) {
+                    // Parse and render with dimmed sections
+                    const dimRegex = /\[DIM\](.*?)\[\/DIM\]/g;
+                    span.innerHTML = s.replace(dimRegex, '<span class="dimmed-text">$1</span>');
+                } else {
+                    span.textContent = s;
+                }
+                
+                span.onclick = () => jumpToSentence(i); 
+                fragment.appendChild(span);
+            });
+            textContent.innerHTML = '';
+            textContent.appendChild(fragment);
+            
+            // Cache sentence elements for performance (avoid repeated queries)
+            sentenceElements = Array.from(textContent.querySelectorAll('.sentence'));
+            
+            pageInput.value = currentPageIndex + 1; pageTotal.textContent = currentPages.length; scrollContainer.scrollTop = 0;
+            
+            // Safe sentence preview with bounds check (strip HTML for clean display)
+            const currentSentence = sentences[currentSentenceIndex];
+            currentSentencePreview.textContent = (currentSentence && typeof currentSentence === 'string') 
+                ? stripHTML(currentSentence)
+                : "Ready";
+            
+            // Re-apply search highlighting if there's an active search query
+            if (currentSearchQuery) {
+                highlightSearchTerm(currentSearchQuery);
+            }
+        }
+
+        async function extractTextFromPage(page) {
+            const content = await page.getTextContent();
+            let text = "", lastItem = null;
+            
+            // First pass: detect average char width for gap analysis
+            let totalWidth = 0, charCount = 0;
+            for (let item of content.items) {
+                if (item.str.trim().length > 0) {
+                    totalWidth += item.width;
+                    charCount += item.str.length;
+                }
+            }
+            const avgCharWidth = charCount > 0 ? totalWidth / charCount : 5;
+
+            for (let item of content.items) {
+                let str = item.str.replace(/\ufffd/g, '"');
+                // Normalize ligatures if any leaked through
+                str = str.normalize('NFKC'); 
+                
+                if (!str.trim() && str !== " ") continue;
+                
+                if (lastItem) {
+                    const lastY = lastItem.transform[5], currentY = item.transform[5];
+                    const lastX = lastItem.transform[4], lastWidth = lastItem.width;
+                    const lastHeight = Math.abs(lastItem.transform[0]);
+                    const currentX = item.transform[4];
+                    
+                    const verticalGap = Math.abs(currentY - lastY);
+                    
+                    if (verticalGap > (lastHeight * 0.4)) {
+                        // New line detection (Check ASCII and CJK terminal punctuation)
+                        const isTerminal = /[.!?;:。！？：；]/.test(text.trimEnd().slice(-1));
+                        
+                        // If it's not a terminal punctuation, it's likely a wrapped line
+                        if (!isTerminal && verticalGap < (lastHeight * 2.5)) {
+                            // Join wrapped line. Add space only if not CJK.
+                            const lastChar = text.trimEnd().slice(-1);
+                            const nextChar = str.trimStart().charAt(0);
+                            const isCJK = (c) => /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/.test(c);
+                            
+                            if (!text.endsWith(" ") && !str.startsWith(" ") && !isCJK(lastChar) && !isCJK(nextChar)) {
+                                text += " ";
+                            }
+                        } else {
+                            text = text.trimEnd() + "\n";
+                        }
+                    } else {
+                        // Horizontal gap analysis
+                        const gap = currentX - (lastX + lastWidth);
+                        
+                        // If gap is significant but not too large, add a space
+                        if (gap > Math.max(1.5, avgCharWidth * 0.25)) {
+                            const lastChar = text.trimEnd().slice(-1);
+                            const nextChar = str.trimStart().charAt(0);
+                            
+                            // Don't add space if we are inside quotes or brackets
+                            const noSpaceBefore = /[\"\'\(\[\{\u201c\u2018]/.test(lastChar);
+                            const noSpaceAfter = /[\"\'\)\\\}\]\u201d\u2019]/.test(nextChar);
+                            // Also don't add space between CJK characters
+                            const isCJK = (c) => /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]/.test(c);
+                            
+                            if (!text.endsWith(" ") && !str.startsWith(" ") && !noSpaceBefore && !noSpaceAfter && (!isCJK(lastChar) || !isCJK(nextChar))) {
+                                text += " ";
+                            }
+                        }
+                    }
+                }
+                text += str;
+                lastItem = item;
+            }
+            
+            // Post-process: clean up multiple spaces and artifacts
+            return text.trim()
+                .replace(/[ \t]+/g, ' ')
+                .replace(/\n\s+/g, '\n')
+                .replace(/-\s*\n\s*/g, ''); // Fix hyphenated words at line breaks
+        }
+
+        pdfUpload.onchange = async (e) => {
+            const file = e.target.files[0]; if (!file) return;
+            const isEpub = file.name.toLowerCase().endsWith('.epub');
+            showToast(isEpub ? "Converting EPUB to PDF..." : "Processing PDF...");
+            
+            if (isEpub) {
+                const formData = new FormData();
+                formData.append('file', file);
+                try {
+                    const res = await fetch(`${API_URL}/api/convert/epub`, { method: 'POST', body: formData });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        throw new Error(err.detail || "Conversion failed");
+                    }
+                    const pdfBlob = await res.blob();
+                    const convertedFileName = file.name.replace(/\.[^/.]+$/, "") + "_converted.pdf";
+                    processPdfBlob(pdfBlob, convertedFileName);
+                } catch (e) {
+                    showToast(e.message);
+                }
+            } else {
+                processPdfBlob(file, file.name);
+            }
+            e.target.value = ''; // Reset
+        };
+
+        async function processPdfBlob(blob, fileName) {
+            const reader = new FileReader();
+            reader.onload = async function() {
+                try {
+                    const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                    const pagesText = [];
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        pagesText.push(await extractTextFromPage(page));
+                    }
+                    const docId = crypto.randomUUID();
+                    const newDoc = { id: docId, fileName: fileName, totalPages: pdf.numPages, currentPage: 0, lastSentenceIndex: 0, lastAccessed: Date.now() };
+                    await fetch(`${API_URL}/api/library`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newDoc) });
+                    await fetch(`${API_URL}/api/library/content`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: docId, pages: pagesText }) });
+                    selectDocument(newDoc);
+                    showToast("Book added to library");
+                } catch (err) {
+                    console.error("PDF processing error:", err);
+                    showToast("Failed to process document: " + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(blob);
+        }
+
+        async function refreshCurrentPage() {
+            // Helper to refresh the current page (e.g., when filter mode changes)
+            await renderPage();
+        }
+
+        async function playNext() {
+            if (!isPlaying || !isEngineReady) { stopPlayback(); return; }
+            const text = sentences[currentSentenceIndex];
+            if (!text || typeof text !== 'string') {
+                if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; await renderPage(); playNext(); }
+                else stopPlayback();
+                return;
+            }
+            
+            // Use cached elements instead of querying DOM
+            sentenceElements.forEach((el, i) => el.className = `sentence ${i===currentSentenceIndex?'active-sentence':''}`);
+            const active = sentenceElements[currentSentenceIndex];
+            if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Strip HTML for preview display
+            currentSentencePreview.textContent = stripHTML(text);
+            saveProgress();
+            
+            // Strip HTML before sending to TTS
+            const cleanText = stripHTML(text);
+            console.log(`Synthesizing sentence ${currentSentenceIndex}: "${cleanText.substring(0, 30)}..."`);
+            
+            // Check if audio is already cached (instant playback)
+            const lookupKey = `${currentPageIndex}_${currentSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
+            
+            if (audioBufferCache.has(lookupKey)) {
+                const cachedBuffer = audioBufferCache.get(lookupKey);
+                console.log(`[WebAudio] CACHE HIT - Playing cached buffer instantly`);
+                playAudioBuffer(cachedBuffer);
+                return; // Skip fetch and decode
+            }
+            
+            try {
+                const res = await fetch(`${API_URL}/api/synthesize`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        text: cleanText,  // Send clean text without HTML
+                        voice: voiceSelect.value, 
+                        speed: parseFloat(speedRange.value), 
+                        rules, 
+                        ignore_list: ignoreList,
+                        pause_settings: pauseSettings
+                    }) 
+                });
+                
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Synthesis failed");
+                }
+                
+                const blob = await res.blob();
+                console.log(`Audio blob received: ${blob.size} bytes`);
+                if (blob.size < 1000) {
+                    console.warn("Audio blob is suspiciously small.");
+                }
+                
+                // Initialize AudioContext on first play
+                initAudioContext();
+                
+                // Convert blob to ArrayBuffer and decode
+                const arrayBuffer = await blob.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                // Cache for potential replay (e.g., user jumps back)
+                const cacheKey = `${currentPageIndex}_${currentSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
+                audioBufferCache.set(cacheKey, audioBuffer);
+                
+                // Cleanup old cache entries (LRU)
+                if (audioBufferCache.size > MAX_AUDIO_CACHE) {
+                    const firstKey = audioBufferCache.keys().next().value;
+                    audioBufferCache.delete(firstKey);
+                }
+                
+                // Play audio via AudioBufferSourceNode
+                playAudioBuffer(audioBuffer);
+                
+            } catch (e) { 
+                console.error("Synthesis error:", e);
+                showToast(e.message); 
+                stopPlayback(); 
+            }
+        }
+        
+        // Pre-cache next sentences for seamless playback
+        async function preCacheNextSentences() {
+            const sentencesToPreCache = 2; // Pre-generate next 2 sentences
+            
+            // Ensure AudioContext is initialized
+            if (!audioContext) return;
+            
+            for (let i = 1; i <= sentencesToPreCache; i++) {
+                let targetPageIndex = currentPageIndex;
+                let targetSentenceIndex = currentSentenceIndex + i;
+                let targetSentences = sentences;
+                
+                // Check if next sentence exists on current page
+                if (targetSentenceIndex >= sentences.length) {
+                    // Check if there's a next page
+                    if (currentPageIndex < currentPages.length - 1) {
+                        // Switch to first sentence of next page
+                        targetPageIndex = currentPageIndex + 1;
+                        targetSentenceIndex = 0;
+                        
+                        // Parse next page's text to get first sentence
+                        try {
+                            const nextPageText = currentPages[targetPageIndex];
+                            if (!nextPageText) continue;
+                            
+                            // Use same sentence parsing logic as renderPage()
+                            const rawSentences = nextPageText.match(/[^.!?]+[.!?]+[\"\'\u201c\u2018\u201d\u2019]*(?:\s|$)|[^.!?]+$/g) || [nextPageText];
+                            targetSentences = rawSentences.map(s => s.trim()).filter(s => s);
+                            
+                            if (targetSentences.length === 0) continue;
+                        } catch (err) {
+                            console.warn(`[PreCache] Failed to parse next page: ${err}`);
+                            continue;
+                        }
+                    } else {
+                        // End of document
+                        break;
+                    }
+                }
+                
+                const nextText = targetSentences[targetSentenceIndex];
+                if (!nextText || typeof nextText !== 'string') continue;
+                
+                const cleanText = stripHTML(nextText);
+                
+                // Before fetch, check cache
+                const cacheKey = `${targetPageIndex}_${targetSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
+                if (audioBufferCache.has(cacheKey)) {
+                    console.log(`[PreCache] Already cached: page ${targetPageIndex} sentence ${targetSentenceIndex}`);
+                    continue; // Skip fetch
+                }
+                
+                console.log(`[PreCache] Queuing page ${targetPageIndex} sentence ${targetSentenceIndex}`);
+                
+                // Fire-and-forget: Pre-generate in background (don't await)
+                fetch(`${API_URL}/api/synthesize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: cleanText,
+                        voice: voiceSelect.value,
+                        speed: parseFloat(speedRange.value),
+                        rules,
+                        ignore_list: ignoreList,
+                        pause_settings: pauseSettings
+                    })
+                }).then(async res => {
+                    if (res.ok) {
+                        const blob = await res.blob();
+                        const arrayBuffer = await blob.arrayBuffer();
+                        
+                        // Decode in background (non-blocking)
+                        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                        
+                        // Store in frontend cache for instant playback
+                        audioBufferCache.set(cacheKey, audioBuffer);
+                        
+                        console.log(`[PreCache] Decoded page ${targetPageIndex} sentence ${targetSentenceIndex} (${audioBuffer.duration.toFixed(2)}s)`);
+                    }
+                }).catch(() => {
+                    // Silently fail - pre-caching is optional
+                });
+            }
+        }
+
+        // Helper to set play/pause icon
+        function setPlayIcon(iconName) {
+            const icon = document.getElementById('playIcon');
+            if (icon) {
+                icon.setAttribute('data-lucide', iconName);
+                renderIcons();
+            }
+        }
+
+        // Initialize Web Audio API context
+        function initAudioContext() {
+            if (!audioContext) {
+                // Create AudioContext on first user interaction (autoplay policy)
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('[WebAudio] AudioContext initialized');
+            }
+            // Resume if suspended (iOS autoplay policy)
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
+        // Play audio using Web Audio API
+        function playAudioBuffer(audioBuffer) {
+            // Stop previous audio if playing
+            if (currentAudioSource) {
+                try {
+                    currentAudioSource.stop();
+                    currentAudioSource.disconnect();
+                } catch (e) {
+                    // Ignore if already stopped
+                }
+            }
+            
+            // Create new source node (one-shot)
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
+            
+            // Handle playback end
+            source.onended = () => {
+                currentAudioSource = null;
+                currentSentenceIndex++;
+                console.log(`Sentence ended, moving to ${currentSentenceIndex}`);
+                playNext();
+                
+                // Pre-cache next sentences
+                preCacheNextSentences();
+            };
+            
+            currentAudioSource = source;
+            source.start(0);
+            console.log(`[WebAudio] Playing buffer: ${audioBuffer.duration.toFixed(2)}s`);
+        }
+
+        function stopPlayback() { 
+            isPlaying = false; 
+            setPlayIcon('play');
+            
+            // Stop Web Audio API source
+            if (currentAudioSource) {
+                try {
+                    currentAudioSource.stop();
+                    currentAudioSource.disconnect();
+                } catch (e) {
+                    // Ignore if already stopped
+                }
+                currentAudioSource = null;
+            }
+            // Keep audioBufferCache (user might resume)
+        }
+
+        function togglePlayback() {
+            if (isPlaying) {
+                stopPlayback(); 
+            } else {
+                // Initialize AudioContext on first user interaction
+                initAudioContext();
+                
+                isPlaying = true; 
+                setPlayIcon('pause');
+                playNext(); 
+            }
+        }
+
+        playBtn.onclick = togglePlayback;
+
+        window.addEventListener('keydown', (e) => {
+            const active = document.activeElement;
+            const isTyping = active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable;
+            
+            if (isTyping) return;
+
+            if (e.code === 'Space') {
+                e.preventDefault(); // Prevent scrolling
+                togglePlayback();
+            } else if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                document.getElementById('skipBack').click();
+            } else if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                document.getElementById('skipForward').click();
+            }
+        });
+
+        document.getElementById('skipBack').onclick = () => {
+            if (currentSentenceIndex > 0) {
+                jumpToSentence(currentSentenceIndex - 1);
+            } else {
+                showToast("Beginning of page");
+            }
+        };
+
+        document.getElementById('skipForward').onclick = () => {
+            if (currentSentenceIndex < sentences.length - 1) {
+                jumpToSentence(currentSentenceIndex + 1);
+            } else {
+                if (currentPageIndex < currentPages.length - 1) {
+                    currentPageIndex++;
+                    jumpToSentence(0);
+                } else {
+                    showToast("End of document");
+                }
+            }
+        };
+
+        async function jumpToSentence(i) { 
+            // Stop current audio completely to prevent onended race condition
+            if (currentAudioSource) {
+                try {
+                    currentAudioSource.stop();
+                    currentAudioSource.disconnect();
+                } catch (e) {
+                    // Ignore if already stopped
+                }
+                currentAudioSource = null;
+            }
+            
+            currentSentenceIndex = i; 
+            await renderPage(); 
+            if (!isPlaying) {
+                // Initialize AudioContext before starting playback
+                initAudioContext();
+                
+                isPlaying = true; 
+                setPlayIcon('pause');
+            } 
+            playNext(); 
+        }
+        async function saveProgress() { 
+            if (currentDoc) {
+                await fetch(`${API_URL}/api/library`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        ...currentDoc, 
+                        currentPage: currentPageIndex, 
+                        lastSentenceIndex: currentSentenceIndex, 
+                        lastAccessed: Date.now() 
+                    }) 
+                });
+            }
+        }
+        
+        // Bidirectional Smart Scroll
+        let isAutoFlipping = false;
+        scrollContainer.addEventListener('wheel', async (e) => {
+            if (isAutoFlipping) return;
+            
+            const isAtBottom = scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 10;
+            const isAtTop = scrollContainer.scrollTop <= 10;
+            
+            // Scroll Down to Next Page
+            if (e.deltaY > 0 && isAtBottom && currentPageIndex < currentPages.length - 1) {
+                if (isPlaying) stopPlayback();
+                isAutoFlipping = true;
+                currentPageIndex++;
+                currentSentenceIndex = 0;
+                await renderPage();
+                scrollContainer.scrollTop = 0;
+                saveProgress();
+                setTimeout(() => { isAutoFlipping = false; }, 700);
+            } 
+            // Scroll Up to Previous Page
+            else if (e.deltaY < 0 && isAtTop && currentPageIndex > 0) {
+                if (isPlaying) stopPlayback();
+                isAutoFlipping = true;
+                currentPageIndex--;
+                currentSentenceIndex = 0; // Or last sentence? Better to stay consistent.
+                await renderPage();
+                // When going back, scroll to the BOTTOM of the previous page
+                scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                saveProgress();
+                setTimeout(() => { isAutoFlipping = false; }, 700);
+            }
+        }, { passive: true });
+
+        speedRange.oninput = (e) => speedVal.textContent = parseFloat(e.target.value).toFixed(2);
+        document.getElementById('prevPage').onclick = async () => { if (currentPageIndex > 0) { currentPageIndex--; currentSentenceIndex = 0; await renderPage(); if (isPlaying) playNext(); } };
+        document.getElementById('nextPage').onclick = async () => { if (currentPageIndex < currentPages.length - 1) { currentPageIndex++; currentSentenceIndex = 0; await renderPage(); if (isPlaying) playNext(); } };
+        pageInput.onchange = async () => { let v = parseInt(pageInput.value)-1; if (v >= 0 && v < currentPages.length) { currentPageIndex = v; currentSentenceIndex = 0; await renderPage(); if (isPlaying) playNext(); } };
+
+        // === MP3 EXPORT FUNCTIONALITY ===
+        let exportPollInterval = null;
+        let exportOutputFile = null;
+        let ffmpegPollInterval = null;
+
+        exportBtn.onclick = async () => {
+            if (!currentDoc) {
+                showToast("No document selected");
+                return;
+            }
+            if (!isEngineReady) {
+                showToast("Voice engine not ready");
+                return;
+            }
+
+            // Check if FFMPEG is installed
+            try {
+                const statusRes = await fetch(`${API_URL}/api/ffmpeg/status?t=${Date.now()}`);
+                const status = await statusRes.json();
+
+                if (!status.is_installed) {
+                    // Show FFMPEG download modal
+                    showFFMPEGDownloadModal();
+                    return;
+                }
+
+                // FFMPEG installed, proceed with export
+                startExport();
+
+            } catch (e) {
+                showToast("Failed to check FFMPEG status");
+            }
+        };
+
+        function showFFMPEGDownloadModal() {
+            ffmpegModal.classList.remove('hidden');
+            ffmpegDownloadSection.classList.add('hidden');
+            ffmpegComplete.classList.add('hidden');
+            ffmpegError.classList.add('hidden');
+            startFFMPEGDownload.classList.remove('hidden');
+            renderIcons();
+        }
+
+        startFFMPEGDownload.onclick = async () => {
+            try {
+                const res = await fetch(`${API_URL}/api/ffmpeg/install`, { method: 'POST' });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.error || "Failed to start download");
+                }
+
+                // Hide button, show progress
+                startFFMPEGDownload.classList.add('hidden');
+                ffmpegDownloadSection.classList.remove('hidden');
+                ffmpegProgress.textContent = '0%';
+                ffmpegProgressBar.style.width = '0%';
+                ffmpegStatus.textContent = 'Starting download...';
+
+                startFFMPEGPolling();
+
+            } catch (e) {
+                ffmpegError.classList.remove('hidden');
+                ffmpegErrorMsg.textContent = e.message;
+            }
+        };
+
+        function startFFMPEGPolling() {
+            if (ffmpegPollInterval) clearInterval(ffmpegPollInterval);
+
+            ffmpegPollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_URL}/api/ffmpeg/status?t=${Date.now()}`);
+                    const status = await res.json();
+
+                    if (status.error) {
+                        clearInterval(ffmpegPollInterval);
+                        ffmpegError.classList.remove('hidden');
+                        ffmpegErrorMsg.textContent = status.error;
+                        return;
+                    }
+
+                    if (status.is_downloading) {
+                        // Update progress
+                        const percent = status.total > 0 ? Math.round((status.progress / status.total) * 100) : 0;
+                        ffmpegProgress.textContent = `${percent}%`;
+                        ffmpegProgressBar.style.width = `${percent}%`;
+                        ffmpegStatus.textContent = status.message || 'Downloading...';
+                    } else if (status.is_installed) {
+                        // Download complete
+                        clearInterval(ffmpegPollInterval);
+                        ffmpegDownloadSection.classList.add('hidden');
+                        ffmpegComplete.classList.remove('hidden');
+                        renderIcons();
+                        
+                        // Auto-close modal and start export after 1 second
+                        setTimeout(() => {
+                            ffmpegModal.classList.add('hidden');
+                            startExport();
+                        }, 1000);
+                    }
+                } catch (e) {
+                    console.error("FFMPEG polling error:", e);
+                }
+            }, 500);
+        }
+
+        cancelFFMPEGBtn.onclick = async () => {
+            if (ffmpegPollInterval) clearInterval(ffmpegPollInterval);
+            
+            try {
+                await fetch(`${API_URL}/api/ffmpeg/cancel`, { method: 'POST' });
+            } catch (e) {
+                console.error("Cancel error:", e);
+            }
+            
+            ffmpegModal.classList.add('hidden');
+        };
+
+        async function startExport() {
+            // Calculate estimated time
+            const totalChars = currentPages.join('').length;
+            const estimatedSeconds = Math.ceil((totalChars / 1000) * 15);
+            const estimatedMins = Math.ceil(estimatedSeconds / 60);
+
+            if (!confirm(`This will export the entire document to MP3.\n\nEstimated time: ~${estimatedMins} minute${estimatedMins !== 1 ? 's' : ''}\n\nContinue?`)) {
+                return;
+            }
+
+            // Start export
+            try {
+                const res = await fetch(`${API_URL}/api/export/audio`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        doc_id: currentDoc.id,
+                        voice: voiceSelect.value,
+                        speed: parseFloat(speedRange.value),
+                        rules: rules,
+                        ignore_list: ignoreList
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    showToast(err.detail || err.error || "Failed to start export");
+                    return;
+                }
+
+                // Show modal and start polling
+                exportModal.classList.remove('hidden');
+                exportComplete.classList.add('hidden');
+                exportError.classList.add('hidden');
+                exportProgress.textContent = '0%';
+                exportProgressBar.style.width = '0%';
+                exportStatus.textContent = 'Initializing export...';
+                playBtn.disabled = true;
+
+                startExportPolling();
+
+            } catch (e) {
+                showToast("Export failed: " + e.message);
+            }
+        }
+
+        function startExportPolling() {
+            if (exportPollInterval) clearInterval(exportPollInterval);
+            
+            exportPollInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_URL}/api/export/status?t=${Date.now()}`);
+                    const status = await res.json();
+
+                    if (status.error) {
+                        // Error occurred
+                        clearInterval(exportPollInterval);
+                        exportError.classList.remove('hidden');
+                        exportErrorMsg.textContent = status.error;
+                        exportStatus.textContent = 'Export failed';
+                        playBtn.disabled = false;
+                        return;
+                    }
+
+                    if (status.is_exporting) {
+                        // Update progress
+                        const percent = status.total > 0 ? Math.round((status.progress / status.total) * 100) : 0;
+                        exportProgress.textContent = `${percent}%`;
+                        exportProgressBar.style.width = `${percent}%`;
+                        exportStatus.textContent = `Processing paragraph ${status.progress} of ${status.total}...`;
+                    } else if (status.output_file) {
+                        // Export complete
+                        clearInterval(exportPollInterval);
+                        exportProgress.textContent = '100%';
+                        exportProgressBar.style.width = '100%';
+                        exportStatus.textContent = 'Export complete!';
+                        
+                        // Show file path (user-friendly relative path)
+                        exportFilePath.textContent = `./userdata/${status.output_file}`;
+                        
+                        exportComplete.classList.remove('hidden');
+                        exportOutputFile = status.output_file;
+                        playBtn.disabled = false;
+                        renderIcons(); // Re-render folder-open icon
+                    }
+                } catch (e) {
+                    console.error("Export polling error:", e);
+                }
+            }, 1000);
+        }
+
+        cancelExportBtn.onclick = async () => {
+            if (exportPollInterval) clearInterval(exportPollInterval);
+            
+            try {
+                await fetch(`${API_URL}/api/export/cancel`, { method: 'POST' });
+            } catch (e) {
+                console.error("Cancel error:", e);
+            }
+            
+            exportModal.classList.add('hidden');
+            playBtn.disabled = false;
+        };
+
+        openFileLocationBtn.onclick = async () => {
+            if (exportOutputFile) {
+                try {
+                    const res = await fetch(`${API_URL}/api/export/open-location/${exportOutputFile}`, { 
+                        method: 'POST' 
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        // Show quick confirmation toast
+                        showToast("Opening folder...");
+                        
+                        // Close modal after a brief delay
+                        setTimeout(() => {
+                            exportModal.classList.add('hidden');
+                        }, 1000);
+                    } else {
+                        const err = await res.json();
+                        showToast(err.detail || "Failed to open folder");
+                    }
+                } catch (e) {
+                    console.error("Failed to open folder:", e);
+                    showToast("Error: " + e.message);
+                }
+            }
+        };
+
+        // ============================================
+        // FEATURE: Global Search (Ctrl+F Replacement)
+        // ============================================
+        
+        function openSearchModal() {
+            if (!currentDoc) {
+                showToast("No document loaded");
+                return;
+            }
+            searchModal.classList.remove('hidden');
+            searchInput.focus();
+            renderIcons();
+        }
+
+        function closeSearchModal() {
+            searchModal.classList.add('hidden');
+            searchInput.value = '';
+            searchResultsList.innerHTML = '';
+            searchPlaceholder.classList.remove('hidden');
+            searchEmpty.classList.add('hidden');
+            searchFooter.classList.add('hidden');
+            currentSearchQuery = '';
+            clearSearchHighlights();
+        }
+
+        function clearSearchHighlights() {
+            const highlightedElements = textContent.querySelectorAll('.search-highlight');
+            highlightedElements.forEach(el => {
+                const parent = el.parentNode;
+                parent.replaceChild(document.createTextNode(el.textContent), el);
+                parent.normalize(); // Merge adjacent text nodes
+            });
+        }
+
+        async function performSearch(query) {
+            if (!query || query.length < 2) {
+                searchPlaceholder.classList.remove('hidden');
+                searchEmpty.classList.add('hidden');
+                searchFooter.classList.add('hidden');
+                searchResultsList.innerHTML = '';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/api/library/search/${currentDoc.id}?q=${encodeURIComponent(query)}`);
+                if (!res.ok) throw new Error('Search failed');
+                
+                const data = await res.json();
+                displaySearchResults(data);
+            } catch (e) {
+                console.error('Search error:', e);
+                showToast('Search failed: ' + e.message);
+            }
+        }
+
+        function displaySearchResults(data) {
+            searchPlaceholder.classList.add('hidden');
+            searchResultsList.innerHTML = '';
+
+            if (data.results.length === 0) {
+                searchEmpty.classList.remove('hidden');
+                searchFooter.classList.add('hidden');
+                return;
+            }
+
+            searchEmpty.classList.add('hidden');
+            searchFooter.classList.remove('hidden');
+            
+            // Update stats
+            searchStats.textContent = `${data.total_matches} match${data.total_matches !== 1 ? 'es' : ''} across ${data.pages_with_matches} page${data.pages_with_matches !== 1 ? 's' : ''}`;
+
+            const fragment = document.createDocumentFragment();
+
+            data.results.forEach(result => {
+                result.matches.forEach((match, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result-item';
+                    
+                    // Highlight the query in the snippet (escape regex special chars)
+                    const escapedQuery = escapeRegex(data.query);
+                    const highlightedSnippet = match.snippet.replace(
+                        new RegExp(escapedQuery, 'gi'),
+                        (m) => `<mark>${m}</mark>`
+                    );
+
+                    div.innerHTML = `
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-blue-400">Page ${result.page_index + 1}</span>
+                            <span class="text-xs text-zinc-600">${result.match_count} match${result.match_count !== 1 ? 'es' : ''} on this page</span>
+                        </div>
+                        <div class="search-result-snippet">${highlightedSnippet}</div>
+                    `;
+
+                    div.onclick = () => jumpToSearchResult(result.page_index, data.query);
+                    fragment.appendChild(div);
+                });
+            });
+
+            searchResultsList.appendChild(fragment);
+        }
+
+        async function jumpToSearchResult(pageIndex, query) {
+            currentSearchQuery = query;
+            currentPageIndex = pageIndex;
+            currentSentenceIndex = 0;
+            
+            closeSearchModal();
+            await renderPage();
+            
+            // Highlight the search term on the page
+            highlightSearchTerm(query);
+            
+            showToast(`Jumped to Page ${pageIndex + 1}`);
+        }
+
+        function escapeRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function highlightSearchTerm(query) {
+            if (!query) return;
+
+            const textElements = textContent.querySelectorAll('.sentence');
+            const escapedQuery = escapeRegex(query);
+            const regex = new RegExp(`(${escapedQuery})`, 'gi');
+            
+            textElements.forEach(el => {
+                highlightTextNodes(el, regex);
+            });
+        }
+
+        function highlightTextNodes(node, regex) {
+            // Walk through all child nodes
+            const walker = document.createTreeWalker(
+                node,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            const textNodes = [];
+            let currentNode;
+            
+            while (currentNode = walker.nextNode()) {
+                if (regex.test(currentNode.textContent)) {
+                    textNodes.push(currentNode);
+                }
+            }
+
+            // Process text nodes (do this separately to avoid iterator issues)
+            textNodes.forEach(textNode => {
+                const text = textNode.textContent;
+                const parent = textNode.parentNode;
+                
+                // Skip if already highlighted
+                if (parent.classList && parent.classList.contains('search-highlight')) {
+                    return;
+                }
+
+                const fragment = document.createDocumentFragment();
+                let lastIndex = 0;
+                let match;
+                
+                // Reset regex
+                regex.lastIndex = 0;
+                
+                while ((match = regex.exec(text)) !== null) {
+                    // Add text before match
+                    if (match.index > lastIndex) {
+                        fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+                    }
+                    
+                    // Add highlighted match
+                    const highlight = document.createElement('span');
+                    highlight.className = 'search-highlight';
+                    highlight.textContent = match[0];
+                    fragment.appendChild(highlight);
+                    
+                    lastIndex = match.index + match[0].length;
+                }
+                
+                // Add remaining text
+                if (lastIndex < text.length) {
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+                }
+                
+                // Replace original text node with fragment
+                parent.replaceChild(fragment, textNode);
+            });
+        }
+
+        // Search Button Handler
+        searchBtn.onclick = openSearchModal;
+
+        // Close Search Modal
+        closeSearchBtn.onclick = closeSearchModal;
+        searchModal.onclick = (e) => {
+            if (e.target === searchModal) closeSearchModal();
+        };
+
+        // Search Input Handler (Debounced)
+        searchInput.oninput = (e) => {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                performSearch(e.target.value.trim());
+            }, 300);
+        };
+
+        // Keyboard Shortcuts
+        window.addEventListener('keydown', (e) => {
+            // Ctrl+F or Cmd+F - Open search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && currentDoc) {
+                e.preventDefault();
+                openSearchModal();
+            }
+            
+            // ESC - Close search
+            if (e.key === 'Escape' && !searchModal.classList.contains('hidden')) {
+                closeSearchModal();
+            }
+        });
+
+        // Update selectDocument to show search button
+        const originalSelectDocument = selectDocument;
+        selectDocument = async function(item) {
+            await originalSelectDocument(item);
+            searchBtn.classList.remove('hidden');
+        };
+
+        init();
+    </script>
+</body>
+</html>
+

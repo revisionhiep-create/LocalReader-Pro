@@ -17,6 +17,7 @@
 ### 🎙️ Smart TTS Controls
 - **Dynamic Voice Library:** Automatically loads voices for **English (US/UK), French, Spanish, Chinese, Japanese, Italian, and Portuguese**.
 - **Voice Settings Drawer:** Floating button for quick access to voice, speed, and filter controls
+- **Player Text Customization:** New **Text Size Slider** to adjust subtitle/caption size (12px-24px) in real-time.
 - **Natural Speech Flow:** Intelligent line joining prevents mid-sentence stops
 - **Smart Punctuation Logic:**
   - Supports English (`...`, `?!`) and CJK (`。`, `！`, `？`) punctuation correctly.

@@ -80,6 +80,7 @@ safe_init_json(settings_file, {
     "ignoreList": [],
     "voice_id": "af_bella",
     "speed": 1.0,
+    "font_size": 16,  # Default font size
     "header_footer_mode": "off",  # Options: "off", "clean", "dim"
     "engine_mode": "gpu",  # Options: "gpu" (standard), "cpu" (quantized)
     "ui_language": "en",  # Options: "en", "fr", "es"
@@ -119,6 +120,7 @@ class AppSettings(BaseModel):
     ignoreList: List[str]
     voice_id: Optional[str] = "af_bella"
     speed: Optional[float] = 1.0
+    font_size: Optional[int] = 16
     header_footer_mode: Optional[str] = "off"  # "off", "clean", or "dim"
     engine_mode: Optional[str] = "gpu"  # "gpu" (standard) or "cpu" (quantized)
     ui_language: Optional[str] = "en"  # "en", "fr", or "es"

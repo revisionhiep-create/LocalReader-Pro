@@ -418,8 +418,20 @@
                     </label>
                 </div>
 
+                <!-- Text Size Slider -->
+                <div id="textSizeArea" class="mb-4" style="display: none;">
+                    <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block flex items-center justify-between">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="type" class="w-3.5 h-3.5"></i>
+                            <span data-i18n="sidebar.text_size">Text Size</span>
+                        </span>
+                        <span class="text-blue-400 font-mono"><span id="textSizeVal">16</span>px</span>
+                    </label>
+                    <input type="range" id="fontSizeSlider" min="12" max="24" step="1" value="16" class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                </div>
+
                 <div id="exportArea" class="mb-4" style="display: none;">
-                    <button id="exportBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-all shadow-lg shadow-purple-900/20">
+                    <button id="exportBtn" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#4B0082] hover:bg-[#320056] text-white rounded-lg transition-all shadow-lg shadow-purple-900/20">
                         <i data-lucide="download" class="w-4 h-4"></i>
                         <span class="text-sm font-bold" data-i18n="export.title">Export Audio (MP3)</span>
                     </button>
@@ -821,7 +833,7 @@
         let pauseSettings = { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 0 }; // Pause durations in ms
         const API_URL = 'http://127.0.0.1:8000';
 
-        const pdfUpload = document.getElementById('pdfUpload'), uploadArea = document.getElementById('uploadArea'), exportArea = document.getElementById('exportArea'),
+        const pdfUpload = document.getElementById('pdfUpload'), uploadArea = document.getElementById('uploadArea'), exportArea = document.getElementById('exportArea'), textSizeArea = document.getElementById('textSizeArea'),
               libraryPanel = document.getElementById('libraryPanel'), rulesPanel = document.getElementById('rulesPanel'), 
               ignorePanel = document.getElementById('ignorePanel'), rulesList = document.getElementById('rulesList'), ignoreListUI = document.getElementById('ignoreListUI'), 
               tabLibrary = document.getElementById('tabLibrary'), tabRules = document.getElementById('tabRules'), tabIgnore = document.getElementById('tabIgnore'), 
@@ -832,6 +844,7 @@
               pageNav = document.getElementById('pageNav'), controls = document.getElementById('controls'), playBtn = document.getElementById('playBtn'), 
               playIcon = document.getElementById('playIcon'), currentSentencePreview = document.getElementById('currentSentencePreview'), 
               speedRange = document.getElementById('speedRange'), speedVal = document.getElementById('speedVal'), 
+              fontSizeSlider = document.getElementById('fontSizeSlider'), textSizeVal = document.getElementById('textSizeVal'), 
               voiceSelect = document.getElementById('voiceSelect'), addRuleBtn = document.getElementById('addRuleBtn'), setupArea = document.getElementById('setupArea'), 
               setupBtn = document.getElementById('setupBtn'), engineStatusDot = document.getElementById('engineStatusDot'), toast = document.getElementById('toast'),
               exportBtn = document.getElementById('exportBtn'), exportModal = document.getElementById('exportModal'),
@@ -881,6 +894,9 @@
         // v2.3 - Dynamic Voice Loading
         async function loadVoices() {
             try {
+                // Preserve current selection if any
+                const currentVoice = voiceSelect.value;
+                
                 const response = await fetch(`${API_URL}/api/voices/available`);
                 if (!response.ok) throw new Error("Failed to load voices");
                 
@@ -912,6 +928,15 @@
                     
                     voiceSelect.appendChild(group);
                 });
+
+                // Restore previous selection if it still exists in the new list
+                if (currentVoice) {
+                    const exists = Array.from(voiceSelect.options).some(opt => opt.value === currentVoice);
+                    if (exists) {
+                        voiceSelect.value = currentVoice;
+                        console.log(`[VOICES] Restored selection: ${currentVoice}`);
+                    }
+                }
                 
                 // If list is empty (no voices downloaded yet)
                 if (voiceSelect.options.length === 0) {
@@ -1133,6 +1158,7 @@
                 ignoreList = settings.ignoreList || [];
                 const savedVoice = settings.voice_id;
                 const savedSpeed = settings.speed;
+                const savedFontSize = settings.font_size || 16;
                 headerFooterMode = settings.header_footer_mode || 'off';
                 engineMode = settings.engine_mode || 'gpu'; // v1.9 - default to GPU for backward compatibility
                 pauseSettings = settings.pause_settings || { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 800 };
@@ -1148,6 +1174,16 @@
                 if (savedSpeed) {
                     speedRange.value = savedSpeed;
                     speedVal.textContent = parseFloat(savedSpeed).toFixed(2);
+                }
+
+                // 2b. Set font size independently (immediate)
+                if (savedFontSize && fontSizeSlider) {
+                    fontSizeSlider.value = savedFontSize;
+                    if (textSizeVal) textSizeVal.textContent = savedFontSize;
+                    if (currentSentencePreview) {
+                        currentSentencePreview.style.fontSize = `${savedFontSize}px`;
+                        currentSentencePreview.style.lineHeight = (parseInt(savedFontSize) * 1.5) + 'px';
+                    }
                 }
                 
                 // 3. Set header/footer mode
@@ -1234,6 +1270,7 @@
                     ignoreList: ignoreList,
                     voice_id: voiceSelect.value,
                     speed: parseFloat(speedRange.value),
+                    font_size: fontSizeSlider ? parseInt(fontSizeSlider.value) : 16,
                     header_footer_mode: headerFooterMode,
                     engine_mode: engineMode, // v1.9 - Dual-engine support
                     ui_language: languages[currentLangIndex], // v2.0 - Multilingual support
@@ -1282,6 +1319,19 @@
             speedVal.textContent = val;
         };
         speedRange.onchange = saveSettings; // Save only on release to avoid spamming the FS
+
+        // Text Size Slider Logic
+        if (fontSizeSlider) {
+            fontSizeSlider.oninput = (e) => {
+                const val = e.target.value;
+                if (textSizeVal) textSizeVal.textContent = val;
+                if (currentSentencePreview) {
+                    currentSentencePreview.style.fontSize = `${val}px`;
+                    currentSentencePreview.style.lineHeight = (parseInt(val) * 1.5) + 'px';
+                }
+            };
+            fontSizeSlider.onchange = saveSettings; // Persist font size change
+        }
         
         // Header/Footer Mode handler
         headerFooterModeSelect.onchange = async () => {
@@ -1422,7 +1472,10 @@
                             engineStatusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"; 
                             setupArea.style.display = 'none';
                             uploadArea.style.display = 'block';
-                            if (currentDoc) exportArea.style.display = 'block';
+                            if (currentDoc) {
+                                exportArea.style.display = 'block';
+                                if (textSizeArea) textSizeArea.style.display = 'block';
+                            }
                             // Clear error tracking on success
                             window.lastShownError = null;
 
@@ -1681,6 +1734,7 @@
                         document.getElementById('pageInput').disabled = true;
                         controls.classList.add('hidden');
                         exportArea.style.display = 'none';
+                        if (textSizeArea) textSizeArea.style.display = 'none';
                         emptyState.classList.remove('hidden');
                         textContent.classList.add('hidden');
                         stopPlayback();
@@ -1718,6 +1772,7 @@
             emptyState.classList.add('hidden'); 
             textContent.classList.remove('hidden');
             if (isEngineReady) exportArea.style.display = 'block';
+            if (textSizeArea) textSizeArea.style.display = 'block';
             renderPage(); 
             loadLibrary();
         }
