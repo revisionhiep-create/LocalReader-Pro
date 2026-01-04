@@ -10,6 +10,9 @@
 - **Auto-Refresh Voice List:** Fixed a bug where the "Voice Selection" dropdown remained empty after downloading the engine for the first time. The list now automatically refreshes the moment the engine reports "Ready".
 - **Improved Downloads:** Increased the timeout for model downloads from 5 minutes to 10 minutes (600s) to better support users with slower internet connections when fetching the ~300MB GPU models.
 
+### 🐛 Bug Fixes
+- **ROCm/Torch Compatibility:** Fixed a "Index out of bounds" crash that occurred when processing specific text chunks in ROCm environments. This was caused by an edge case in the `PatchedKokoro` class where generated tokens matched the exact length of the voice style array (512). The style index is now safely clamped to prevent this.
+
 ---
 
 # LocalReader Pro v2.5 Changelog
