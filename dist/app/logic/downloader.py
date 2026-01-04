@@ -40,7 +40,7 @@ def download_kokoro_model(model_type: Literal["gpu", "cpu"] = "gpu") -> None:
             if model_type == "cpu":
                 # Direct download from GitHub releases
                 print(f"  Starting download from: {model_url}")
-                r = requests.get(model_url, stream=True, timeout=300)  # 5 min timeout for large file
+                r = requests.get(model_url, stream=True, timeout=600)  # 10 min timeout for large file
                 r.raise_for_status()
                 
                 total_size = int(r.headers.get('content-length', 0))

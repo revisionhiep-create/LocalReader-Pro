@@ -321,7 +321,13 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 @app.get("/")
 async def serve_ui():
-    return FileResponse(base_dir / "ui" / "index.html")
+    ui_file = base_dir / "ui" / "index.html"
+    if not ui_file.exists():
+        return JSONResponse(
+            status_code=500, 
+            content={"error": "UI file missing. Please check installation.", "path": str(ui_file)}
+        )
+    return FileResponse(ui_file)
 
 # Settings API (Rules & Ignore)
 @app.get("/api/settings")

@@ -1425,6 +1425,9 @@
                             if (currentDoc) exportArea.style.display = 'block';
                             // Clear error tracking on success
                             window.lastShownError = null;
+
+                            // Refresh voices now that engine is ready
+                            await loadVoices();
                         }
                         else { 
                             // Model not loaded OR wrong model selected → Show setup button

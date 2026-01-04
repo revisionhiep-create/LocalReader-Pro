@@ -61,7 +61,7 @@ def main():
 
     # 2. Wait for server to be responsive (with timeout)
     print("[WAIT] Waiting for server to initialize...")
-    retries = 15
+    retries = 150
     server_up = False
     
     for attempt in range(1, retries + 1):
@@ -69,8 +69,8 @@ def main():
             server_up = True
             print(f"[OK] Server ready on http://127.0.0.1:8000 (attempt {attempt})")
             break
-        time.sleep(1)
-        if attempt % 5 == 0:
+        time.sleep(0.1)
+        if attempt % 50 == 0:
             print(f"     Still waiting... ({attempt}/{retries})")
 
     if not server_up:

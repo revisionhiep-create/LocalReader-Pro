@@ -1,3 +1,17 @@
+# LocalReader Pro Changelog
+
+## v2.6 - January 4, 2026
+
+### 🚀 Core Performance & Stability
+- **Faster Startup:** Reduced internal server polling interval from 1s to 0.1s. The app window now appears almost instantly once the backend is ready (approx. 0.9s faster launch).
+- **Safety Hardening:** Added explicit file existence checks for the UI. If `index.html` is missing/corrupted, the app now reports a clear error instead of crashing silently or showing a generic 500 page.
+
+### 🌐 User Experience
+- **Auto-Refresh Voice List:** Fixed a bug where the "Voice Selection" dropdown remained empty after downloading the engine for the first time. The list now automatically refreshes the moment the engine reports "Ready".
+- **Improved Downloads:** Increased the timeout for model downloads from 5 minutes to 10 minutes (600s) to better support users with slower internet connections when fetching the ~300MB GPU models.
+
+---
+
 # LocalReader Pro v2.5 Changelog
 
 ## v2.5 - January 3, 2026
