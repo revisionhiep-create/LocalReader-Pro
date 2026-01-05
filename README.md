@@ -2,6 +2,11 @@
 
 **A modern, privacy-focused PDF/EPUB reader with AI-powered text-to-speech, multilingual support, and smart audio caching.**
 
+<p align="center">
+  <img src="docs/images/image1.png" alt="LocalReader Pro Main Interface" width="45%">
+  <img src="docs/images/image2.png" alt="LocalReader Pro Settings" width="45%">
+</p>
+
 ---
 
 ## ✨ Key Features
