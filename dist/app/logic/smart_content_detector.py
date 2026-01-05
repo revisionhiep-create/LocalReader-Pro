@@ -94,8 +94,11 @@ def detect_headers_footers(pages: List[str], page_index: int) -> Dict[str, List[
     prev_lines = split_into_lines(prev_page) if prev_page else []
     next_lines = split_into_lines(next_page) if next_page else []
     
-    # Check top 3 lines (potential headers)
-    for i in range(min(3, len(current_lines))):
+    # Calculate safe scan depth (max 20% of page or 3 lines, whichever is smaller, but at least 1 if lines exist)
+    limit = max(1, min(3, int(len(current_lines) * 0.2)))
+    
+    # Check top lines (potential headers)
+    for i in range(limit):
         current_line = current_lines[i]
         matches = 0
         
@@ -109,12 +112,15 @@ def detect_headers_footers(pages: List[str], page_index: int) -> Dict[str, List[
             if similarity(current_line, next_lines[i]) > 0.9:
                 matches += 1
         
-        # If line matches in at least 1 adjacent page (2 total including current)
+        # If line matches in at least 1 adjacent page
         if matches >= 1:
             headers.append(current_line)
     
-    # Check bottom 3 lines (potential footers)
-    for i in range(max(0, len(current_lines) - 3), len(current_lines)):
+    # Check bottom lines (potential footers)
+    # Ensure footer scan doesn't overlap with header scan
+    start_footer_scan = max(limit, len(current_lines) - limit)
+    
+    for i in range(start_footer_scan, len(current_lines)):
         current_line = current_lines[i]
         matches = 0
         offset_from_end = len(current_lines) - i - 1
@@ -135,7 +141,7 @@ def detect_headers_footers(pages: List[str], page_index: int) -> Dict[str, List[
         
         # Also check if it's a page number
         if is_page_number(current_line):
-            matches += 2  # Boost confidence for page numbers
+            matches += 2
         
         if matches >= 1:
             footers.append(current_line)

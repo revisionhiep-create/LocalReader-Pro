@@ -1,0 +1,404 @@
+:root {
+    --sidebar-width: 320px;
+    --sidebar-min-width: 280px;
+    --sidebar-max-width: 600px;
+    --player-padding: 2rem;
+}
+
+/* MAIN LAYOUT */
+.main-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background-color: #000000;
+}
+
+/* SCROLLBAR CUSTOMIZATION */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* SMART SIDEBAR */
+.sidebar {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    min-width: var(--sidebar-min-width);
+    max-width: var(--sidebar-max-width);
+}
+
+/* Drag Handle */
+.sidebar-drag-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    cursor: ew-resize;
+    background: transparent;
+    z-index: 1000;
+    transition: background 0.2s ease;
+}
+
+.sidebar-drag-handle:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+.sidebar-drag-handle.dragging {
+    background: rgba(59, 130, 246, 0.8);
+}
+
+/* Mobile: Collapse to icon width */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 70px;
+    }
+
+    .sidebar-drag-handle {
+        display: none;
+    }
+}
+
+/* THE CONTAINER (Right of Sidebar) */
+.content-area {
+    flex-grow: 1;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    width: auto;
+    background-color: #000000;
+    position: relative;
+}
+
+/* Sticky Header */
+.content-area>header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background-color: rgba(9, 9, 11, 0.95);
+    backdrop-filter: blur(12px);
+}
+
+/* Reader Content Area */
+#readerContent {
+    flex: 1;
+    padding: 2rem;
+    padding-bottom: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+@media (min-width: 1024px) {
+    #readerContent {
+        padding-left: 6rem;
+        padding-right: 6rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    #readerContent {
+        padding-left: 12rem;
+        padding-right: 12rem;
+    }
+}
+
+/* THE TEXT ITSELF */
+.chapter-text {
+    width: 100%;
+    max-width: 900px;
+    font-size: 1.25rem;
+    line-height: 1.8;
+    color: #e0e0e0;
+    text-align: left;
+    column-count: 1 !important;
+    height: auto !important;
+    column-gap: 0;
+}
+
+/* SMART PLAYER (Floating - Centered in Reading Pane) */
+.player-bar {
+    position: fixed;
+    bottom: 2rem;
+    /* Center relative to content area (reading pane) */
+    left: calc(var(--sidebar-width) + (100% - var(--sidebar-width)) / 2);
+    transform: translateX(-50%);
+    width: min(90%, 800px);
+    max-width: calc(100% - var(--sidebar-width) - 4rem);
+    min-height: 70px;
+    padding: 1rem var(--player-padding);
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    z-index: 100;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    transition: left 0.1s ease;
+}
+
+/* Player Text Element (The Sentence Preview) - Full Display */
+.player-text {
+    flex: 1 1 auto;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    margin-left: 1rem;
+    margin-right: 1rem;
+    font-size: 0.85rem;
+    color: #ccc;
+    text-transform: none;
+    letter-spacing: 0.5px;
+    line-height: 1.5;
+    min-width: 0;
+}
+
+.active-sentence {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-left: 3px solid #3b82f6;
+    border-radius: 2px;
+}
+
+.sentence {
+    transition: all 0.2s;
+    padding: 4px 8px;
+    cursor: pointer;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.sentence:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Dimmed Text (Headers/Footers) */
+.dimmed-text {
+    opacity: 0.5;
+    font-size: 0.8em;
+    color: #71717a;
+    font-style: italic;
+}
+
+/* Search Highlight */
+.search-highlight {
+    background-color: #ffeb3b;
+    color: #000;
+    border-radius: 2px;
+    padding: 2px 0;
+    box-shadow: 0 0 5px #ffeb3b;
+    font-weight: 600;
+}
+
+/* Search Result Item */
+.search-result-item {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #27272a;
+    background: #18181b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.search-result-item:hover {
+    background: #27272a;
+    border-color: #3b82f6;
+}
+
+.search-result-snippet {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #a1a1aa;
+}
+
+.search-result-snippet mark {
+    background-color: #3b82f6;
+    color: #fff;
+    padding: 1px 4px;
+    border-radius: 2px;
+    font-weight: 600;
+}
+
+/* Pronunciation Rules Accordion */
+.rule-item {
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.rule-collapsed {
+    cursor: pointer;
+}
+
+.rule-collapsed:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.rule-expanded {
+    background-color: rgba(59, 130, 246, 0.05);
+    border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.rule-content {
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+}
+
+.rule-content.expanded {
+    max-height: 500px;
+    opacity: 1;
+}
+
+/* Collapsed Rule Layout */
+.rule-original {
+    flex: 0 1 40%;
+    min-width: 0;
+    font-weight: 600;
+    color: #ffffff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rule-arrow {
+    flex-shrink: 0;
+    margin: 0 8px;
+    color: #52525b;
+}
+
+.rule-replacement {
+    flex: 0 1 40%;
+    min-width: 0;
+    color: #60a5fa;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rule-meta {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+}
+
+.rule-badge {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.rule-empty {
+    font-style: italic;
+    color: #71717a;
+}
+
+/* Settings Section Styling */
+.settings-section {
+    background: rgba(9, 9, 11, 0.5);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid rgba(63, 63, 70, 0.3);
+}
+
+.settings-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #71717a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* Voice Settings Drawer */
+.voice-settings-drawer {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    background: linear-gradient(to bottom, #18181b, #09090b);
+    border-left: 1px solid #27272a;
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+    transition: right 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.voice-settings-drawer.open {
+    right: 0;
+}
+
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.drawer-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.voice-settings-button {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    z-index: 998;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #27272a;
+    border: 1px solid #3f3f46;
+    color: #a1a1aa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.voice-settings-button:hover {
+    background: #3f3f46;
+    color: #e4e4e7;
+    border-color: #52525b;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.voice-settings-button.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #2563eb;
+}

@@ -1,5 +1,35 @@
 # LocalReader Pro Changelog
 
+# LocalReader Pro Changelog
+
+## v3.0 - January 5, 2026 (The "Modular" Update)
+
+### 🏗️ Massive Codebase Refactor
+- **ES6 Modularization:** Completely dismantled the monolithic `index.html` (2,000+ lines) into clean, maintainable JS modules (`modules/ui.js`, `modules/tts.js`, `modules/library.js`, `modules/state.js`).
+- **Parallel Backend:** Optimized TTS generation to use parallel processing for significantly lower latency.
+- **Frontend Architecture:** Introduced a global state management system and event-driven architecture.
+
+### 🐛 Critical Fixes & Restorations
+- **Audio Stitching Crash:** Verified fix for `ValueError` in NumPy concatenation during MP3 export/playback on long texts.
+- **Header/Footer Filter:**
+  - Fixed "Hide" mode aggressively deleting body text on short pages (now proportional).
+  - Fixed `[DIM]` tags breaking across sentence splits (causing visual glitches).
+- **Localization:**
+  - Restored missing **Chinese (ZH)** language option.
+  - Fixed Language Toggle not updating UI immediately.
+  - Wired up `updateTranslations` for real-time locale switching.
+- **Voice Loading:** Fixed bug where voice dropdown remained empty after engine download (now auto-refreshes).
+- **EPUB & Export:**
+  - Connected EPUB upload to backend converter.
+  - Verified Audio Export (MP3) logic and FFMPEG auto-installer.
+
+### 💅 UI/UX Polish
+- **Sidebar Resizing:** Restored drag-to-resize functionality.
+- **Auto-Save Feedback:** Restored "pulse" animation when saving progress.
+- **Status Indicators:** Fixed GPU/CPU status showing "?" (now shows ✓/✗).
+
+---
+
 ## v2.8 - January 5, 2026
 
 ### 🛠️ Critical Fixes

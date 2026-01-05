@@ -1,6 +1,7 @@
 import os
 import sys
 import threading
+import concurrent.futures
 import subprocess
 from typing import List, Optional, AsyncGenerator, Dict, Any
 from contextlib import asynccontextmanager
@@ -320,9 +321,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(title="LocalReader Pro API", lifespan=lifespan)
 
 # Mount local lib folder for self-hosted dependencies
+# Mount local lib folder for self-hosted dependencies
 ui_lib_path = base_dir / "ui" / "lib"
 if ui_lib_path.exists():
     app.mount("/lib", StaticFiles(directory=str(ui_lib_path)), name="lib")
+
+# Mount CSS folder
+ui_css_path = base_dir / "ui" / "css"
+if ui_css_path.exists():
+    app.mount("/css", StaticFiles(directory=str(ui_css_path)), name="css")
+
+# Mount JS folder
+ui_js_path = base_dir / "ui" / "js"
+if ui_js_path.exists():
+    app.mount("/js", StaticFiles(directory=str(ui_js_path)), name="js")
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -967,118 +979,109 @@ def safe_concat(audio_list: List[np.ndarray]) -> np.ndarray:
 
 def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: Dict[str, int]) -> tuple:
     """
-    Synthesize text with custom pauses using audio stitching.
-    v2.3 Logic:
-    - Handles punctuation groups (e.g., "...", "?!") as single pause events (based on last char).
-    - Smart newline handling: Only pauses on newline if NOT preceded by punctuation.
-    - v2.5 Logic: Added support for Chinese/Japanese punctuation (。，！？：；、)
+    Synthesize text with custom pauses using PARALLEL processing.
+    v3.0 Logic:
+    - Pre-scans text to build a synthesis plan.
+    - Executes TTS segments in parallel using ThreadPoolExecutor.
+    - Lowers latency by removing sequential synthesis blocking.
     
     Returns: (audio_samples, sample_rate)
     """
     lang = get_language_from_voice(voice)
     print(f"\n{'='*60}")
-    print(f"[PAUSE LOGIC v2.5] Processing: '{text[:100]}{'...' if len(text) > 100 else ''}'")
+    print(f"[PAUSE LOGIC v3.0 Parallel] Processing: '{text[:100]}{'...' if len(text) > 100 else ''}'")
     
     # Pattern: Match text OR punctuation sequences (ASCII + CJK) OR newlines
-    # Added: 。，！？：；、 (Fullwidth/Chinese punctuation)
     segments = re.split(r'([,\.!\?:;。，！？：；、]+|\n)', text)
     
-    audio_segments = []
     sample_rate = SAMPLE_RATE
+    plan = []
+    last_was_punctuation = False
     
-    print(f"\n[SPLIT] Text split into {len(segments)} segments")
-    print(f"[SETTINGS] Pauses: {pause_settings}")
-    print(f"\n[PROCESSING]")
-    
-    pause_count = 0
-    skipped_newline_count = 0
-    last_was_punctuation = False  # Track if previous valid segment was punctuation
-    
+    # 1. PLAN PHASE: Determine what each segment requires
     for i, segment in enumerate(segments):
-        # IMPORTANT: Do NOT strip newlines here, or we lose them!
         clean_segment = segment.strip()
         
-        # 1. Handle Newlines
+        # Handle Newlines
         if segment == '\n':
             if last_was_punctuation:
-                # If we just had a punctuation pause, skip the newline pause (avoid stacking)
-                print(f"  [{i}] SKIP: Newline (already paused for punctuation)")
-                skipped_newline_count += 1
+                # Skip if we just paused for punctuation
+                last_was_punctuation = False 
             else:
-                # Standalone newline (e.g. title or header) -> Apply "soft" pause
-                # Use user setting or fallback to 300ms (to prevent "rushing")
-                pause_ms = pause_settings.get('newline', 300)
-                if pause_ms == 0: pause_ms = 300 # Enforce minimum breathing room
-                
-                pause_samples = int((pause_ms / 1000.0) * sample_rate)
-                silence = np.zeros(pause_samples, dtype=np.float32)
-                audio_segments.append(silence)
-                pause_count += 1
-                print(f"  [{i}] PAUSE: Newline = {pause_ms}ms")
-            
-            # Newline resets state (it's a separator, but subsequent newlines should also pause if multiple)
-            # Actually, treating multiple newlines as one pause might be better, but let's stick to simple logic first.
-            last_was_punctuation = False 
+                # Standalone newline -> soft pause
+                ms = pause_settings.get('newline', 300)
+                if ms == 0: ms = 300
+                plan.append({'type': 'silence', 'ms': ms, 'orig': '\\n'})
+                last_was_punctuation = False
             continue
 
-        # Skip empty strings (artifacts of re.split)
         if not clean_segment:
             continue
-
-        # 2. Handle Punctuation (Single or Grouped)
+            
+        # Handle Punctuation
         if re.match(r'^[,\.!\?:;。，！？：；、]+$', clean_segment):
-            # Take the LAST character to determine pause type
             last_char = clean_segment[-1]
-            
             pause_ms = 0
-            if last_char in [',', '，', '、']:
-                pause_ms = pause_settings.get('comma', 300)
-            elif last_char in ['.', '。']:
-                pause_ms = pause_settings.get('period', 600)
-            elif last_char in ['?', '？']:
-                pause_ms = pause_settings.get('question', 600)
-            elif last_char in ['!', '！']:
-                pause_ms = pause_settings.get('exclamation', 600)
-            elif last_char in [':', '：']:
-                pause_ms = pause_settings.get('colon', 400)
-            elif last_char in [';', '；']:
-                pause_ms = pause_settings.get('semicolon', 400)
+            if last_char in [',', '，', '、']: pause_ms = pause_settings.get('comma', 300)
+            elif last_char in ['.', '。']: pause_ms = pause_settings.get('period', 600)
+            elif last_char in ['?', '？']: pause_ms = pause_settings.get('question', 600)
+            elif last_char in ['!', '！']: pause_ms = pause_settings.get('exclamation', 600)
+            elif last_char in [':', '：']: pause_ms = pause_settings.get('colon', 400)
+            elif last_char in [';', '；']: pause_ms = pause_settings.get('semicolon', 400)
             
-            # Generate silent audio
-            pause_samples = int((pause_ms / 1000.0) * sample_rate)
-            silence = np.zeros(pause_samples, dtype=np.float32)
-            audio_segments.append(silence)
-            pause_count += 1
+            plan.append({'type': 'silence', 'ms': pause_ms, 'orig': clean_segment})
             last_was_punctuation = True
-            print(f"  [{i}] PAUSE: '{clean_segment}' (as '{last_char}') = {pause_ms}ms")
-        
-        # 3. Handle Text
+            
+        # Handle Text
         else:
-            # Re-add CJK ranges to regex to ensure we don't skip valid text
             if re.search(r'[a-zA-Z0-9\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uff9f\u4e00-\u9faf\u3400-\u4dbf]', clean_segment):
+                # Mark for synthesis
+                plan.append({'type': 'tts', 'text': clean_segment, 'index': i})
+                last_was_punctuation = False
+    
+    # 2. EXECUTION PHASE: Run TTS in parallel
+    tts_tasks = [p for p in plan if p['type'] == 'tts']
+    audio_map = {}
+    
+    if tts_tasks:
+        print(f"[PARALLEL] Synthesizing {len(tts_tasks)} segments with {min(len(tts_tasks), 4)} threads...")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            # Submit all tasks
+            future_to_idx = {
+                executor.submit(kokoro.create, t['text'], voice=voice, speed=speed, lang=lang): t['index']
+                for t in tts_tasks
+            }
+            
+            # Gather results
+            for future in concurrent.futures.as_completed(future_to_idx):
+                idx = future_to_idx[future]
                 try:
-                    samples, _ = kokoro.create(clean_segment, voice=voice, speed=speed, lang=lang)
-                    audio_segments.append(samples.flatten())
-                    word_count = len(clean_segment.split())
-                    print(f"  [{i}] AUDIO: '{clean_segment[:40]}{'...' if len(clean_segment) > 40 else ''}' ({word_count} words)")
-                    last_was_punctuation = False
+                    samples, _ = future.result()
+                    audio_map[idx] = samples.flatten()
                 except Exception as e:
-                    print(f"  [{i}] ERROR: Synthesis failed for '{clean_segment[:30]}...': {e}")
+                    print(f"  [ERROR] Segment {idx} failed: {e}")
+                    audio_map[idx] = None
 
-    # Concatenate all audio segments
-    if audio_segments:
-        # Use safe_concat to handle potential dimension mismatches (1D vs 2D)
-        final_audio = safe_concat(audio_segments)
-        print(f"\n[COMPLETE]")
-        print(f"  Pauses applied: {pause_count}")
-        print(f"  Newlines skipped: {skipped_newline_count}")
-        print(f"  Audio length: {len(final_audio)/sample_rate:.2f}s")
+    # 3. ASSEMBLY PHASE: Stitch audio
+    final_segments = []
+    
+    for item in plan:
+        if item['type'] == 'silence':
+            pause_samples = int((item['ms'] / 1000.0) * sample_rate)
+            if pause_samples > 0:
+                final_segments.append(np.zeros(pause_samples, dtype=np.float32))
+                
+        elif item['type'] == 'tts':
+            audio = audio_map.get(item['index'])
+            if audio is not None:
+                final_segments.append(audio)
+    
+    if final_segments:
+        final_audio = safe_concat(final_segments)
+        print(f"[COMPLETE] Length: {len(final_audio)/sample_rate:.2f}s")
         print(f"{'='*60}\n")
         return final_audio, sample_rate
     else:
-        # Return tiny silence if no audio was generated
-        print(f"\n[WARNING] No audio generated - returning silence")
-        print(f"{'='*60}\n")
         return np.zeros(int(sample_rate * 0.1), dtype=np.float32), sample_rate
 
 def generate_cache_key(text: str, voice: str, speed: float, pause_settings: Dict[str, int], rules: List, ignore_list: List) -> str:
