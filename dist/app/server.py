@@ -174,6 +174,9 @@ class PatchedKokoro(Kokoro):
         tokens = [[0, *tokens, 0]]
         inputs = {"input_ids": tokens, "style": np.array(voice_style, dtype=np.float32), "speed": np.array([speed], dtype=np.float32)}
         audio = self.sess.run(None, inputs)[0]
+        # Fix: Ensure 1D output to prevent concatenation errors
+        if audio.ndim == 2:
+            audio = audio.squeeze()
         return audio, SAMPLE_RATE
 
 def load_engine(requested_mode: Optional[str] = None):
@@ -943,6 +946,25 @@ def get_language_from_voice(voice: str) -> str:
     else:
         return 'en-us'  # Default fallback
 
+def safe_concat(audio_list: List[np.ndarray]) -> np.ndarray:
+    """
+    Safely concatenate audio chunks, ensuring consistent dimensions.
+    Handles mixing 1D and 2D arrays by flattening/squeezing to 1D.
+    """
+    clean_list = []
+    for a in audio_list:
+        if isinstance(a, np.ndarray):
+            if a.ndim == 2:
+                a = a.squeeze() # Convert (1, N) -> (N,)
+            if a.ndim > 2:
+                a = a.flatten() # Fallback
+        clean_list.append(a)
+    
+    if not clean_list:
+        return np.array([], dtype=np.float32)
+        
+    return np.concatenate(clean_list)
+
 def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: Dict[str, int]) -> tuple:
     """
     Synthesize text with custom pauses using audio stitching.
@@ -1045,7 +1067,8 @@ def synthesize_with_pauses(text: str, voice: str, speed: float, pause_settings: 
 
     # Concatenate all audio segments
     if audio_segments:
-        final_audio = np.concatenate(audio_segments)
+        # Use safe_concat to handle potential dimension mismatches (1D vs 2D)
+        final_audio = safe_concat(audio_segments)
         print(f"\n[COMPLETE]")
         print(f"  Pauses applied: {pause_count}")
         print(f"  Newlines skipped: {skipped_newline_count}")
