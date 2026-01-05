@@ -22,6 +22,9 @@
 - **EPUB & Export:**
   - Connected EPUB upload to backend converter.
   - Verified Audio Export (MP3) logic and FFMPEG auto-installer.
+- **Data Integrity:**
+  - **Fixed PDF Deletion:** Added missing backend logic to permanently delete content files (JSON/PDF/EPUB) when removing a book from the library.
+  - **Orphan Cleanup:** Implemented background tasks to automatically delete temporary PDF/EPUB files generated during conversion, preventing disk clutter.
 
 ### 💅 UI/UX Polish
 - **Sidebar Resizing:** Restored drag-to-resize functionality.

@@ -480,22 +480,40 @@ async def get_available_voices():
 
 # Library API
 @app.post("/api/convert/epub")
-async def convert_epub(file: UploadFile = File(...)):
+async def convert_epub(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".epub"):
         raise HTTPException(status_code=400, detail="Not an EPUB file")
     
-    temp_epub = content_dir / f"temp_{os.getpid()}.epub"
-    temp_pdf = content_dir / f"converted_{os.getpid()}.pdf"
+    # Create unique temp files
+    pid = os.getpid()
+    timestamp = int(time.time() * 1000)
+    temp_epub = content_dir / f"temp_{pid}_{timestamp}.epub"
+    temp_pdf = content_dir / f"converted_{pid}_{timestamp}.pdf"
     
+    def cleanup_files():
+        """Delete temp files after response is sent"""
+        try:
+            if temp_epub.exists():
+                temp_epub.unlink()
+                print(f"[CLEANUP] Deleted temp EPUB: {temp_epub.name}")
+            if temp_pdf.exists():
+                temp_pdf.unlink()
+                print(f"[CLEANUP] Deleted temp PDF: {temp_pdf.name}")
+        except Exception as e:
+            print(f"[CLEANUP ERROR] {e}")
+
     try:
+        # Save uploaded EPUB
         with open(temp_epub, "wb") as f:
             content = await file.read()
             f.write(content)
         
-        # Check for DRM (very basic check: ebooklib will throw if it can't parse)
+        # Check DRM
         try:
             book = epub.read_epub(str(temp_epub))
         except Exception:
+            # Cleanup immediately if invalid
+            cleanup_files()
             raise HTTPException(status_code=400, detail="Cannot read protected file (DRM)")
 
         html_content = "<html><body>"
@@ -514,20 +532,20 @@ async def convert_epub(file: UploadFile = File(...)):
             pisa_status = pisa.CreatePDF(html_content, dest=f)
         
         if pisa_status.err:
+            cleanup_files()
             raise HTTPException(status_code=500, detail="PDF conversion failed")
             
+        # Register cleanup task
+        background_tasks.add_task(cleanup_files)
+        
         return FileResponse(temp_pdf, media_type="application/pdf", filename=temp_pdf.name)
         
     except HTTPException:
+        cleanup_files()
         raise
     except Exception as e:
+        cleanup_files()
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if temp_epub.exists(): temp_epub.unlink()
-        # Note: We keep the PDF for a bit or until next conversion? 
-        # Actually, the user's browser will download it. 
-        # We should probably delete it after response is sent if we want to be clean.
-        # But for now, we leave it in userdata/content as requested by spec.
 
 @app.get("/api/library")
 async def get_library():
@@ -553,6 +571,36 @@ async def save_library_item(item: LibraryItem):
     
     safe_save_json(library_file, library)
     return {"status": "ok"}
+
+@app.delete("/api/library/{doc_id}")
+async def delete_library_item(doc_id: str):
+    # 1. Update Library Index
+    try:
+        with open(library_file, "r") as f:
+            library = json.load(f)
+        
+        len_before = len(library)
+        library = [item for item in library if item.get("id") != doc_id]
+        
+        if len(library) < len_before:
+            safe_save_json(library_file, library)
+            
+            # 2. Delete Content Files (JSON, PDF, EPUB)
+            for ext in [".json", ".pdf", ".epub"]:
+                file_path = content_dir / f"{doc_id}{ext}"
+                if file_path.exists():
+                    try:
+                        file_path.unlink()
+                        print(f"[DELETE] Removed {file_path.name}")
+                    except Exception as e:
+                        print(f"[WARNING] Failed to delete {file_path.name}: {e}")
+            
+            return {"status": "deleted"}
+        else:
+            raise HTTPException(status_code=404, detail="Document not found")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/library/content/{doc_id}")
 async def get_content(doc_id: str):
