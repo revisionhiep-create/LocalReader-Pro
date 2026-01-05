@@ -1,5 +1,16 @@
 # LocalReader Pro Changelog
 
+## v2.8 - January 5, 2026
+
+### 🛠️ Critical Fixes
+- **Audio Stitching Crash:** Fixed a critical NumPy dimension mismatch error (`ValueError: all the input array dimensions...`) that occurred during MP3 export or playback when concatenating audio chunks.
+  - **Root Cause:** Inconsistent audio array shapes (1D vs 2D) returned by `kokoro-onnx` vs internal pause logic.
+  - **Solution:** Implemented a robust `safe_concat` helper that standardizes all audio arrays to 1D before concatenation.
+  - **Patch:** Updated `PatchedKokoro` class to strictly return 1D arrays, preventing future library-level mismatches.
+- **Installer Update:** Rebuilt `setup.exe` to include the latest stability fixes in `server.py`.
+
+---
+
 ## v2.7 - January 4, 2026
 
 ### 🎨 UI/UX & Visual Polish
