@@ -5,11 +5,13 @@
 ## v3.0 - January 5, 2026 (The "Modular" Update)
 
 ### 🏗️ Massive Codebase Refactor
+
 - **ES6 Modularization:** Completely dismantled the monolithic `index.html` (2,000+ lines) into clean, maintainable JS modules (`modules/ui.js`, `modules/tts.js`, `modules/library.js`, `modules/state.js`).
 - **Parallel Backend:** Optimized TTS generation to use parallel processing for significantly lower latency.
 - **Frontend Architecture:** Introduced a global state management system and event-driven architecture.
 
 ### 🐛 Critical Fixes & Restorations
+
 - **Audio Stitching Crash:** Verified fix for `ValueError` in NumPy concatenation during MP3 export/playback on long texts.
 - **Header/Footer Filter:**
   - Fixed "Hide" mode aggressively deleting body text on short pages (now proportional).
@@ -27,6 +29,7 @@
   - **Orphan Cleanup:** Implemented background tasks to automatically delete temporary PDF/EPUB files generated during conversion, preventing disk clutter.
 
 ### 💅 UI/UX Polish
+
 - **Sidebar Resizing:** Restored drag-to-resize functionality.
 - **Auto-Save Feedback:** Restored "pulse" animation when saving progress.
 - **Status Indicators:** Fixed GPU/CPU status showing "?" (now shows ✓/✗).
@@ -36,10 +39,13 @@
 ## v2.8 - January 5, 2026
 
 ### 🛠️ Critical Fixes
-- **Audio Stitching Crash:** Fixed a critical NumPy dimension mismatch error (`ValueError: all the input array dimensions...`) that occurred during MP3 export or playback when concatenating audio chunks.
-  - **Root Cause:** Inconsistent audio array shapes (1D vs 2D) returned by `kokoro-onnx` vs internal pause logic.
-  - **Solution:** Implemented a robust `safe_concat` helper that standardizes all audio arrays to 1D before concatenation.
-  - **Patch:** Updated `PatchedKokoro` class to strictly return 1D arrays, preventing future library-level mismatches.
+
+- **Audio Stitching & Segmentation Crash:** Fixed a critical bug where specific sentences (e.g., involving complex punctuation or names) caused the TTS engine to crash or skip audio.
+  - **Root Cause:** The `kokoro-onnx` library's strict token limit splitting logic occasionally produced empty audio chunks for certain text splits, which caused a `ValueError` when attempting to concatenate them.
+  - **Fix:** Implemented a robust `PatchedKokoro` class that:
+    1.  **Bypasses Splitting:** Directly synthesizes valid sentence-length text (escaping the buggy splitting logic).
+    2.  **Handles Empty Tokens:** Safely effectively filters out empty or invalid phoneme chunks instead of crashing.
+    3.  **Auto-Recovery:** Automatically retries with sanitation if a text segment fails, ensuring playback continuity.
 - **Installer Update:** Rebuilt `setup.exe` to include the latest stability fixes in `server.py`.
 
 ---
@@ -47,14 +53,17 @@
 ## v2.7 - January 4, 2026
 
 ### 🎨 UI/UX & Visual Polish
+
 - **Dark Mode Refinement:** Updated the "Export Audio" button to a more sophisticated **Deep Indigo** (`#4B0082`) to improve contrast and visual hierarchy in dark mode.
 - **Improved Sidebar Feedback:** UI elements like the "Export" button and the new "Text Size" slider now dynamically show/hide based on document state and engine readiness.
 
 ### ✨ New Features
+
 - **Audio Player Text Resizing:** Added a **"Text Size" Slider** in the sidebar. This allows users to dynamically resize the subtitle/caption text in the bottom player bar (Range: 12px to 24px) for better accessibility and focus.
 - **Smart Line Height:** Caption text now automatically adjusts its line height alongside font size for optimal readability.
 
 ### 🔧 Persistence & Reliability
+
 - **Persistent Voice Selection:** Fixed a long-standing bug where the chosen voice (e.g., `am_adam`) would reset to the default after app restart. Selection is now saved to disk and restored even after dynamic voice list refreshes.
 - **Global Settings Audit:** Unified persistence for all user preferences including:
   - **Voice ID**
@@ -73,6 +82,7 @@
 ## v2.5 - January 3, 2026
 
 ### 🇨🇳 Chinese Language Support (Full Integration)
+
 - **New Voice:** Added **Chinese (Mandarin)** voice support (`zf_xiaobei`, `zf_xiaomi`, etc.) powered by Kokoro-82M.
 - **UI Translation:** Fully translated the interface into **Simplified Chinese (简体中文)**.
 - **Smart Punctuation Logic:**
@@ -84,6 +94,7 @@
   - **Terminal Detection:** Improved paragraph detection to prevent merging lines ending in Chinese punctuation.
 
 ### 🌍 Multilingual Architecture Overhaul
+
 - **Dynamic Voice Loading:**
   - The voice list is no longer hardcoded. It now **dynamically fetches** available voices from the backend based on the loaded model.
   - Voices are automatically grouped by language (English, French, Spanish, Chinese, etc.) in the dropdown.
@@ -91,9 +102,10 @@
 - **New Languages Enabled:**
   - **Italian** (`if_sara`, `im_nicola`)
   - **Portuguese (Brazil)** (`pf_dora`, `pm_alex`)
-  - *(Note: These require the Multilingual Voice Pack)*
+  - _(Note: These require the Multilingual Voice Pack)_
 
 ### 🛠️ Core Improvements
+
 - **Self-Healing Audio Cache:**
   - The SQLite audio cache (`audio_cache.db`) now automatically detects corruption or missing tables and rebuilds itself without crashing the app.
   - Added robust checks before every read/write operation.
@@ -104,6 +116,7 @@
     - **Pause Settings:** All slider labels are now translated.
 
 ### 🐛 Bug Fixes
+
 - **Fixed:** "Index 510 is out of bounds" error when processing long Chinese/Japanese paragraphs.
 - **Fixed:** Japanese text sometimes hallucinating "In Chinese" (Reverted unstable experimental logic).
 - **Fixed:** Layout issues where CJK characters were wrapped with unnecessary whitespace.
@@ -115,6 +128,7 @@
 ### 🧠 Smart Pause Logic Overhaul (Detailed Breakdown)
 
 **1. Punctuation Group Handling ("The Ellipsis Fix")**
+
 - **Problem:** Previous versions treated `...` as three separate periods, tripling the pause time (e.g., 600ms × 3 = 1.8s). Or, if filtered, it resulted in 0ms.
 - **New Logic:** The engine now detects consecutive punctuation groups (e.g., `...`, `?!`, `!!`) as a single event.
 - **Mechanism:** It inspects the **last character** of the group to determine the pause type.
@@ -123,23 +137,24 @@
   - `Hello??` → Uses `?` setting (Question Pause)
 
 **2. Smart Newline Handling ("The Flow Fix")**
+
 - **Problem:** Previous versions stripped newlines to prevent audio gaps, causing text to "rush" together.
 - **New Logic:** Newlines are preserved but handled conditionally based on context.
 - **State Tracking:** The engine remembers if the previous segment was punctuation.
   - **Scenario A (Paragraphs):** Text ends with punctuation (`End.
-`).
-    - *Action:* The newline pause is **SKIPPED** to prevent stacking with the period pause.
+`). - _Action:_ The newline pause is **SKIPPED** to prevent stacking with the period pause.
   - **Scenario B (Headers/Titles):** Text has no punctuation (`Chapter One
-`).
-    - *Action:* A **"Soft Pause"** (default 300ms) is applied. This separates headers from body text without needing manual punctuation.
+`). - _Action:_ A **"Soft Pause"** (default 300ms) is applied. This separates headers from body text without needing manual punctuation.
 
 **3. Implementation Details**
+
 - **Regex Update:** Text is split using `([,.
 !?:;]+|
 )`, ensuring delimiters are captured but separated.
 - **Fallback Safety:** If no specific newline setting is provided, it defaults to 300ms (minimum "breathing room") rather than 0ms.
 
 ### 🚀 Performance & Stability
+
 - Maintained all v2.2 caching improvements (SQLite + Prefetching)
 - Optimized regex segmentation for cleaner audio stitching
 
@@ -148,6 +163,7 @@
 ## v2.2.1 - January 1, 2026
 
 ### 🚀 Performance Improvements
+
 - **FIXED**: Eliminated 5-10 second audio delay when switching pages
 - **Implemented**: Cross-page prefetching system
   - TTS now pre-generates first sentence of next page while reading current page
@@ -156,6 +172,7 @@
 - **Technical**: Modified `preCacheNextSentences()` to parse and cache next page's first sentence
 
 ### 🎯 User Experience
+
 - Smooth continuous reading without interruptions
 - No more waiting when auto-advancing to new pages
 - Background prefetch doesn't block current playback
@@ -165,6 +182,7 @@
 ## ✨ What's New in v2.2
 
 ### 🗄️ SQLite Audio Cache
+
 - **Replaced:** File-based `.cache/` directory with `audio_cache.db` SQLite database
 - **Storage:** WAV audio stored as BLOB in database
 - **Size Limit:** 200MB (increased from v2.0's 100MB)
@@ -172,6 +190,7 @@
 - **Performance:** Instant cache lookups, no file system overhead
 
 ### 📁 Cache Management
+
 - **Location:** `userdata/audio_cache.db`
 - **Structure:**
   - `cache_key` (TEXT PRIMARY KEY): MD5 hash of TTS parameters
@@ -181,6 +200,7 @@
   - `accessed_at` (REAL): Last access timestamp (LRU)
 
 ### 🔧 Implementation Details
+
 - **New File:** `app/logic/audio_cache.py` - SQLite cache manager class
 - **Modified File:** `app/server.py` - Integrated SQLite cache
 - **Removed:** Old file-based cache functions (lines 79-221 in original v2.0)
@@ -190,12 +210,14 @@
 ## 📊 Cache Behavior
 
 ### When Cache Hits:
+
 1. Query SQLite by `cache_key`
 2. Update `accessed_at` timestamp (LRU tracking)
 3. Return audio BLOB from memory
 4. Stream to client
 
 ### When Cache Misses:
+
 1. Generate audio with Kokoro TTS
 2. Convert to WAV bytes
 3. Insert into SQLite with current timestamp
@@ -203,6 +225,7 @@
 5. Stream to client
 
 ### LRU Cleanup Logic:
+
 - Triggered automatically when inserting new audio
 - Sorts all entries by `accessed_at` (oldest first)
 - Deletes oldest entries until total size ≤ 200MB
@@ -213,17 +236,21 @@
 ## 🧪 Testing Results
 
 ### ✅ Startup Verification
+
 - Server starts successfully on `http://127.0.0.1:8000`
 - SQLite database created at `userdata/audio_cache.db` (16KB initial size)
 - No errors in startup logs
 
 ### ✅ UI Verification
+
 - Language toggle working (ES button visible and functional)
 - All UI elements rendering correctly
 - No console errors in browser
 
 ### 🔄 Migration from v2.0
+
 If you have an existing v2.0 installation with file-based cache:
+
 1. Old `.cache/*.wav` files will NOT be migrated (fresh cache)
 2. SQLite database will be created on first TTS request
 3. Cache will rebuild naturally as you use the app
@@ -232,26 +259,28 @@ If you have an existing v2.0 installation with file-based cache:
 
 ## 🎯 Why SQLite vs Files?
 
-| Feature | v2.0 (Files) | v2.2 (SQLite) |
-|---------|--------------|---------------|
-| Cache Lookups | O(n) glob scan | O(1) indexed query |
-| LRU Tracking | File `st_atime` | Database timestamp |
-| Size Calculation | Sum all file sizes | Single SQL query |
-| Cleanup Speed | Delete files one-by-one | Single transaction |
-| Portability | Platform-dependent paths | Single .db file |
-| Atomicity | No guarantees | ACID transactions |
+| Feature          | v2.0 (Files)             | v2.2 (SQLite)      |
+| ---------------- | ------------------------ | ------------------ |
+| Cache Lookups    | O(n) glob scan           | O(1) indexed query |
+| LRU Tracking     | File `st_atime`          | Database timestamp |
+| Size Calculation | Sum all file sizes       | Single SQL query   |
+| Cleanup Speed    | Delete files one-by-one  | Single transaction |
+| Portability      | Platform-dependent paths | Single .db file    |
+| Atomicity        | No guarantees            | ACID transactions  |
 
 ---
 
 ## 🚀 Performance Impact
 
 **Expected Improvements:**
+
 - Faster cache lookups (no file system scan)
 - More reliable LRU eviction (precise timestamp tracking)
 - Simpler backup (single .db file)
 - No file descriptor limits (all in-memory ops)
 
 **Trade-offs:**
+
 - Slightly larger disk usage (SQLite overhead ~16KB)
 - Cannot manually browse cached audio files (binary BLOB)
 
