@@ -466,9 +466,9 @@ LocalReader_Pro_v2.5/
 
 ---
 
-**Version:** 3.0.0 (Modular Refactor)
+**Version:** 3.3.0 (Internationalization & Installer)
 **Engine:** Kokoro-82M (Dual-Mode: CPU/GPU)
-**Last Updated:** January 5, 2026
+**Last Updated:** January 6, 2026
 **Status:** ✅ Stable Release
 
 ---

@@ -100,31 +100,41 @@
     "success": "Succès",
     "processing": "Traitement..."
   },
-  "voices": {
-    "af_sky": "AF Sky (Féminin)",
-    "af_bella": "AF Bella (Féminin)",
-    "af_nicole": "AF Nicole (Féminin)",
-    "af_sarah": "AF Sarah (Féminin)",
-    "am_adam": "AM Adam (Masculin)",
-    "am_michael": "AM Michael (Masculin)",
-    "bf_emma": "BF Emma (Britannique Féminin)",
-    "bf_isabella": "BF Isabella (Britannique Féminin)",
-    "bm_george": "BM George (Britannique Masculin)",
-    "bm_lewis": "BM Lewis (Britannique Masculin)",
-    "ff_siwis": "FF Siwis (Français Féminin)",
-    "jf_alpha": "JF Alpha (Japonais Féminin)",
-    "jf_gongitsune": "JF Gongitsune (Japonais Féminin)",
-    "jf_nezumi": "JF Nezumi (Japonais Féminin)",
-    "jf_tebukuro": "JF Tebukuro (Japonais Féminin)",
-    "ef_dora": "EF Dora (Espagnol Féminin)",
-    "em_alex": "EM Alex (Espagnol Masculin)",
-    "em_santa": "EM Santa (Espagnol Masculin)"
+  "voice_attributes": {
+    "female": "Féminin",
+    "male": "Masculin",
+    "american": "Américain",
+    "british": "Britannique",
+    "french": "Français",
+    "japanese": "Japonais",
+    "spanish": "Espagnol",
+    "chinese": "Chinois",
+    "italian": "Italien",
+    "portuguese": "Portugais"
+  },
+  "timer": {
+    "title": "Minuteur de sommeil",
+    "description": "Arrêter la lecture automatiquement",
+    "inactive": "Minuteur inactif",
+    "running": "Minuteur actif",
+    "set_duration": "Définir la durée",
+    "hours": "Heures",
+    "minutes": "Minutes",
+    "start": "Démarrer",
+    "stop": "Arrêter"
   },
   "languages": {
-    "en": "English",
+    "en": "Anglais",
     "fr": "Français",
-    "ja": "日本語",
-    "es": "Español"
+    "ja": "Japonais",
+    "es": "Espagnol",
+    "zh": "Chinois",
+    "en-us": "Anglais (US)",
+    "en-gb": "Anglais (UK)",
+    "fr-fr": "Français",
+    "cmn": "Chinois (Mandarin)",
+    "it": "Italien",
+    "pt-br": "Portugais (Brésil)"
   },
   "tabs": {
     "library": "BIBLIOTHÈQUE",

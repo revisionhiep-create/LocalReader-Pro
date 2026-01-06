@@ -654,9 +654,9 @@
                 <div>
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
                         <i data-lucide="timer" class="w-5 h-5 text-blue-500"></i>
-                         <span data-i18n="settings.timer_title">Sleep Timer</span>
+                         <span data-i18n="timer.title">Sleep Timer</span>
                     </h2>
-                    <p class="text-xs text-zinc-500 mt-1">Automatically stop playback</p>
+                    <p class="text-xs text-zinc-500 mt-1" data-i18n="timer.description">Automatically stop playback</p>
                 </div>
                 <button id="closeTimerDrawerBtn" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
                     <i data-lucide="x" class="w-5 h-5 text-zinc-400"></i>
@@ -669,7 +669,7 @@
             
             <!-- Status Display -->
             <div class="flex flex-col items-center justify-center p-6 bg-zinc-900/50 rounded-xl border border-zinc-800/50">
-                <div id="timerStatusText" class="text-zinc-500 font-bold text-sm mb-2">Timer Inactive</div>
+                <div id="timerStatusText" class="text-zinc-500 font-bold text-sm mb-2" data-i18n="timer.inactive">Timer Inactive</div>
                 <div id="timerCountdown" class="text-4xl font-mono text-zinc-300 font-bold tracking-widest">--:--:--</div>
             </div>
 
@@ -677,28 +677,28 @@
             <div class="border-t border-zinc-800 pt-6">
                  <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4 block flex items-center gap-2">
                     <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                    Set Duration
+                    <span data-i18n="timer.set_duration">Set Duration</span>
                  </label>
                  
                  <div class="flex gap-4 mb-6">
                      <div class="flex-1">
-                        <label class="block text-[10px] text-zinc-500 mb-1 uppercase tracking-wide font-bold">Hours</label>
+                        <label class="block text-[10px] text-zinc-500 mb-1 uppercase tracking-wide font-bold" data-i18n="timer.hours">Hours</label>
                         <input type="number" id="timerHours" min="0" max="12" value="0" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-white text-center font-mono text-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
                      </div>
                      <div class="flex-1">
-                        <label class="block text-[10px] text-zinc-500 mb-1 uppercase tracking-wide font-bold">Minutes</label>
+                        <label class="block text-[10px] text-zinc-500 mb-1 uppercase tracking-wide font-bold" data-i18n="timer.minutes">Minutes</label>
                         <input type="number" id="timerMinutes" min="0" max="59" value="30" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-white text-center font-mono text-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
                      </div>
                  </div>
 
                  <button id="startTimerBtn" class="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-all shadow-lg shadow-blue-900/20">
                     <i data-lucide="play" class="w-4 h-4 fill-current"></i>
-                    Start Timer
+                    <span data-i18n="timer.start">Start Timer</span>
                  </button>
                  
                  <button id="stopTimerBtn" class="hidden w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all shadow-lg shadow-red-900/20">
                     <i data-lucide="square" class="w-4 h-4 fill-current"></i>
-                    Stop Timer
+                    <span data-i18n="timer.stop">Stop Timer</span>
                  </button>
             </div>
         </div>

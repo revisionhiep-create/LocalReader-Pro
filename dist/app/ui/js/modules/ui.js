@@ -200,6 +200,7 @@ function highlightTextNodes(node, regex) {
 export async function updateTranslations(lang) {
     try {
         const translations = await fetchJSON(`/api/locale/${lang}`);
+        state.translations = translations; // Store in global state
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.dataset.i18n;
             const keys = key.split('.');

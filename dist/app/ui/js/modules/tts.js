@@ -284,11 +284,50 @@ export async function loadVoices() {
         sortedKeys.forEach(langCode => {
             const category = categories[langCode];
             const group = document.createElement('optgroup');
-            group.label = category.label;
+            // Try to translate the language code using loaded translations, fallback to label from backend
+            group.label = state.translations?.languages?.[langCode] || category.label;
             category.voices.forEach(voice => {
                 const option = document.createElement('option');
                 option.value = voice.id;
-                option.textContent = voice.name;
+
+                // Dynamic label generation
+                let label = voice.name;
+                const attrs = state.translations?.voice_attributes || {};
+                
+                // Helper to get attributes
+                const getAttrs = (vid) => {
+                    if (vid.startsWith('af_')) return [attrs.american, attrs.female];
+                    if (vid.startsWith('am_')) return [attrs.american, attrs.male];
+                    if (vid.startsWith('bf_')) return [attrs.british, attrs.female];
+                    if (vid.startsWith('bm_')) return [attrs.british, attrs.male];
+                    if (vid.startsWith('ff_')) return [attrs.french, attrs.female];
+                    if (vid.startsWith('jf_')) return [attrs.japanese, attrs.female];
+                    if (vid.startsWith('jm_')) return [attrs.japanese, attrs.male];
+                    if (vid.startsWith('ef_')) return [attrs.spanish, attrs.female];
+                    if (vid.startsWith('em_')) return [attrs.spanish, attrs.male];
+                    if (vid.startsWith('zf_')) return [attrs.chinese, attrs.female];
+                    if (vid.startsWith('zm_')) return [attrs.chinese, attrs.male];
+                    if (vid.startsWith('if_')) return [attrs.italian, attrs.female];
+                    if (vid.startsWith('im_')) return [attrs.italian, attrs.male];
+                    if (vid.startsWith('pf_')) return [attrs.portuguese, attrs.female];
+                    if (vid.startsWith('pm_')) return [attrs.portuguese, attrs.male];
+                    
+                    // Special cases
+                    if (vid === 'santa') return [attrs.spanish, attrs.male];
+                    if (['alpha', 'beta', 'psi'].includes(vid)) return [attrs.american, attrs.female];
+                    
+                    return [];
+                };
+
+                const [region, gender] = getAttrs(voice.id);
+                if (region && gender) {
+                    label = `${voice.name} (${region} ${gender})`;
+                } else {
+                    // Fallback to legacy static list if available, or just name
+                    label = state.translations?.voices?.[voice.id] || voice.name;
+                }
+
+                option.textContent = label;
                 group.appendChild(option);
             });
             voiceSelect.appendChild(group);

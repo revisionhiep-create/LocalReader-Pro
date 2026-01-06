@@ -100,31 +100,40 @@
     "success": "Success",
     "processing": "Processing..."
   },
-  "voices": {
-    "af_sky": "AF Sky (Female)",
-    "af_bella": "AF Bella (Female)",
-    "af_nicole": "AF Nicole (Female)",
-    "af_sarah": "AF Sarah (Female)",
-    "am_adam": "AM Adam (Male)",
-    "am_michael": "AM Michael (Male)",
-    "bf_emma": "BF Emma (British Female)",
-    "bf_isabella": "BF Isabella (British Female)",
-    "bm_george": "BM George (British Male)",
-    "bm_lewis": "BM Lewis (British Male)",
-    "ff_siwis": "FF Siwis (French Female)",
-    "jf_alpha": "JF Alpha (Japanese Female)",
-    "jf_gongitsune": "JF Gongitsune (Japanese Female)",
-    "jf_nezumi": "JF Nezumi (Japanese Female)",
-    "jf_tebukuro": "JF Tebukuro (Japanese Female)",
-    "ef_dora": "EF Dora (Spanish Female)",
-    "em_alex": "EM Alex (Spanish Male)",
-    "em_santa": "EM Santa (Spanish Male)"
+  "voice_attributes": {
+    "female": "Female",
+    "male": "Male",
+    "american": "American",
+    "british": "British",
+    "french": "French",
+    "japanese": "Japanese",
+    "spanish": "Spanish",
+    "chinese": "Chinese",
+    "italian": "Italian",
+    "portuguese": "Portuguese"
+  },
+  "timer": {
+    "title": "Sleep Timer",
+    "description": "Automatically stop playback",
+    "inactive": "Timer Inactive",
+    "running": "Timer Running",
+    "set_duration": "Set Duration",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "start": "Start Timer",
+    "stop": "Stop Timer"
   },
   "languages": {
     "en": "English",
-    "fr": "Français",
-    "ja": "日本語",
-    "es": "Español"
+    "fr": "French",
+    "ja": "Japanese",
+    "es": "Spanish",
+    "en-us": "English (US)",
+    "en-gb": "English (UK)",
+    "fr-fr": "French",
+    "cmn": "Chinese (Mandarin)",
+    "it": "Italian",
+    "pt-br": "Portuguese (Brazil)"
   },
   "tabs": {
     "library": "LIBRARY",
@@ -132,4 +141,3 @@
     "ignore": "IGNORE"
   }
 }
-

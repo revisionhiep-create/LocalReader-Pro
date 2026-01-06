@@ -38,6 +38,11 @@ async function init() {
             fontSizeSlider.value = settings.font_size;
             const tv = document.getElementById('textSizeVal');
             if (tv) tv.textContent = settings.font_size;
+            const preview = document.getElementById('currentSentencePreview');
+            if (preview) {
+                preview.style.fontSize = `${settings.font_size}px`;
+                preview.style.lineHeight = (parseInt(settings.font_size) * 1.5) + 'px';
+            }
         }
         const headerSelect = document.getElementById('headerFooterMode');
         if (headerSelect) headerSelect.value = state.headerFooterMode;
@@ -233,6 +238,7 @@ document.getElementById('languageToggle').onclick = async () => {
     await updateTranslations(next);
     renderIcons();
     saveSettings();
+    loadVoices();
     showToast(`Language set to ${next.toUpperCase()}`);
 };
 

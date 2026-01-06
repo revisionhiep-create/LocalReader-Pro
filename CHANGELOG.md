@@ -1,5 +1,24 @@
 # LocalReader Pro Changelog
 
+## v3.3 - January 6, 2026 (The "Global" Update)
+
+### 🌍 Internationalization Overhaul
+
+- **Dynamic Voice Loading:**
+  - Completely refactored voice management in `tts.js`.
+  - Voices are now dynamically categorized and labeled based on metadata, fixing missing or mislabeled voices.
+  - Added full support for **50+ Kokoro voices** across all supported languages (American, British, French, Chinese, etc.).
+- **Localized Voice Names:** Voice labels now automatically translate (e.g., "Alloy (American Female)" ↔ "Alloy (Femenino EE.UU.)") based on the selected UI language.
+- **Sleep Timer Localization:** Added complete translations for the new Sleep Timer interface in English, Spanish, French, Chinese, and Japanese.
+
+### 🐛 Bug Fixes & UX Polish
+
+- **Text Size Persistence:** Fixed a bug where the customized text size in the player bar would reset to the default small size on app restart. It now correctly saves and restores your preference immediately.
+- **Installer Optimization:** Rebuilt the installer to be cleaner and lighter. It now actively excludes `models`, `userdata`, and temporary caches, ensuring a fresh "start-from-scratch" experience for new installations while still allowing existing users to keep their data if upgrading manually.
+- **Performance:** Optimized backend text synthesis logic for slightly better efficiency.
+
+---
+
 ## v3.2 - January 6, 2026 (The "Sleep Timer" Update)
 
 ### ✨ New Feature: Sleep Timer
@@ -30,9 +49,16 @@
 
 ### 🏗️ Massive Codebase Refactor
 
-- **ES6 Modularization:** Completely dismantled the monolithic `index.html` (2,000+ lines) into clean, maintainable JS modules (`modules/ui.js`, `modules/tts.js`, `modules/library.js`, `modules/state.js`).
-- **Parallel Backend:** Optimized TTS generation to use parallel processing for significantly lower latency.
-- **Frontend Architecture:** Introduced a global state management system and event-driven architecture.
+- **ES6 Modularization (Frontend):** Completely dismantled the monolithic `index.html` and a 2,000+ line JS core into 8 clean, specialized modules (`state.js`, `api.js`, `ui.js`, `library.js`, `tts.js`, `export.js`, `timer.js`, and `app.js`).
+- **Python FastAPI Router Refactor (Backend):** Decoupled the monolithic `server.py` (previously ~2,000 lines) into a highly organized router-based architecture. Logic is now split into 6 specific controllers:
+  - `routers/tts.py`: Core synthesis and pause logic.
+  - `routers/library.py`: Document management and conversion.
+  - `routers/export.py`: MP3 stitching and FFMPEG integration.
+  - `routers/system.py`: Engine status, downloads, and health checks.
+  - `routers/settings.py`: JSON persistence for user preferences.
+  - `routers/timer.py`: Shutdown and worker thread management.
+- **Parallel processing:** Optimized TTS generation to use parallel processing for significantly lower latency.
+- **State Management:** Introduced a centralized global state system (`state.js`) to prevent race conditions and ensure UI consistency.
 
 ### 🐛 Critical Fixes & Restorations
 
