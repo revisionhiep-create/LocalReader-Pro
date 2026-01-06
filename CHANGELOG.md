@@ -1,5 +1,18 @@
 # LocalReader Pro Changelog
 
+## v3.2 - January 6, 2026 (The "Sleep Timer" Update)
+
+### ✨ New Feature: Sleep Timer
+
+- **Sleep Timer Drawer:** Added a dedicated settings drawer to configure an automatic shutdown timer.
+  - **Custom Duration:** Set any duration in hours and minutes.
+  - **Visual Countdown:** The drawer displays a large countdown timer.
+  - **Dynamic Button:** When active, the timer button on the main UI transforms to show the remaining time in a neutral, unobtrusive style.
+- **Auto-Shutdown:** The application will automatically close (`os._exit`) when the timer reaches zero, ensuring your computer doesn't stay awake unnecessarily.
+- **Backend Integration:** The timer runs on a background thread in the backend, ensuring reliability even if the UI is minimized.
+
+---
+
 ## v3.1 - January 6, 2026 (The "Fluent Reader" Update)
 
 ### 🐛 Critical Bug Fixes

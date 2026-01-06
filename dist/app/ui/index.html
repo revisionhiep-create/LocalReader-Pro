@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LocalReader Pro</title>
     <!-- Local Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,226 +10,388 @@
     <script src="lib/pdf.min.js"></script>
 
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        border: "hsl(240 3.7% 15.9%)",
-                        background: "#000000",
-                        foreground: "#d1d5db",
-                        card: "#09090b",
-                        accent: "#3b82f6",
-                    }
-                }
-            }
-        }
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              border: "hsl(240 3.7% 15.9%)",
+              background: "#000000",
+              foreground: "#d1d5db",
+              card: "#09090b",
+              accent: "#3b82f6",
+            },
+          },
+        },
+      };
     </script>
-    <link rel="stylesheet" href="css/style.css">
-</head>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
 
-<body class="min-h-screen selection:bg-blue-500/30 overflow-hidden">
-
+  <body class="min-h-screen selection:bg-blue-500/30 overflow-hidden">
     <div class="main-container">
-        <!-- Sidebar -->
-        <aside class="sidebar bg-card flex flex-col">
-            <!-- Drag Handle -->
-            <div class="sidebar-drag-handle" id="sidebarDragHandle"></div>
-            <div class="p-6 border-b border-border">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-blue-600 rounded-lg text-white">
-                            <i data-lucide="book-open" class="w-5 h-5"></i>
-                        </div>
-                        <h1 class="font-bold text-lg tracking-tight text-white">LocalReader</h1>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button id="languageToggle"
-                            class="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30 rounded-md text-xs font-bold transition-all"
-                            title="Switch Language">EN</button>
-                        <div id="engineStatusDot"
-                            class="w-2.5 h-2.5 rounded-full bg-zinc-700 shadow-[0_0_8px_rgba(0,0,0,0.5)]"
-                            title="Engine Status"></div>
-                    </div>
-                </div>
-
-                <div id="setupArea" class="mb-4" style="display: none;">
-                    <button id="setupBtn"
-                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20">
-                        <i data-lucide="download-cloud" class="w-4 h-4"></i>
-                        <span class="text-sm font-bold" data-i18n="sidebar.setup_engine">Setup Voice Engine</span>
-                    </button>
-                </div>
-
-                <div id="uploadArea" class="mb-4" style="display: none;">
-                    <label
-                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg cursor-pointer transition-all border border-zinc-700">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                        <span class="text-sm font-semibold" data-i18n="sidebar.upload">Upload Book (PDF/EPUB)</span>
-                        <input type="file" id="pdfUpload" class="hidden" accept=".pdf,.epub">
-                    </label>
-                </div>
-
-                <!-- Text Size Slider -->
-                <div id="textSizeArea" class="mb-4" style="display: none;">
-                    <label
-                        class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block flex items-center justify-between">
-                        <span class="flex items-center gap-2">
-                            <i data-lucide="type" class="w-3.5 h-3.5"></i>
-                            <span data-i18n="sidebar.text_size">Text Size</span>
-                        </span>
-                        <span class="text-blue-400 font-mono"><span id="textSizeVal">16</span>px</span>
-                    </label>
-                    <input type="range" id="fontSizeSlider" min="12" max="24" step="1" value="16"
-                        class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
-                </div>
-
-                <div id="exportArea" class="mb-4" style="display: none;">
-                    <button id="exportBtn"
-                        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#4B0082] hover:bg-[#320056] text-white rounded-lg transition-all shadow-lg shadow-purple-900/20">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        <span class="text-sm font-bold" data-i18n="export.title">Export Audio (MP3)</span>
-                    </button>
-                </div>
+      <!-- Sidebar -->
+      <aside class="sidebar bg-card flex flex-col">
+        <!-- Drag Handle -->
+        <div class="sidebar-drag-handle" id="sidebarDragHandle"></div>
+        <div class="p-6 border-b border-border">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-blue-600 rounded-lg text-white">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+              </div>
+              <h1 class="font-bold text-lg tracking-tight text-white">
+                LocalReader
+              </h1>
             </div>
-
-            <!-- Tabs (Compact with Icons) -->
-            <div class="flex border-b border-border">
-                <button id="tabLibrary"
-                    class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5"
-                    data-i18n-title="tabs.library" title="Library">
-                    <i data-lucide="library" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline" data-i18n="tabs.library">Library</span>
-                </button>
-                <button id="tabRules"
-                    class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300"
-                    data-i18n-title="tabs.rules" title="Pronunciation Rules">
-                    <i data-lucide="type" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline" data-i18n="tabs.rules">Rules</span>
-                </button>
-                <button id="tabIgnore"
-                    class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300"
-                    data-i18n-title="tabs.ignore" title="Ignore List">
-                    <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline" data-i18n="tabs.ignore">Ignore</span>
-                </button>
+            <div class="flex items-center gap-2">
+              <button
+                id="languageToggle"
+                class="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-600/30 rounded-md text-xs font-bold transition-all"
+                title="Switch Language"
+              >
+                EN
+              </button>
+              <div
+                id="engineStatusDot"
+                class="w-2.5 h-2.5 rounded-full bg-zinc-700 shadow-[0_0_8px_rgba(0,0,0,0.5)]"
+                title="Engine Status"
+              ></div>
             </div>
+          </div>
 
-            <!-- Content -->
-            <div class="flex-1 overflow-hidden flex flex-col">
-                <div id="libraryPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2"></div>
-                <div id="rulesPanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500"
-                            data-i18n="settings.pronunciation_rules">Pronunciation Rules</h3>
-                        <button id="addRuleBtn" class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md"><i
-                                data-lucide="plus" class="w-3.5 h-3.5"></i></button>
-                    </div>
-                    <div id="rulesList" class="space-y-3"></div>
-                </div>
-                <div id="ignorePanel" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xs font-bold uppercase tracking-widest text-zinc-500"
-                            data-i18n="settings.ignore_list">Ignore List</h3>
-                        <button id="addIgnoreBtn"
-                            class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md"><i data-lucide="plus"
-                                class="w-3.5 h-3.5"></i></button>
-                    </div>
-                    <div id="ignoreListUI" class="space-y-2"></div>
-                </div>
+          <div id="setupArea" class="mb-4" style="display: none">
+            <button
+              id="setupBtn"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all shadow-lg shadow-blue-900/20"
+            >
+              <i data-lucide="download-cloud" class="w-4 h-4"></i>
+              <span class="text-sm font-bold" data-i18n="sidebar.setup_engine"
+                >Setup Voice Engine</span
+              >
+            </button>
+          </div>
+
+          <div id="uploadArea" class="mb-4" style="display: none">
+            <label
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg cursor-pointer transition-all border border-zinc-700"
+            >
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span class="text-sm font-semibold" data-i18n="sidebar.upload"
+                >Upload Book (PDF/EPUB)</span
+              >
+              <input
+                type="file"
+                id="pdfUpload"
+                class="hidden"
+                accept=".pdf,.epub"
+              />
+            </label>
+          </div>
+
+          <!-- Text Size Slider -->
+          <div id="textSizeArea" class="mb-4" style="display: none">
+            <label
+              class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block flex items-center justify-between"
+            >
+              <span class="flex items-center gap-2">
+                <i data-lucide="type" class="w-3.5 h-3.5"></i>
+                <span data-i18n="sidebar.text_size">Text Size</span>
+              </span>
+              <span class="text-blue-400 font-mono"
+                ><span id="textSizeVal">16</span>px</span
+              >
+            </label>
+            <input
+              type="range"
+              id="fontSizeSlider"
+              min="12"
+              max="24"
+              step="1"
+              value="16"
+              class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+          </div>
+
+          <div id="exportArea" class="mb-4" style="display: none">
+            <button
+              id="exportBtn"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#4B0082] hover:bg-[#320056] text-white rounded-lg transition-all shadow-lg shadow-purple-900/20"
+            >
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span class="text-sm font-bold" data-i18n="export.title"
+                >Export Audio (MP3)</span
+              >
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabs (Compact with Icons) -->
+        <div class="flex border-b border-border">
+          <button
+            id="tabLibrary"
+            class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-blue-600 text-blue-500 bg-white/5"
+            data-i18n-title="tabs.library"
+            title="Library"
+          >
+            <i data-lucide="library" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline" data-i18n="tabs.library"
+              >Library</span
+            >
+          </button>
+          <button
+            id="tabRules"
+            class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300"
+            data-i18n-title="tabs.rules"
+            title="Pronunciation Rules"
+          >
+            <i data-lucide="type" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline" data-i18n="tabs.rules">Rules</span>
+          </button>
+          <button
+            id="tabIgnore"
+            class="flex-1 py-3 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest border-b-2 border-transparent text-zinc-500 hover:text-zinc-300"
+            data-i18n-title="tabs.ignore"
+            title="Ignore List"
+          >
+            <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline" data-i18n="tabs.ignore">Ignore</span>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-hidden flex flex-col">
+          <div
+            id="libraryPanel"
+            class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2"
+          ></div>
+          <div
+            id="rulesPanel"
+            class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden"
+          >
+            <div class="flex justify-between items-center">
+              <h3
+                class="text-xs font-bold uppercase tracking-widest text-zinc-500"
+                data-i18n="settings.pronunciation_rules"
+              >
+                Pronunciation Rules
+              </h3>
+              <button
+                id="addRuleBtn"
+                class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md"
+              >
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              </button>
             </div>
-
-            <!-- Settings -->
-            <div class="p-6 border-t border-border bg-black/20 space-y-4">
-                <!-- Processing Mode (v1.9 - Dual-Engine) -->
-                <div class="p-3 bg-blue-900/20 border border-blue-800/30 rounded-lg">
-                    <label
-                        class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
-                        <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
-                        <span data-i18n="settings.processing_mode">Processing Mode</span>
-                    </label>
-                    <select id="engineMode"
-                        class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500 mb-2">
-                        <option value="gpu" data-i18n="settings.gpu_mode">High Quality (GPU) - ~309MB</option>
-                        <option value="cpu" data-i18n="settings.cpu_mode">High Performance (CPU) - ~87MB</option>
-                    </select>
-                    <div id="modelStatus" class="text-[9px] text-zinc-400 flex items-center gap-2">
-                        <span id="gpuStatus">GPU: <span class="text-zinc-600">?</span></span>
-                        <span class="text-zinc-700">|</span>
-                        <span id="cpuStatus">CPU: <span class="text-zinc-600">?</span></span>
-                    </div>
-                    <p class="text-[9px] text-zinc-500 mt-2" data-i18n="settings.mode_help">GPU: Best quality | CPU:
-                        Faster, low RAM</p>
-                </div>
+            <div id="rulesList" class="space-y-3"></div>
+          </div>
+          <div
+            id="ignorePanel"
+            class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 hidden"
+          >
+            <div class="flex justify-between items-center">
+              <h3
+                class="text-xs font-bold uppercase tracking-widest text-zinc-500"
+                data-i18n="settings.ignore_list"
+              >
+                Ignore List
+              </h3>
+              <button
+                id="addIgnoreBtn"
+                class="p-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-md"
+              >
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              </button>
             </div>
-        </aside>
+            <div id="ignoreListUI" class="space-y-2"></div>
+          </div>
+        </div>
 
-        <main class="content-area">
-            <header
-                class="h-16 border-b border-border flex items-center px-4 lg:px-6 bg-card/80 backdrop-blur-md shrink-0 gap-2">
-                <span id="docTitle"
-                    class="font-semibold text-xs lg:text-sm truncate text-zinc-300 italic flex-1 min-w-0 mr-2"
-                    data-i18n="reader.no_document">No document selected</span>
-                <button id="searchBtn" class="hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors shrink-0"
-                    title="Search in book (Ctrl+F)">
-                    <i data-lucide="search" class="w-4 h-4 text-zinc-400 hover:text-blue-400"></i>
-                </button>
-                <div id="pageNav"
-                    class="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800 text-xs shrink-0 opacity-50 pointer-events-none"
-                    data-inactive="true">
-                    <button id="prevPage"
-                        class="hover:text-blue-400 p-1 disabled:opacity-30 disabled:cursor-not-allowed" disabled><i
-                            data-lucide="chevron-left" class="w-3 h-3 lg:w-4 lg:h-4"></i></button>
-                    <div class="flex items-center gap-1 lg:gap-1.5 px-0.5 lg:px-1">
-                        <span class="text-zinc-500 font-medium hidden sm:inline">Pg</span>
-                        <input type="number" id="pageInput"
-                            class="w-8 lg:w-10 bg-zinc-800 border-none rounded text-center text-zinc-200 outline-none focus:ring-1 focus:ring-blue-500 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            min="1" value="1" disabled>
-                        <span class="text-zinc-500 text-xs">/ <span id="pageTotal">1</span></span>
-                    </div>
-                    <button id="nextPage"
-                        class="hover:text-blue-400 p-1 disabled:opacity-30 disabled:cursor-not-allowed" disabled><i
-                            data-lucide="chevron-right" class="w-3 h-3 lg:w-4 lg:h-4"></i></button>
-                </div>
-            </header>
-
-            <div id="readerContent" class="custom-scrollbar">
-                <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center space-y-4">
-                    <div class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-700"><i
-                            data-lucide="file-text" class="w-10 h-10"></i></div>
-                    <h2 class="text-xl font-bold text-zinc-300" data-i18n="reader.welcome">Welcome to LocalReader</h2>
-                    <p class="text-zinc-500 text-sm max-w-sm" data-i18n="reader.select_prompt">Select a document or
-                        upload a new PDF.</p>
-                </div>
-                <div id="textContent" class="chapter-text hidden"></div>
+        <!-- Settings -->
+        <div class="p-6 border-t border-border bg-black/20 space-y-4">
+          <!-- Processing Mode (v1.9 - Dual-Engine) -->
+          <div class="p-3 bg-blue-900/20 border border-blue-800/30 rounded-lg">
+            <label
+              class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2 block flex items-center gap-2"
+            >
+              <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+              <span data-i18n="settings.processing_mode">Processing Mode</span>
+            </label>
+            <select
+              id="engineMode"
+              class="w-full bg-zinc-900 text-xs font-medium border border-zinc-800 rounded px-2 py-1.5 outline-none text-zinc-300 focus:border-blue-500 mb-2"
+            >
+              <option value="gpu" data-i18n="settings.gpu_mode">
+                High Quality (GPU) - ~309MB
+              </option>
+              <option value="cpu" data-i18n="settings.cpu_mode">
+                High Performance (CPU) - ~87MB
+              </option>
+            </select>
+            <div
+              id="modelStatus"
+              class="text-[9px] text-zinc-400 flex items-center gap-2"
+            >
+              <span id="gpuStatus"
+                >GPU: <span class="text-zinc-600">?</span></span
+              >
+              <span class="text-zinc-700">|</span>
+              <span id="cpuStatus"
+                >CPU: <span class="text-zinc-600">?</span></span
+              >
             </div>
+            <p
+              class="text-[9px] text-zinc-500 mt-2"
+              data-i18n="settings.mode_help"
+            >
+              GPU: Best quality | CPU: Faster, low RAM
+            </p>
+          </div>
+        </div>
+      </aside>
 
-            <!-- Controls -->
-            <div id="controls" class="player-bar hidden">
-                <button id="playBtn"
-                    class="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-900/40 shrink-0">
-                    <i data-lucide="play" id="playIcon" class="w-6 h-6 fill-current"></i>
-                </button>
-                <div class="flex flex-col flex-1 min-w-0">
-                    <span id="currentSentencePreview" class="player-text" data-i18n="status.ready">Ready</span>
-                    <div class="flex items-center gap-4 mt-1.5">
-                        <button id="skipBack" class="text-zinc-500 hover:text-white p-1"><i data-lucide="skip-back"
-                                class="w-5 h-5"></i></button>
-                        <button id="skipForward" class="text-zinc-500 hover:text-white p-1"><i
-                                data-lucide="skip-forward" class="w-5 h-5"></i></button>
-                        <div class="h-4 w-px bg-zinc-800 mx-1"></div>
-                        <span id="bookmarkStatus"
-                            class="text-[9px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5"><i
-                                data-lucide="bookmark" class="w-3 h-3"></i> Auto-Saving</span>
-                    </div>
-                </div>
+      <main class="content-area">
+        <header
+          class="h-16 border-b border-border flex items-center px-4 lg:px-6 bg-card/80 backdrop-blur-md shrink-0 gap-2"
+        >
+          <span
+            id="docTitle"
+            class="font-semibold text-xs lg:text-sm truncate text-zinc-300 italic flex-1 min-w-0 mr-2"
+            data-i18n="reader.no_document"
+            >No document selected</span
+          >
+          <button
+            id="searchBtn"
+            class="hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors shrink-0"
+            title="Search in book (Ctrl+F)"
+          >
+            <i
+              data-lucide="search"
+              class="w-4 h-4 text-zinc-400 hover:text-blue-400"
+            ></i>
+          </button>
+          <div
+            id="pageNav"
+            class="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 bg-zinc-900 rounded-full border border-zinc-800 text-xs shrink-0 opacity-50 pointer-events-none"
+            data-inactive="true"
+          >
+            <button
+              id="prevPage"
+              class="hover:text-blue-400 p-1 disabled:opacity-30 disabled:cursor-not-allowed"
+              disabled
+            >
+              <i data-lucide="chevron-left" class="w-3 h-3 lg:w-4 lg:h-4"></i>
+            </button>
+            <div class="flex items-center gap-1 lg:gap-1.5 px-0.5 lg:px-1">
+              <span class="text-zinc-500 font-medium hidden sm:inline">Pg</span>
+              <input
+                type="number"
+                id="pageInput"
+                class="w-8 lg:w-10 bg-zinc-800 border-none rounded text-center text-zinc-200 outline-none focus:ring-1 focus:ring-blue-500 text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                min="1"
+                value="1"
+                disabled
+              />
+              <span class="text-zinc-500 text-xs"
+                >/ <span id="pageTotal">1</span></span
+              >
             </div>
-        </main>
+            <button
+              id="nextPage"
+              class="hover:text-blue-400 p-1 disabled:opacity-30 disabled:cursor-not-allowed"
+              disabled
+            >
+              <i data-lucide="chevron-right" class="w-3 h-3 lg:w-4 lg:h-4"></i>
+            </button>
+          </div>
+        </header>
+
+        <div id="readerContent" class="custom-scrollbar">
+          <div
+            id="emptyState"
+            class="h-full flex flex-col items-center justify-center text-center space-y-4"
+          >
+            <div
+              class="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center text-zinc-700"
+            >
+              <i data-lucide="file-text" class="w-10 h-10"></i>
+            </div>
+            <h2
+              class="text-xl font-bold text-zinc-300"
+              data-i18n="reader.welcome"
+            >
+              Welcome to LocalReader
+            </h2>
+            <p
+              class="text-zinc-500 text-sm max-w-sm"
+              data-i18n="reader.select_prompt"
+            >
+              Select a document or upload a new PDF.
+            </p>
+          </div>
+          <div id="textContent" class="chapter-text hidden"></div>
+        </div>
+
+        <!-- Controls -->
+        <div id="controls" class="player-bar hidden">
+          <button
+            id="playBtn"
+            class="w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg shadow-blue-900/40 shrink-0"
+          >
+            <i
+              data-lucide="play"
+              id="playIcon"
+              class="w-6 h-6 fill-current"
+            ></i>
+          </button>
+          <div class="flex flex-col flex-1 min-w-0">
+            <span
+              id="currentSentencePreview"
+              class="player-text"
+              data-i18n="status.ready"
+              >Ready</span
+            >
+            <div class="flex items-center gap-4 mt-1.5">
+              <button id="skipBack" class="text-zinc-500 hover:text-white p-1">
+                <i data-lucide="skip-back" class="w-5 h-5"></i>
+              </button>
+              <button
+                id="skipForward"
+                class="text-zinc-500 hover:text-white p-1"
+              >
+                <i data-lucide="skip-forward" class="w-5 h-5"></i>
+              </button>
+              <div class="h-4 w-px bg-zinc-800 mx-1"></div>
+              <span
+                id="bookmarkStatus"
+                class="text-[9px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5"
+                ><i data-lucide="bookmark" class="w-3 h-3"></i>
+                Auto-Saving</span
+              >
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
 
     <!-- Voice Settings Button (Floating) -->
-    <button id="voiceSettingsBtn" class="voice-settings-button" title="Voice & Audio Settings">
-        <i data-lucide="audio-lines" class="w-5 h-5"></i>
+    <button
+      id="voiceSettingsBtn"
+      class="voice-settings-button"
+      title="Voice & Audio Settings"
+    >
+      <i data-lucide="audio-lines" class="w-5 h-5"></i>
+    </button>
+
+    <!-- Sleep Timer Button -->
+    <button
+      id="timerSettingsBtn"
+      class="voice-settings-button"
+      style="top: calc(50% + 60px)"
+      title="Sleep Timer"
+    >
+      <i data-lucide="timer" class="w-5 h-5"></i>
+      <span id="timerBtnText" style="display: none"></span>
     </button>
 
     <!-- Drawer Overlay -->
@@ -238,18 +399,266 @@
 
     <!-- Voice Settings Drawer -->
     <div id="voiceSettingsDrawer" class="voice-settings-drawer">
+      <!-- Drawer Header -->
+      <div class="p-6 border-b border-zinc-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="audio-lines" class="w-5 h-5 text-blue-500"></i>
+              <span data-i18n="settings.drawer_title">Voice & Audio</span>
+            </h2>
+            <p
+              class="text-xs text-zinc-500 mt-1"
+              data-i18n="settings.drawer_subtitle"
+            >
+              Customize your reading experience
+            </p>
+          </div>
+          <button
+            id="closeDrawerBtn"
+            class="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+          >
+            <i data-lucide="x" class="w-5 h-5 text-zinc-400"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Drawer Content -->
+      <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+        <!-- Voice Selection -->
+        <div>
+          <label
+            class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2"
+          >
+            <i data-lucide="user" class="w-3.5 h-3.5"></i>
+            <span data-i18n="settings.voice_selection">Voice Selection</span>
+          </label>
+          <select
+            id="voiceSelect"
+            class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="" disabled selected>Loading voices...</option>
+          </select>
+        </div>
+
+        <!-- Speed Control -->
+        <div>
+          <label
+            class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center justify-between"
+          >
+            <span class="flex items-center gap-2">
+              <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+              <span data-i18n="settings.playback_speed">Playback Speed</span>
+            </span>
+            <span class="text-blue-400 font-mono"
+              ><span id="speedVal">1.00</span>x</span
+            >
+          </label>
+          <input
+            type="range"
+            id="speedRange"
+            min="0.5"
+            max="3.0"
+            step="0.05"
+            value="1.00"
+            class="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          />
+          <div class="flex justify-between text-[9px] text-zinc-600 mt-1">
+            <span>0.5x</span>
+            <span>1.0x</span>
+            <span>2.0x</span>
+            <span>3.0x</span>
+          </div>
+        </div>
+
+        <!-- Header/Footer Filter -->
+        <div>
+          <label
+            class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2"
+          >
+            <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+            <span data-i18n="settings.header_footer">Header/Footer Filter</span>
+          </label>
+          <select
+            id="headerFooterMode"
+            class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option value="off" data-i18n="settings.header_footer_off">
+              Off
+            </option>
+            <option value="clean" data-i18n="settings.header_footer_clean">
+              Clean (Remove)
+            </option>
+            <option value="dim" data-i18n="settings.header_footer_dim">
+              Dim (Show Faded)
+            </option>
+          </select>
+          <p
+            class="text-[9px] text-zinc-600 mt-2"
+            data-i18n="settings.header_footer_desc"
+          >
+            Automatically hide repeated page headers & footers
+          </p>
+        </div>
+
+        <!-- Pause Settings -->
+        <div class="border border-zinc-800 rounded-lg overflow-hidden">
+          <button
+            id="pauseSettingsToggle"
+            class="w-full flex items-center justify-between p-4 bg-zinc-900/50 hover:bg-zinc-900 transition-colors"
+          >
+            <span
+              class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2"
+            >
+              <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+              <span data-i18n="settings.pause_settings">Pause Settings</span>
+            </span>
+            <i
+              data-lucide="chevron-down"
+              id="pauseChevron"
+              class="w-4 h-4 text-zinc-500 transition-transform"
+            ></i>
+          </button>
+          <div
+            id="pauseSettingsContent"
+            class="hidden bg-zinc-950/50 p-4 space-y-4"
+          >
+            <div>
+              <label
+                class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between"
+              >
+                <span data-i18n="settings.comma_pause">Comma Pause</span>
+                <span class="font-mono text-blue-400"
+                  ><span id="pauseCommaVal">300</span>ms</span
+                >
+              </label>
+              <input
+                type="range"
+                id="pauseComma"
+                min="0"
+                max="1000"
+                step="50"
+                value="300"
+                class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600"
+              />
+            </div>
+            <div>
+              <label
+                class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between"
+              >
+                <span data-i18n="settings.period_pause">Period Pause</span>
+                <span class="font-mono text-blue-400"
+                  ><span id="pausePeriodVal">600</span>ms</span
+                >
+              </label>
+              <input
+                type="range"
+                id="pausePeriod"
+                min="0"
+                max="1500"
+                step="50"
+                value="600"
+                class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600"
+              />
+            </div>
+            <div>
+              <label
+                class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between"
+              >
+                <span data-i18n="settings.question_pause">Question Pause</span>
+                <span class="font-mono text-blue-400"
+                  ><span id="pauseQuestionVal">600</span>ms</span
+                >
+              </label>
+              <input
+                type="range"
+                id="pauseQuestion"
+                min="0"
+                max="1500"
+                step="50"
+                value="600"
+                class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600"
+              />
+            </div>
+            <div>
+              <label
+                class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between"
+              >
+                <span data-i18n="settings.exclamation_pause"
+                  >Exclamation Pause</span
+                >
+                <span class="font-mono text-blue-400"
+                  ><span id="pauseExclamationVal">600</span>ms</span
+                >
+              </label>
+              <input
+                type="range"
+                id="pauseExclamation"
+                min="0"
+                max="1500"
+                step="50"
+                value="600"
+                class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600"
+              />
+            </div>
+            <div>
+              <label
+                class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between"
+              >
+                <span data-i18n="settings.colon_pause">Colon Pause</span>
+                <span class="font-mono text-blue-400"
+                  ><span id="pauseColonVal">400</span>ms</span
+                >
+              </label>
+              <input
+                type="range"
+                id="pauseColon"
+                min="0"
+                max="1500"
+                step="50"
+                value="400"
+                class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600"
+              />
+            </div>
+            <div>
+              <label
+                class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between"
+              >
+                <span data-i18n="settings.semicolon_pause"
+                  >Semicolon Pause</span
+                >
+                <span class="font-mono text-blue-400"
+                  ><span id="pauseSemicolonVal">400</span>ms</span
+                >
+              </label>
+              <input
+                type="range"
+                id="pauseSemicolon"
+                min="0"
+                max="1500"
+                step="50"
+                value="400"
+                class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timer Settings Drawer -->
+    <div id="timerSettingsDrawer" class="voice-settings-drawer">
         <!-- Drawer Header -->
         <div class="p-6 border-b border-zinc-800">
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                        <i data-lucide="audio-lines" class="w-5 h-5 text-blue-500"></i>
-                        <span data-i18n="settings.drawer_title">Voice & Audio</span>
+                        <i data-lucide="timer" class="w-5 h-5 text-blue-500"></i>
+                         <span data-i18n="settings.timer_title">Sleep Timer</span>
                     </h2>
-                    <p class="text-xs text-zinc-500 mt-1" data-i18n="settings.drawer_subtitle">Customize your reading
-                        experience</p>
+                    <p class="text-xs text-zinc-500 mt-1">Automatically stop playback</p>
                 </div>
-                <button id="closeDrawerBtn" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                <button id="closeTimerDrawerBtn" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
                     <i data-lucide="x" class="w-5 h-5 text-zinc-400"></i>
                 </button>
             </div>
@@ -257,284 +666,283 @@
 
         <!-- Drawer Content -->
         <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
-            <!-- Voice Selection -->
-            <div>
-                <label
-                    class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
-                    <i data-lucide="user" class="w-3.5 h-3.5"></i>
-                    <span data-i18n="settings.voice_selection">Voice Selection</span>
-                </label>
-                <select id="voiceSelect"
-                    class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
-                    <option value="" disabled selected>Loading voices...</option>
-                </select>
+            
+            <!-- Status Display -->
+            <div class="flex flex-col items-center justify-center p-6 bg-zinc-900/50 rounded-xl border border-zinc-800/50">
+                <div id="timerStatusText" class="text-zinc-500 font-bold text-sm mb-2">Timer Inactive</div>
+                <div id="timerCountdown" class="text-4xl font-mono text-zinc-300 font-bold tracking-widest">--:--:--</div>
             </div>
 
-            <!-- Speed Control -->
-            <div>
-                <label
-                    class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center justify-between">
-                    <span class="flex items-center gap-2">
-                        <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
-                        <span data-i18n="settings.playback_speed">Playback Speed</span>
-                    </span>
-                    <span class="text-blue-400 font-mono"><span id="speedVal">1.00</span>x</span>
-                </label>
-                <input type="range" id="speedRange" min="0.5" max="3.0" step="0.05" value="1.00"
-                    class="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600">
-                <div class="flex justify-between text-[9px] text-zinc-600 mt-1">
-                    <span>0.5x</span>
-                    <span>1.0x</span>
-                    <span>2.0x</span>
-                    <span>3.0x</span>
-                </div>
-            </div>
+            <!-- Controls -->
+            <div class="border-t border-zinc-800 pt-6">
+                 <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4 block flex items-center gap-2">
+                    <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                    Set Duration
+                 </label>
+                 
+                 <div class="flex gap-4 mb-6">
+                     <div class="flex-1">
+                        <label class="block text-[10px] text-zinc-500 mb-1 uppercase tracking-wide font-bold">Hours</label>
+                        <input type="number" id="timerHours" min="0" max="12" value="0" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-white text-center font-mono text-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+                     </div>
+                     <div class="flex-1">
+                        <label class="block text-[10px] text-zinc-500 mb-1 uppercase tracking-wide font-bold">Minutes</label>
+                        <input type="number" id="timerMinutes" min="0" max="59" value="30" class="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-white text-center font-mono text-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+                     </div>
+                 </div>
 
-            <!-- Header/Footer Filter -->
-            <div>
-                <label
-                    class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 block flex items-center gap-2">
-                    <i data-lucide="filter" class="w-3.5 h-3.5"></i>
-                    <span data-i18n="settings.header_footer">Header/Footer Filter</span>
-                </label>
-                <select id="headerFooterMode"
-                    class="w-full bg-zinc-900 text-sm font-medium border border-zinc-800 rounded-lg px-3 py-2.5 outline-none text-zinc-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20">
-                    <option value="off" data-i18n="settings.header_footer_off">Off</option>
-                    <option value="clean" data-i18n="settings.header_footer_clean">Clean (Remove)</option>
-                    <option value="dim" data-i18n="settings.header_footer_dim">Dim (Show Faded)</option>
-                </select>
-                <p class="text-[9px] text-zinc-600 mt-2" data-i18n="settings.header_footer_desc">Automatically hide
-                    repeated page headers & footers</p>
-            </div>
-
-            <!-- Pause Settings -->
-            <div class="border border-zinc-800 rounded-lg overflow-hidden">
-                <button id="pauseSettingsToggle"
-                    class="w-full flex items-center justify-between p-4 bg-zinc-900/50 hover:bg-zinc-900 transition-colors">
-                    <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                        <span data-i18n="settings.pause_settings">Pause Settings</span>
-                    </span>
-                    <i data-lucide="chevron-down" id="pauseChevron"
-                        class="w-4 h-4 text-zinc-500 transition-transform"></i>
-                </button>
-                <div id="pauseSettingsContent" class="hidden bg-zinc-950/50 p-4 space-y-4">
-                    <div>
-                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span data-i18n="settings.comma_pause">Comma Pause</span>
-                            <span class="font-mono text-blue-400"><span id="pauseCommaVal">300</span>ms</span>
-                        </label>
-                        <input type="range" id="pauseComma" min="0" max="1000" step="50" value="300"
-                            class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                    </div>
-                    <div>
-                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span data-i18n="settings.period_pause">Period Pause</span>
-                            <span class="font-mono text-blue-400"><span id="pausePeriodVal">600</span>ms</span>
-                        </label>
-                        <input type="range" id="pausePeriod" min="0" max="1500" step="50" value="600"
-                            class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                    </div>
-                    <div>
-                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span data-i18n="settings.question_pause">Question Pause</span>
-                            <span class="font-mono text-blue-400"><span id="pauseQuestionVal">600</span>ms</span>
-                        </label>
-                        <input type="range" id="pauseQuestion" min="0" max="1500" step="50" value="600"
-                            class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                    </div>
-                    <div>
-                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span data-i18n="settings.exclamation_pause">Exclamation Pause</span>
-                            <span class="font-mono text-blue-400"><span id="pauseExclamationVal">600</span>ms</span>
-                        </label>
-                        <input type="range" id="pauseExclamation" min="0" max="1500" step="50" value="600"
-                            class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                    </div>
-                    <div>
-                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span data-i18n="settings.colon_pause">Colon Pause</span>
-                            <span class="font-mono text-blue-400"><span id="pauseColonVal">400</span>ms</span>
-                        </label>
-                        <input type="range" id="pauseColon" min="0" max="1500" step="50" value="400"
-                            class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                    </div>
-                    <div>
-                        <label class="text-[9px] text-zinc-500 mb-2 block flex items-center justify-between">
-                            <span data-i18n="settings.semicolon_pause">Semicolon Pause</span>
-                            <span class="font-mono text-blue-400"><span id="pauseSemicolonVal">400</span>ms</span>
-                        </label>
-                        <input type="range" id="pauseSemicolon" min="0" max="1500" step="50" value="400"
-                            class="w-full h-1.5 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-green-600">
-                    </div>
-                </div>
+                 <button id="startTimerBtn" class="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-all shadow-lg shadow-blue-900/20">
+                    <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                    Start Timer
+                 </button>
+                 
+                 <button id="stopTimerBtn" class="hidden w-full flex items-center justify-center gap-2 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all shadow-lg shadow-red-900/20">
+                    <i data-lucide="square" class="w-4 h-4 fill-current"></i>
+                    Stop Timer
+                 </button>
             </div>
         </div>
     </div>
 
     <!-- Toast -->
-    <div id="toast"
-        class="fixed top-4 right-4 bg-red-900/95 border border-red-700 text-white px-6 py-4 rounded-xl shadow-2xl hidden z-[9999]">
-        <div class="flex items-center gap-3">
-            <i data-lucide="alert-circle" class="w-5 h-5 text-red-300"></i>
-            <span id="toastMsg" class="text-sm font-semibold"></span>
-        </div>
+    <div
+      id="toast"
+      class="fixed top-4 right-4 bg-red-900/95 border border-red-700 text-white px-6 py-4 rounded-xl shadow-2xl hidden z-[9999]"
+    >
+      <div class="flex items-center gap-3">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-red-300"></i>
+        <span id="toastMsg" class="text-sm font-semibold"></span>
+      </div>
     </div>
 
     <!-- FFMPEG Download Modal -->
-    <div id="ffmpegModal"
-        class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] hidden">
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg font-bold text-white">Download Required</h3>
-                <button id="cancelFFMPEGBtn" class="text-zinc-500 hover:text-red-500 transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-
-            <div class="space-y-4">
-                <p class="text-sm text-zinc-400">
-                    To export audio to MP3, we need to download the FFMPEG encoder (~100MB).
-                </p>
-
-                <div id="ffmpegDownloadSection" class="hidden">
-                    <div>
-                        <div class="flex justify-between text-sm mb-2">
-                            <span class="text-zinc-400">Progress</span>
-                            <span id="ffmpegProgress" class="text-blue-400 font-mono">0%</span>
-                        </div>
-                        <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                            <div id="ffmpegProgressBar"
-                                class="h-full bg-gradient-to-r from-blue-600 to-green-600 transition-all duration-300"
-                                style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <div class="text-xs text-zinc-500 text-center">
-                        <span id="ffmpegStatus">Downloading...</span>
-                    </div>
-                </div>
-
-                <div id="ffmpegComplete"
-                    class="hidden bg-green-900/50 border border-green-700 text-green-300 px-4 py-3 rounded-lg text-sm">
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
-                        <span>Download complete! Starting export...</span>
-                    </div>
-                </div>
-
-                <div id="ffmpegError"
-                    class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
-                    <div class="flex items-start gap-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0"></i>
-                        <span id="ffmpegErrorMsg"></span>
-                    </div>
-                </div>
-
-                <button id="startFFMPEGDownload"
-                    class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-semibold">
-                    <i data-lucide="download-cloud" class="w-4 h-4"></i>
-                    <span>Download FFMPEG</span>
-                </button>
-            </div>
+    <div
+      id="ffmpegModal"
+      class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] hidden"
+    >
+      <div
+        class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4"
+      >
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-lg font-bold text-white">Download Required</h3>
+          <button
+            id="cancelFFMPEGBtn"
+            class="text-zinc-500 hover:text-red-500 transition-colors"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
         </div>
+
+        <div class="space-y-4">
+          <p class="text-sm text-zinc-400">
+            To export audio to MP3, we need to download the FFMPEG encoder
+            (~100MB).
+          </p>
+
+          <div id="ffmpegDownloadSection" class="hidden">
+            <div>
+              <div class="flex justify-between text-sm mb-2">
+                <span class="text-zinc-400">Progress</span>
+                <span id="ffmpegProgress" class="text-blue-400 font-mono"
+                  >0%</span
+                >
+              </div>
+              <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  id="ffmpegProgressBar"
+                  class="h-full bg-gradient-to-r from-blue-600 to-green-600 transition-all duration-300"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+
+            <div class="text-xs text-zinc-500 text-center">
+              <span id="ffmpegStatus">Downloading...</span>
+            </div>
+          </div>
+
+          <div
+            id="ffmpegComplete"
+            class="hidden bg-green-900/50 border border-green-700 text-green-300 px-4 py-3 rounded-lg text-sm"
+          >
+            <div class="flex items-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
+              <span>Download complete! Starting export...</span>
+            </div>
+          </div>
+
+          <div
+            id="ffmpegError"
+            class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm"
+          >
+            <div class="flex items-start gap-2">
+              <i
+                data-lucide="alert-triangle"
+                class="w-4 h-4 mt-0.5 shrink-0"
+              ></i>
+              <span id="ffmpegErrorMsg"></span>
+            </div>
+          </div>
+
+          <button
+            id="startFFMPEGDownload"
+            class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-semibold"
+          >
+            <i data-lucide="download-cloud" class="w-4 h-4"></i>
+            <span>Download FFMPEG</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Export Progress Modal -->
-    <div id="exportModal"
-        class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] hidden">
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg font-bold text-white">Exporting Audio</h3>
-                <button id="cancelExportBtn" class="text-zinc-500 hover:text-red-500 transition-colors">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-
-            <div class="space-y-4">
-                <div>
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="text-zinc-400">Progress</span>
-                        <span id="exportProgress" class="text-blue-400 font-mono">0%</span>
-                    </div>
-                    <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <div id="exportProgressBar"
-                            class="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300"
-                            style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div class="text-xs text-zinc-500 text-center">
-                    <span id="exportStatus">Processing paragraphs...</span>
-                </div>
-
-                <div id="exportComplete" class="hidden space-y-3">
-                    <div class="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3">
-                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Saved to:</div>
-                        <div id="exportFilePath" class="text-xs text-zinc-400 font-mono break-all"></div>
-                    </div>
-                    <button id="openFileLocationBtn"
-                        class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all font-semibold">
-                        <i data-lucide="folder-open" class="w-4 h-4"></i>
-                        <span>📂 Open Folder</span>
-                    </button>
-                </div>
-
-                <div id="exportError"
-                    class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm">
-                    <div class="flex items-start gap-2">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 shrink-0"></i>
-                        <span id="exportErrorMsg"></span>
-                    </div>
-                </div>
-            </div>
+    <div
+      id="exportModal"
+      class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[1000] hidden"
+    >
+      <div
+        class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4"
+      >
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-lg font-bold text-white">Exporting Audio</h3>
+          <button
+            id="cancelExportBtn"
+            class="text-zinc-500 hover:text-red-500 transition-colors"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
         </div>
+
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between text-sm mb-2">
+              <span class="text-zinc-400">Progress</span>
+              <span id="exportProgress" class="text-blue-400 font-mono"
+                >0%</span
+              >
+            </div>
+            <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+              <div
+                id="exportProgressBar"
+                class="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-300"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+
+          <div class="text-xs text-zinc-500 text-center">
+            <span id="exportStatus">Processing paragraphs...</span>
+          </div>
+
+          <div id="exportComplete" class="hidden space-y-3">
+            <div class="bg-zinc-800/50 border border-zinc-700 rounded-lg p-3">
+              <div
+                class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1"
+              >
+                Saved to:
+              </div>
+              <div
+                id="exportFilePath"
+                class="text-xs text-zinc-400 font-mono break-all"
+              ></div>
+            </div>
+            <button
+              id="openFileLocationBtn"
+              class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all font-semibold"
+            >
+              <i data-lucide="folder-open" class="w-4 h-4"></i>
+              <span>📂 Open Folder</span>
+            </button>
+          </div>
+
+          <div
+            id="exportError"
+            class="hidden bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm"
+          >
+            <div class="flex items-start gap-2">
+              <i
+                data-lucide="alert-triangle"
+                class="w-4 h-4 mt-0.5 shrink-0"
+              ></i>
+              <span id="exportErrorMsg"></span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Search Modal -->
-    <div id="searchModal"
-        class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 z-[2000] hidden">
-        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
-            <!-- Search Input -->
-            <div class="p-4 border-b border-zinc-800">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="search" class="w-5 h-5 text-zinc-500"></i>
-                    <input type="text" id="searchInput" placeholder="Search in book..."
-                        class="flex-1 bg-transparent text-white text-lg outline-none placeholder-zinc-500"
-                        autocomplete="off">
-                    <button id="closeSearchBtn" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
-                        <i data-lucide="x" class="w-5 h-5 text-zinc-500"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Search Results -->
-            <div id="searchResults" class="max-h-96 overflow-y-auto custom-scrollbar">
-                <div id="searchResultsList" class="p-4 space-y-2">
-                    <!-- Results will be inserted here -->
-                </div>
-                <div id="searchEmpty" class="hidden p-8 text-center text-zinc-500 text-sm">
-                    <i data-lucide="search-x" class="w-12 h-12 mx-auto mb-3 text-zinc-700"></i>
-                    <p>No results found</p>
-                </div>
-                <div id="searchPlaceholder" class="p-8 text-center text-zinc-600 text-sm">
-                    <i data-lucide="search" class="w-12 h-12 mx-auto mb-3 text-zinc-700"></i>
-                    <p>Type to search across all pages</p>
-                    <p class="text-xs mt-2 text-zinc-700">Minimum 2 characters</p>
-                </div>
-            </div>
-
-            <!-- Search Footer (Stats) -->
-            <div id="searchFooter" class="hidden px-4 py-3 border-t border-zinc-800 bg-zinc-900/50">
-                <div class="flex items-center justify-between text-xs text-zinc-500">
-                    <span id="searchStats"></span>
-                    <span class="text-zinc-700">Press ESC to close</span>
-                </div>
-            </div>
+    <div
+      id="searchModal"
+      class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 z-[2000] hidden"
+    >
+      <div
+        class="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden"
+      >
+        <!-- Search Input -->
+        <div class="p-4 border-b border-zinc-800">
+          <div class="flex items-center gap-3">
+            <i data-lucide="search" class="w-5 h-5 text-zinc-500"></i>
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search in book..."
+              class="flex-1 bg-transparent text-white text-lg outline-none placeholder-zinc-500"
+              autocomplete="off"
+            />
+            <button
+              id="closeSearchBtn"
+              class="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+            >
+              <i data-lucide="x" class="w-5 h-5 text-zinc-500"></i>
+            </button>
+          </div>
         </div>
+
+        <!-- Search Results -->
+        <div
+          id="searchResults"
+          class="max-h-96 overflow-y-auto custom-scrollbar"
+        >
+          <div id="searchResultsList" class="p-4 space-y-2">
+            <!-- Results will be inserted here -->
+          </div>
+          <div
+            id="searchEmpty"
+            class="hidden p-8 text-center text-zinc-500 text-sm"
+          >
+            <i
+              data-lucide="search-x"
+              class="w-12 h-12 mx-auto mb-3 text-zinc-700"
+            ></i>
+            <p>No results found</p>
+          </div>
+          <div
+            id="searchPlaceholder"
+            class="p-8 text-center text-zinc-600 text-sm"
+          >
+            <i
+              data-lucide="search"
+              class="w-12 h-12 mx-auto mb-3 text-zinc-700"
+            ></i>
+            <p>Type to search across all pages</p>
+            <p class="text-xs mt-2 text-zinc-700">Minimum 2 characters</p>
+          </div>
+        </div>
+
+        <!-- Search Footer (Stats) -->
+        <div
+          id="searchFooter"
+          class="hidden px-4 py-3 border-t border-zinc-800 bg-zinc-900/50"
+        >
+          <div class="flex items-center justify-between text-xs text-zinc-500">
+            <span id="searchStats"></span>
+            <span class="text-zinc-700">Press ESC to close</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="js/app.js"></script>
-</body>
-
+  </body>
 </html>

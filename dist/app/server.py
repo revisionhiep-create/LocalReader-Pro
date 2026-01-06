@@ -1797,6 +1797,93 @@ async def open_file_location(filename: str):
         raise HTTPException(status_code=500, detail=error_msg)
 
 
+# --- SLEEP TIMER FEATURE ---
+
+
+class SleepTimer:
+    def __init__(self):
+        self.active = False
+        self.target_time = 0
+        self.duration_seconds = 0
+        self.timer_thread: Optional[threading.Timer] = None
+        self._lock = threading.Lock()
+
+    def set_timer(self, minutes: int):
+        with self._lock:
+            self.stop_timer_internal()
+
+            if minutes <= 0:
+                return
+
+            self.duration_seconds = minutes * 60
+            self.target_time = time.time() + self.duration_seconds
+            self.active = True
+
+            # Start background thread
+            self.timer_thread = threading.Timer(
+                self.duration_seconds, self.trigger_shutdown
+            )
+            self.timer_thread.daemon = True
+            self.timer_thread.start()
+            print(f"[TIMER] Sleep timer set for {minutes} minutes")
+
+    def stop_timer(self):
+        with self._lock:
+            self.stop_timer_internal()
+            print("[TIMER] Sleep timer stopped")
+
+    def stop_timer_internal(self):
+        if self.timer_thread:
+            self.timer_thread.cancel()
+            self.timer_thread = None
+        self.active = False
+        self.target_time = 0
+        self.duration_seconds = 0
+
+    def trigger_shutdown(self):
+        print("[TIMER] Time's up! Shutting down application...")
+        os._exit(0)
+
+    def get_status(self):
+        with self._lock:
+            if not self.active:
+                return {"active": False, "remaining_seconds": 0}
+
+            remaining = self.target_time - time.time()
+            if remaining <= 0:
+                return {"active": False, "remaining_seconds": 0}
+
+            return {
+                "active": True,
+                "remaining_seconds": int(remaining),
+                "total_seconds": self.duration_seconds,
+            }
+
+
+sleep_timer = SleepTimer()
+
+
+class TimerRequest(BaseModel):
+    minutes: int
+
+
+@app.post("/api/timer/set")
+async def set_timer(req: TimerRequest):
+    sleep_timer.set_timer(req.minutes)
+    return sleep_timer.get_status()
+
+
+@app.post("/api/timer/stop")
+async def stop_timer():
+    sleep_timer.stop_timer()
+    return sleep_timer.get_status()
+
+
+@app.get("/api/timer/status")
+async def get_timer_status():
+    return sleep_timer.get_status()
+
+
 if __name__ == "__main__":
     import uvicorn
 

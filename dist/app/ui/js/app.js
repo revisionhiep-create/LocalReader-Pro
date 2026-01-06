@@ -5,6 +5,7 @@ import { renderIcons, showToast, switchTab, renderRules, renderIgnoreList, updat
 import { loadLibrary, selectDocument, renderPage, processPdfBlob } from './modules/library.js';
 import { loadVoices, togglePlayback, stopPlayback, playNext, jumpToSentence, initAudioContext, saveProgress } from './modules/tts.js';
 import { startExport, cancelExport, startFFMPEGDownload, openExportLocation } from './modules/export.js';
+import { initTimer } from './modules/timer.js';
 
 // Global access for debugging
 window.state = state;
@@ -82,6 +83,7 @@ async function init() {
     renderRules();
     renderIgnoreList();
     startStatusPolling();
+    initTimer();
 }
 
 document.addEventListener('DOMContentLoaded', init);

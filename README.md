@@ -13,6 +13,7 @@
 ## ✨ Key Features
 
 ### 📚 Core Reading
+
 - **Multi-Format Support:** PDF and EPUB files
 - **Multilingual UI:** Full interface translation (**English, French, Spanish, Chinese**)
 - **Dual-Engine Architecture:** Choose between Performance (CPU) and Quality (GPU) modes
@@ -21,6 +22,7 @@
 - **Sentence-Level Control:** Click any sentence to start reading from there
 
 ### 🎙️ Smart TTS Controls
+
 - **Dynamic Voice Library:** Automatically loads voices for **English (US/UK), French, Spanish, Chinese, Japanese, Italian, and Portuguese**.
 - **Voice Settings Drawer:** Floating button for quick access to voice, speed, and filter controls
 - **Player Text Customization:** New **Text Size Slider** to adjust subtitle/caption size (12px-24px) in real-time.
@@ -33,15 +35,23 @@
 - **Speed Control:** 0.5x to 3.0x playback speed.
 
 ### 🧠 Smart Features
+
 - **Smart Start:** Auto-skip blank/cover pages on first open
 - **Header/Footer Filter:** Detect and remove/dim repeated page clutter
 - **Global Search:** Full-book search with instant navigation (Ctrl+F)
 - **SQLite Audio Cache:** 200MB LRU cache with automatic cleanup (Self-healing).
 
 ### 🎵 MP3 Export
+
 - **One-Click Export:** Convert entire document to MP3
 - **Background Processing:** UI stays responsive during export
 - **On-Demand FFMPEG:** Auto-downloads encoder (~100MB) on first export
+
+### ⏲️ Sleep Timer
+
+- **Auto-Shutdown:** Automatically closes the application after a set duration.
+- **Visual Feedback:** Button displays remaining time in a neutral style when active.
+- **Background Safe:** Timer runs on the backend to guarantee shutdown.
 
 ---
 
@@ -63,21 +73,23 @@
 6. **Launch:** Double-click "LocalReader Pro" on your Desktop
 
 **What the installer does:**
+
 - ✅ Installs Python 3.12 if not present
 - ✅ Installs all required packages (FastAPI, PyTorch, Kokoro-TTS, etc.)
 - ✅ Creates shortcuts on Desktop and Start Menu
 - ✅ Sets up the application in the selected directory
 
 **Uninstalling:**
+
 - Run `uninstall.exe` in the installation directory
 - Removes all shortcuts (application files remain for manual deletion)
 
 **Installation Size:**
+
 - Installer: ~24 MB
 - Full installation: ~2.6 GB (including Python dependencies)
 
 ---
-
 
 ### Linux / Manual Installation
 
@@ -114,6 +126,7 @@ python3.12 -m pip install -r requirements.txt
 ```
 
 This will install:
+
 - FastAPI (web framework)
 - uvicorn (web server)
 - torch (PyTorch for ML)
@@ -137,6 +150,7 @@ python3.12 main.py
 After launching the application:
 
 1. **Choose Your Engine Mode:**
+
    - Open **Settings** section in sidebar
    - Find **"Processing Mode"** dropdown
    - Choose between:
@@ -144,21 +158,24 @@ After launching the application:
      - **High Quality (GPU):** Best audio quality (~309MB model)
 
 2. **Download Voice Engine:**
+
    - Click **"Setup Voice Engine"** button in sidebar
    - Downloads the model matching your selected mode
    - Wait for green status indicator (⚫ → 🟢)
    - **Tip:** You can download both models and switch anytime!
 
-2. **Upload Your First Book:**
+3. **Upload Your First Book:**
+
    - Click **"Upload Book (PDF/EPUB)"**
    - Select any PDF or EPUB file
    - App will process and display the book
 
-3. **Start Reading:**
+4. **Start Reading:**
+
    - Click the blue **Play** button
    - Or press `Space` to play/pause
 
-4. **First MP3 Export (Optional):**
+5. **First MP3 Export (Optional):**
    - Click **"Export Audio (MP3)"** in sidebar
    - Prompt appears: "Download FFMPEG encoder (~100MB)"
    - Click **"Download FFMPEG"** and wait ~2-3 minutes
@@ -180,17 +197,20 @@ After launching the application:
 ### Smart Features
 
 **Smart Start:**
+
 - Automatically activates on first open
 - Finds first page with >500 characters
 - Shows notification: "⚡ Skipped to start of content (Page X)"
 
 **Header/Footer Filter:**
+
 1. Open **Settings** section in sidebar
 2. Find **"Header/Footer Filter"** dropdown
 3. Choose: **Off**, **Clean** (remove), or **Dim** (show faded)
 4. TTS skips filtered content in all modes
 
 **Global Search:**
+
 1. Press `Ctrl+F` (or `Cmd+F` on Mac)
 2. Type query (minimum 2 characters)
 3. Click any result to jump to that page
@@ -209,6 +229,7 @@ After launching the application:
    - ☑️ **Use Pattern Matching:** Enable RegEx
 
 **Example Rules:**
+
 - `ChatGPT` → `Chat G P T` (spell out)
 - `COVID-19` → `COVID nineteen` (pronounce naturally)
 
@@ -226,9 +247,10 @@ After launching the application:
 3. Settings save automatically
 
 **Smart Behavior:**
+
 - Pauses apply only to single punctuation or the last char of a group
 - `"..."` creates ONE pause (e.g. 600ms), not three
-- `"?!` creates ONE pause (based on `!`) 
+- `"?!` creates ONE pause (based on `!`)
 - `Title\n` creates a soft pause (300ms)
 
 ### Exporting to MP3
@@ -241,22 +263,31 @@ After launching the application:
 6. Click **"📂 Open Folder"** to access file
 
 **Export Details:**
+
 - **Format:** MP3, 192 kbps
 - **Naming:** `{document_name}_{voice_name}.mp3`
 - **Location:** `userdata/` folder in project directory
 - **Speed:** ~15 seconds per 1,000 characters
 
+### Sleep Timer
+
+1. Click the **Timer Icon** (clock) on the right side of the screen.
+2. Set the desired duration in **Hours** and **Minutes**.
+3. Click **"Start Timer"**.
+4. The drawer will show a countdown, and the main button will display the remaining minutes.
+5. The application will automatically close when the timer reaches zero.
+
 ---
 
 ## 📝 Keyboard Shortcuts
 
-| Key | Action |
-|-----|--------|
-| `Space` | Play/Pause |
-| `←` | Previous Sentence |
-| `→` | Next Sentence |
-| `Ctrl+F` / `Cmd+F` | Open Search |
-| `ESC` | Close Search |
+| Key                | Action            |
+| ------------------ | ----------------- |
+| `Space`            | Play/Pause        |
+| `←`                | Previous Sentence |
+| `→`                | Next Sentence     |
+| `Ctrl+F` / `Cmd+F` | Open Search       |
+| `ESC`              | Close Search      |
 
 ---
 
@@ -264,15 +295,15 @@ After launching the application:
 
 ### Architecture
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Vanilla JavaScript + Tailwind CSS |
-| **Backend** | FastAPI (Python) |
-| **TTS Engine** | Kokoro-82M (ONNX Runtime) |
-| **Desktop Wrapper** | pywebview |
-| **PDF Parsing** | PDF.js (Mozilla) |
-| **Audio Export** | pydub + FFMPEG |
-| **EPUB Support** | ebooklib + xhtml2pdf |
+| Layer               | Technology                        |
+| ------------------- | --------------------------------- |
+| **Frontend**        | Vanilla JavaScript + Tailwind CSS |
+| **Backend**         | FastAPI (Python)                  |
+| **TTS Engine**      | Kokoro-82M (ONNX Runtime)         |
+| **Desktop Wrapper** | pywebview                         |
+| **PDF Parsing**     | PDF.js (Mozilla)                  |
+| **Audio Export**    | pydub + FFMPEG                    |
+| **EPUB Support**    | ebooklib + xhtml2pdf              |
 
 ### File Structure
 
@@ -310,24 +341,25 @@ LocalReader_Pro_v2.5/
 ```
 
 **Additional folders created during use:**
+
 - `bin/` - FFMPEG binaries (auto-downloaded on first export)
 - `models/` - TTS engine models (auto-downloaded based on your choice)
 - `userdata/audio_cache.db` - SQLite Audio Cache
 
 ### Storage Requirements
 
-| Component | Size |
-|-----------|------|
-| **Installer** | ~24 MB |
-| **App Files** | ~10 MB |
-| **Python Dependencies** | ~2 GB (PyTorch, etc.) |
-| **TTS Engine (GPU Mode)** | ~309 MB |
-| **TTS Engine (CPU Mode)** | ~87 MB |
-| **Voice Pack (shared)** | ~30 MB |
-| **FFMPEG** | ~100 MB (optional) |
-| **Audio Cache (SQLite)** | ~200 MB max (auto-managed) |
-| **Per Document Cache** | ~1-5 MB |
-| **Exported MP3** | ~1 MB per minute of audio |
+| Component                 | Size                       |
+| ------------------------- | -------------------------- |
+| **Installer**             | ~24 MB                     |
+| **App Files**             | ~10 MB                     |
+| **Python Dependencies**   | ~2 GB (PyTorch, etc.)      |
+| **TTS Engine (GPU Mode)** | ~309 MB                    |
+| **TTS Engine (CPU Mode)** | ~87 MB                     |
+| **Voice Pack (shared)**   | ~30 MB                     |
+| **FFMPEG**                | ~100 MB (optional)         |
+| **Audio Cache (SQLite)**  | ~200 MB max (auto-managed) |
+| **Per Document Cache**    | ~1-5 MB                    |
+| **Exported MP3**          | ~1 MB per minute of audio  |
 
 **Total (GPU Mode):** ~2.6 GB (without exported audio)  
 **Total (CPU Mode):** ~2.4 GB (saves ~220MB)  
@@ -335,25 +367,27 @@ LocalReader_Pro_v2.5/
 
 ### System Requirements
 
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| **OS** | Windows 10+ / Ubuntu 20.04+ | Windows 11 / Ubuntu 22.04+ |
-| **Python** | 3.10 - 3.13 | 3.12.10 |
-| **RAM** | 4 GB | 8 GB+ |
-| **Disk Space** | 3 GB free | 5 GB+ free |
-| **CPU** | Dual-core 2.0 GHz | Quad-core 2.5 GHz+ |
-| **Internet** | Required for setup only | Offline after setup |
+| Component      | Minimum                     | Recommended                |
+| -------------- | --------------------------- | -------------------------- |
+| **OS**         | Windows 10+ / Ubuntu 20.04+ | Windows 11 / Ubuntu 22.04+ |
+| **Python**     | 3.10 - 3.13                 | 3.12.10                    |
+| **RAM**        | 4 GB                        | 8 GB+                      |
+| **Disk Space** | 3 GB free                   | 5 GB+ free                 |
+| **CPU**        | Dual-core 2.0 GHz           | Quad-core 2.5 GHz+         |
+| **Internet**   | Required for setup only     | Offline after setup        |
 
 ---
 
 ## 🛡️ Privacy & Security
 
 ### Data Storage
+
 - **100% Local:** All documents, settings, and exports stored on your machine
 - **No Cloud:** Zero data sent to external servers
 - **No Accounts:** No login, no sign-up, no user tracking
 
 ### Network Usage
+
 - **Setup Only:** Internet required for:
   1. Downloading Python (Windows installer only, ~100 MB)
   2. Installing dependencies (~2 GB)
@@ -362,11 +396,13 @@ LocalReader_Pro_v2.5/
 - **Fully Offline:** After setup, works without internet indefinitely
 
 ### Analytics & Telemetry
+
 - **Zero Tracking:** No analytics, no usage stats, no crash reports
 - **No Cookies:** Web UI runs locally
 - **No Logs:** App doesn't phone home
 
 ### File Access
+
 - **Read-Only Documents:** PDFs/EPUBs are only read (never modified)
 - **Writable Folders:** Only `userdata/`, `models/`, `bin/`, and `.cache/`
 - **No Background Access:** App closes completely when you exit
@@ -376,26 +412,28 @@ LocalReader_Pro_v2.5/
 ## 📄 License
 
 ### LocalReader Pro
+
 - **Code:** Proprietary (review, modify, use personally)
 - **Redistribution:** Contact author for permission
 
 ### Third-Party Components
 
-| Component | License |
-|-----------|---------|
-| **Kokoro-82M** | Apache 2.0 |
-| **FastAPI** | MIT |
-| **PyTorch** | BSD-3-Clause |
-| **PDF.js** | Apache 2.0 |
-| **Tailwind CSS** | MIT |
-| **Lucide Icons** | ISC |
-| **FFMPEG** | LGPL 2.1+ |
+| Component        | License      |
+| ---------------- | ------------ |
+| **Kokoro-82M**   | Apache 2.0   |
+| **FastAPI**      | MIT          |
+| **PyTorch**      | BSD-3-Clause |
+| **PDF.js**       | Apache 2.0   |
+| **Tailwind CSS** | MIT          |
+| **Lucide Icons** | ISC          |
+| **FFMPEG**       | LGPL 2.1+    |
 
 ---
 
 ## 🙏 Credits
 
 ### Core Technologies
+
 - **TTS Engine:** [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) by hexgrad
 - **PDF Rendering:** [PDF.js](https://mozilla.github.io/pdf.js/) by Mozilla
 - **UI Framework:** [Tailwind CSS](https://tailwindcss.com/)
@@ -403,6 +441,7 @@ LocalReader_Pro_v2.5/
 - **Audio Processing:** [FFMPEG](https://ffmpeg.org/)
 
 ### Python Libraries
+
 - FastAPI, uvicorn, torch, onnxruntime, pydub, soundfile, pywebview, ebooklib, beautifulsoup4, and more (see `requirements.txt`)
 
 ---
@@ -410,6 +449,7 @@ LocalReader_Pro_v2.5/
 ## 📞 Support
 
 ### Found a Bug?
+
 1. Check **Troubleshooting** section above
 2. Verify you're on latest version (v2.5.0)
 3. Check `CHANGELOG.md` for known issues
@@ -419,6 +459,7 @@ LocalReader_Pro_v2.5/
    - Steps to reproduce
 
 ### Feature Requests
+
 - Review `CHANGELOG.md` to see if already implemented
 - Describe use case and expected behavior
 - Provide examples or mockups if applicable
