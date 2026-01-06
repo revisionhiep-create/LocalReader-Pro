@@ -197,7 +197,16 @@ document.getElementById('fontSizeSlider').oninput = (e) => {
     const preview = document.getElementById('currentSentencePreview');
     if (preview) { preview.style.fontSize = `${e.target.value}px`; preview.style.lineHeight = (parseInt(e.target.value) * 1.5) + 'px'; }
 };
-document.getElementById('voiceSelect').onchange = async () => { state.audioBufferCache.clear(); await saveSettings(); };
+document.getElementById('voiceSelect').onchange = async () => { 
+    stopPlayback(); 
+    state.audioBufferCache.clear(); 
+    try {
+        await fetchJSON('/api/system/clear-cache', { method: 'POST' });
+    } catch (e) {
+        console.error("Failed to clear backend cache", e);
+    }
+    await saveSettings(); 
+};
 document.getElementById('headerFooterMode').onchange = async (e) => { state.headerFooterMode = e.target.value; await saveSettings(); if (state.currentDoc) await renderPage(); };
 document.getElementById('engineMode').onchange = async (e) => { state.engineMode = e.target.value; await saveSettings(); };
 document.getElementById('setupBtn').onclick = async () => { try { await fetchJSON(`/api/system/setup?model_type=${state.engineMode}`, { method: 'POST' }); showToast("Started downloading..."); } catch (e) { showToast(e.message); } };

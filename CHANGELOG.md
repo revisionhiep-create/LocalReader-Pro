@@ -1,5 +1,15 @@
 # LocalReader Pro Changelog
 
+## v3.4 - January 6, 2026 (The "Clean Sweep" Update)
+
+### 🔊 Audio Cache Stability
+
+- **Playback Sync:** Fixed a critical issue where switching voices during playback could lead to audio corruption or segments playing out of order.
+- **Auto-Stop & Purge:** Selecting a new voice now immediately stops current playback and clears both frontend and backend audio caches.
+- **Deep Clean:** The backend cache clearing logic now physically deletes the `audio_cache.db` file and re-initializes it, ensuring a 100% fresh start for the new voice and resolving potential data corruption issues.
+
+---
+
 ## v3.3 - January 6, 2026 (The "Global" Update)
 
 ### 🌍 Internationalization Overhaul

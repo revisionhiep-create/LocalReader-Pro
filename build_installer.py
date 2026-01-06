@@ -1,5 +1,5 @@
 """
-Build script for LocalReader Pro v2.2 installer
+Build script for LocalReader Pro v3.4 installer
 Compiles both setup.exe and uninstall.exe using PyInstaller
 """
 
@@ -203,7 +203,7 @@ oLink.Save
 def main():
     """Main build process"""
     print("\n" + "=" * 60)
-    print("LocalReader Pro v2.3 - Build System")
+    print("LocalReader Pro v3.4 - Build System")
     print("=" * 60 + "\n")
 
     clean_build_artifacts()
