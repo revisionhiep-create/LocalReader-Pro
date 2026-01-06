@@ -202,8 +202,11 @@ async def get_voices():
         for voice in raw_voices:
             # Assuming voice is just a string ID based on previous code usage.
             # If it's an object, we adjust. Kokoro usually returns list of strings.
-            # But just in case, let's handle string vs obj
             voice_id = voice if isinstance(voice, str) else voice.get("id")
+
+            # Filter out voices with Indian accents as requested (handles prefixes like v0_alpha)
+            if voice_id.lower().split("_")[-1] in ["alpha", "beta", "omega", "psi"]:
+                continue
 
             lang_code = get_language_from_voice(voice_id)
             label = get_lang_label(lang_code)

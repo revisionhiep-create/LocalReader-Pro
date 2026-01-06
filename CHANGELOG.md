@@ -7,6 +7,7 @@
 - **Playback Sync:** Fixed a critical issue where switching voices during playback could lead to audio corruption or segments playing out of order.
 - **Auto-Stop & Purge:** Selecting a new voice now immediately stops current playback and clears both frontend and backend audio caches.
 - **Deep Clean:** The backend cache clearing logic now physically deletes the `audio_cache.db` file and re-initializes it, ensuring a 100% fresh start for the new voice and resolving potential data corruption issues.
+- **Voice Library Cleanup:** Removed "alpha", "beta", "omega", and "psi" voices from the selection list due to user feedback regarding inconsistent accents.
 
 ---
 

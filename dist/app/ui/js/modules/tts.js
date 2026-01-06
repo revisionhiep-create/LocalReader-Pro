@@ -287,6 +287,11 @@ export async function loadVoices() {
             // Try to translate the language code using loaded translations, fallback to label from backend
             group.label = state.translations?.languages?.[langCode] || category.label;
             category.voices.forEach(voice => {
+                // Filter out voices with Indian accents as requested (handles prefixes like v0_alpha)
+                const voiceId = voice.id.toLowerCase();
+                const cleanId = voiceId.includes('_') ? voiceId.split('_').pop() : voiceId;
+                if (['alpha', 'beta', 'omega', 'psi'].includes(cleanId)) return;
+
                 const option = document.createElement('option');
                 option.value = voice.id;
 
@@ -312,9 +317,7 @@ export async function loadVoices() {
                     if (vid.startsWith('pf_')) return [attrs.portuguese, attrs.female];
                     if (vid.startsWith('pm_')) return [attrs.portuguese, attrs.male];
                     
-                    // Special cases
                     if (vid === 'santa') return [attrs.spanish, attrs.male];
-                    if (['alpha', 'beta', 'psi'].includes(vid)) return [attrs.american, attrs.female];
                     
                     return [];
                 };
