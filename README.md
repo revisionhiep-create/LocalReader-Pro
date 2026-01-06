@@ -308,36 +308,29 @@ After launching the application:
 ### File Structure
 
 ```
-LocalReader_Pro_v2.5/
-├── Install LocalReader Pro.lnk      # Windows installer shortcut
-├── Uninstall LocalReader Pro.lnk    # Uninstaller shortcut
+LocalReader-Pro/
+├── build_installer.py           # Master build script
+├── installer_logic.py           # setup.exe core logic
 ├── README.md
 ├── CHANGELOG.md
 │
 └── dist/
-    ├── setup.exe                    # One-click installer (24 MB)
-    ├── main.py                      # Application entry point
-    ├── launch.vbs                   # Silent Windows launcher
-    ├── requirements.txt             # Python dependencies
+    ├── setup.exe                # One-click installer (~22 MB)
+    ├── main.py                  # App entry point (FastAPI + WebView)
+    ├── launch.vbs               # Silent runner
     │
     ├── app/
-    │   ├── server.py                # FastAPI backend
-    │   ├── locales/                 # UI Translations (en, fr, es, zh)
-    │   ├── logic/
-    │   │   ├── text_normalizer.py        # Pronunciation rules
-    │   │   ├── smart_content_detector.py # Smart features
-    │   │   ├── downloader.py             # Model downloader
-    │   │   ├── audio_cache.py            # SQLite Cache Manager
-    │   │   └── dependency_manager.py     # FFMPEG installer
+    │   ├── server.py            # FastAPI initialization
+    │   ├── state.py             # Global engine/status singleton
+    │   ├── routers/             # API Controllers (TTS, Library, Export, etc.)
+    │   ├── logic/               # Core logic (Normalize, Detector, Cache)
+    │   ├── locales/             # UI Translations (EN, ES, FR, ZH, JA)
     │   └── ui/
-    │       ├── index.html           # Main SPA
-    │       └── lib/                 # Offline dependencies
+    │       ├── index.html       # Main SPA
+    │       ├── css/style.css    # Premium styling
+    │       └── js/modules/      # ES6 Logic modules
     │
-    └── userdata/                    # User data (auto-created)
-        ├── library.json             # Document library
-        ├── settings.json            # Preferences
-        ├── content/                 # Cached page content
-        └── *.mp3                    # Exported audio
+    └── userdata/                # User settings and book database
 ```
 
 **Additional folders created during use:**
@@ -350,7 +343,7 @@ LocalReader_Pro_v2.5/
 
 | Component                 | Size                       |
 | ------------------------- | -------------------------- |
-| **Installer**             | ~24 MB                     |
+| **Installer**             | ~22 MB                     |
 | **App Files**             | ~10 MB                     |
 | **Python Dependencies**   | ~2 GB (PyTorch, etc.)      |
 | **TTS Engine (GPU Mode)** | ~309 MB                    |
@@ -466,7 +459,7 @@ LocalReader_Pro_v2.5/
 
 ---
 
-**Version:** 3.3.0 (Internationalization & Installer)
+**Version:** 3.4.0 (The "Clean Sweep" Update)
 **Engine:** Kokoro-82M (Dual-Mode: CPU/GPU)
 **Last Updated:** January 6, 2026
 **Status:** ✅ Stable Release
