@@ -1,3 +1,4 @@
+
 # Python
 __pycache__/
 *.py[cod]
@@ -27,6 +28,7 @@ dist/userdata/
 dist/.cache/
 dist/bin/
 dist/app/models/
+dist/webview_data/
 *.onnx
 *.bin
 
@@ -54,3 +56,6 @@ desktop.ini
 # Test files
 *.pdf
 *.epub
+
+# Backups
+*.bak

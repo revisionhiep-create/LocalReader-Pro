@@ -1,5 +1,16 @@
 # LocalReader Pro Changelog
 
+## v3.1 - January 6, 2026 (The "Fluent Reader" Update)
+
+### 🐛 Critical Bug Fixes
+
+- **Converter & Reader Logic Fixes:**
+  - **Abbreviation Protection:** Fixed a major issue where abbreviations like "Mr.", "Dr.", "Mrs.", or "e.g." were causing sentences to split incorrectly. This was causing stilted, broken TTS playback (e.g., "Mr." ... long pause ... "Smith").
+  - **Smarter Line Joining:** The EPUB-to-PDF converter now intelligently detects when a line ends with an abbreviation and joins it with the next line using a space instead of a newline. This fixes "broken sentences" in the visual text.
+  - **Robust Segmentation:** Replaced brittle regex-based sentence splitting with the modern `Intl.Segmenter` API (`modules/library.js`). This provides linguistically accurate sentence boundaries for cleaner, smoother reading.
+
+---
+
 # LocalReader Pro Changelog
 
 ## v3.0 - January 5, 2026 (The "Modular" Update)
