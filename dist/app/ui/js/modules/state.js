@@ -3,11 +3,17 @@ export const state = {
     // Documents
     currentDoc: null,
     currentPages: [],
-    currentPageIndex: 0,
-    currentSentenceIndex: 0,
-    sentences: [],
-    sentenceElements: [], // Cache
+    
+    // Decoupled Pointers
+    readingPageIndex: 0,    // Where the voice is
+    readingSentences: [],   // The sentences being spoken
+    currentSentenceIndex: 0, // Current line index
+    viewPageIndex: 0,       // What the user is seeing
+    viewSentences: [],      // The sentences currently rendered on screen
+    
+    sentenceElements: [],   // Cache for current view
     smartStartPage: 0,
+    autoScrollEnabled: true,
 
     // Playback
     isPlaying: false,
@@ -23,6 +29,7 @@ export const state = {
     engineMode: 'gpu',
     currentSearchQuery: '',
     searchDebounceTimer: null,
+    jumpTimer: null,
     pauseSettings: { comma: 300, period: 600, question: 600, exclamation: 600, colon: 400, semicolon: 400, newline: 0 },
 
     // Voices & Language

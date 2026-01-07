@@ -2,7 +2,7 @@
 import { state } from './modules/state.js';
 import { fetchJSON, API_URL } from './modules/api.js';
 import { renderIcons, showToast, switchTab, renderRules, renderIgnoreList, updateEngineStatusUI, highlightSearchTerm, escapeRegex, updateTranslations } from './modules/ui.js';
-import { loadLibrary, selectDocument, renderPage, processPdfBlob } from './modules/library.js';
+import { loadLibrary, selectDocument, renderPage, processPdfBlob, getSentencesForPage } from './modules/library.js';
 import { loadVoices, togglePlayback, stopPlayback, playNext, jumpToSentence, initAudioContext, saveProgress } from './modules/tts.js';
 import { startExport, cancelExport, startFFMPEGDownload, openExportLocation } from './modules/export.js';
 import { initTimer } from './modules/timer.js';
@@ -97,10 +97,17 @@ document.addEventListener('DOMContentLoaded', init);
 
 // Playback
 document.getElementById('playBtn').onclick = togglePlayback;
-document.getElementById('skipBack').onclick = () => { if (state.currentSentenceIndex > 0) jumpToSentence(state.currentSentenceIndex - 1); };
-document.getElementById('skipForward').onclick = () => {
-    if (state.currentSentenceIndex < state.sentences.length - 1) jumpToSentence(state.currentSentenceIndex + 1);
-    else if (state.currentPageIndex < state.currentPages.length - 1) { state.currentPageIndex++; jumpToSentence(0); }
+document.getElementById('skipBack').onclick = () => { 
+    if (state.currentSentenceIndex > 0) jumpToSentence(state.currentSentenceIndex - 1); 
+};
+document.getElementById('skipForward').onclick = async () => {
+    if (state.currentSentenceIndex < state.readingSentences.length - 1) {
+        jumpToSentence(state.currentSentenceIndex + 1);
+    } else if (state.readingPageIndex < state.currentPages.length - 1) {
+        state.readingPageIndex++;
+        state.readingSentences = await getSentencesForPage(state.readingPageIndex);
+        jumpToSentence(0);
+    }
 };
 
 // Keyboard Shortcuts
@@ -113,12 +120,38 @@ window.addEventListener('keydown', (e) => {
     else if (e.key === 'Escape') document.getElementById('closeSearchBtn').click();
 });
 
-// Page Navigation
-document.getElementById('prevPage').onclick = async () => { if (state.currentPageIndex > 0) { state.currentPageIndex--; state.currentSentenceIndex = 0; await renderPage(); if (state.isPlaying) playNext(); } };
-document.getElementById('nextPage').onclick = async () => { if (state.currentPageIndex < state.currentPages.length - 1) { state.currentPageIndex++; state.currentSentenceIndex = 0; await renderPage(); if (state.isPlaying) playNext(); } };
+// Page Navigation (Viewing)
+document.getElementById('prevPage').onclick = async () => { 
+    if (state.viewPageIndex > 0) { 
+        state.viewPageIndex--; 
+        state.autoScrollEnabled = false; 
+        await renderPage(); 
+    } 
+};
+document.getElementById('nextPage').onclick = async () => { 
+    if (state.viewPageIndex < state.currentPages.length - 1) { 
+        state.viewPageIndex++; 
+        state.autoScrollEnabled = false; 
+        await renderPage(); 
+    } 
+};
 document.getElementById('pageInput').onchange = async (e) => {
     let v = parseInt(e.target.value) - 1;
-    if (v >= 0 && v < state.currentPages.length) { state.currentPageIndex = v; state.currentSentenceIndex = 0; await renderPage(); if (state.isPlaying) playNext(); }
+    if (v >= 0 && v < state.currentPages.length) { 
+        state.viewPageIndex = v; 
+        state.autoScrollEnabled = false; 
+        await renderPage(); 
+    }
+};
+
+// Back to Reading Logic
+document.getElementById('backToReadingBtn').onclick = async () => {
+    state.viewPageIndex = state.readingPageIndex;
+    state.autoScrollEnabled = true;
+    await renderPage();
+    // After render, auto-scroll will center the active sentence
+    const active = document.querySelector('.active-sentence');
+    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
 // Auto-Flip on Scroll
@@ -129,15 +162,19 @@ if (scrollContainer) {
         if (isAutoFlipping) return;
         const bottom = scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight - 10;
         const top = scrollContainer.scrollTop <= 10;
-        if (e.deltaY > 0 && bottom && state.currentPageIndex < state.currentPages.length - 1) {
-            if (state.isPlaying) stopPlayback();
-            isAutoFlipping = true; state.currentPageIndex++; state.currentSentenceIndex = 0;
-            await renderPage(); scrollContainer.scrollTop = 0; saveProgress();
+        
+        // If user is manually scrolling, disable auto-alignment
+        if (state.autoScrollEnabled) {
+            state.autoScrollEnabled = false;
+        }
+
+        if (e.deltaY > 0 && bottom && state.viewPageIndex < state.currentPages.length - 1) {
+            isAutoFlipping = true; state.viewPageIndex++;
+            await renderPage(); scrollContainer.scrollTop = 0;
             setTimeout(() => { isAutoFlipping = false }, 700);
-        } else if (e.deltaY < 0 && top && state.currentPageIndex > 0) {
-            if (state.isPlaying) stopPlayback();
-            isAutoFlipping = true; state.currentPageIndex--; state.currentSentenceIndex = 0;
-            await renderPage(); scrollContainer.scrollTop = scrollContainer.scrollHeight; saveProgress();
+        } else if (e.deltaY < 0 && top && state.viewPageIndex > 0) {
+            isAutoFlipping = true; state.viewPageIndex--;
+            await renderPage(); scrollContainer.scrollTop = scrollContainer.scrollHeight;
             setTimeout(() => { isAutoFlipping = false }, 700);
         }
     }, { passive: true });
@@ -273,7 +310,14 @@ document.getElementById('searchInput').oninput = (e) => {
                     const div = document.createElement('div');
                     div.className = 'search-result-item';
                     div.innerHTML = `<div class="flex justify-between mb-2"><span class="text-xs font-bold text-blue-400">Page ${result.page_index + 1}</span></div><div class="search-result-snippet">${match.snippet}</div>`;
-                    div.onclick = async () => { state.currentSearchQuery = data.query; state.currentPageIndex = result.page_index; state.currentSentenceIndex = 0; document.getElementById('searchModal').classList.add('hidden'); await renderPage(); highlightSearchTerm(state.currentSearchQuery); };
+                    div.onclick = async () => { 
+                        state.currentSearchQuery = data.query; 
+                        state.viewPageIndex = result.page_index; 
+                        state.autoScrollEnabled = false; 
+                        document.getElementById('searchModal').classList.add('hidden'); 
+                        await renderPage(); 
+                        highlightSearchTerm(state.currentSearchQuery); 
+                    };
                     fragment.appendChild(div);
                 });
             });

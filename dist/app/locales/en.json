@@ -25,7 +25,8 @@
     "search_results": "results",
     "searching": "Searching...",
     "no_results": "No results found",
-    "jump_to_page": "Jump to page"
+    "jump_to_page": "Jump to page",
+    "back_to_reading": "Back to Reading"
   },
   "player": {
     "play": "Play",

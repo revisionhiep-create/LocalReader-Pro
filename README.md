@@ -26,6 +26,7 @@
 - **Dynamic Voice Library:** Automatically loads voices for **English (US/UK), French, Spanish, Chinese, Japanese, Italian, and Portuguese**.
 - **Voice Settings Drawer:** Floating button for quick access to voice, speed, and filter controls
 - **Player Text Customization:** New **Text Size Slider** to adjust subtitle/caption size (12px-24px) in real-time.
+- **Decoupled Browsing:** Browse other pages freely without jumping the audio. A "Back to Reading" button lets you snap back instantly.
 - **Natural Speech Flow:** Intelligent line joining prevents mid-sentence stops
 - **Smart Punctuation Logic:**
   - Supports English (`...`, `?!`) and CJK (`。`, `！`, `？`) punctuation correctly.
@@ -459,7 +460,7 @@ LocalReader-Pro/
 
 ---
 
-**Version:** 3.4.0 (The "Clean Sweep" Update)
+**Version:** 3.5.0 (The "Explorer" Update)
 **Engine:** Kokoro-82M (Dual-Mode: CPU/GPU)
 **Last Updated:** January 6, 2026
 **Status:** ✅ Stable Release

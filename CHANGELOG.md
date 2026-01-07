@@ -1,5 +1,23 @@
 # LocalReader Pro Changelog
 
+1.
+2. ## v3.5 - January 6, 2026 (The "Explorer" Update)
+3.
+4. ### 🧭 Decoupled Browsing System
+5.
+6. - **Independent Navigation:** You can now freely browse pages (via wheel or top buttons) without interrupting the current audio playback. The audio stays on its page while you peek ahead or review previous chapters.
+7. - **"Back to Reading" Button:** Added a neutral floating button (🎯) that appears automatically whenever you browse away from the page currently being spoken. Clicking it instantly snaps your view back to the active reader.
+8. - **Smart Follow Mode:** The app now remembers if you are "following" the voice or browsing manually. Resuming a book or clicking a line re-enables auto-scrolling.
+9. - **Dynamic Highlighting:** Sentence highlighting now only appears when you are viewed the same page the voice is reading, preventing visual confusion.
+10.
+11. ### 🚀 UI & Logic Refinements
+12.
+13. - **Reference Safety:** Fixed a critical `ReferenceError` in the playback loop that occasionally caused audio to stop unexpectedly.
+14. - **Navigation Sync:** Improved the `jump-to-sentence` logic to ensure that clicking any line immediately brings BOTH the audio and the visual focus to that spot.
+15.
+16. ***
+    17:
+
 ## v3.4 - January 6, 2026 (The "Clean Sweep" Update)
 
 ### 🔊 Audio Cache Stability

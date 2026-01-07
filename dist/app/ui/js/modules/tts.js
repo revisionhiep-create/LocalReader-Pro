@@ -2,7 +2,7 @@
 import { state } from './state.js';
 import { fetchJSON, fetchBlob, API_URL } from './api.js';
 import { showToast, stripHTML, renderIcons } from './ui.js';
-import { renderPage } from './library.js';
+import { renderPage, getSentencesForPage } from './library.js';
 
 export function initAudioContext() {
     if (!state.audioContext) {
@@ -51,6 +51,7 @@ export function stopPlayback() {
 
     if (state.currentAudioSource) {
         try {
+            state.currentAudioSource.onended = null; // Prevent triggering 'playNext' on stop
             state.currentAudioSource.stop();
             state.currentAudioSource.disconnect();
         } catch (e) { }
@@ -59,17 +60,27 @@ export function stopPlayback() {
 }
 
 export async function playNext() {
+    const targetIndex = state.currentSentenceIndex;
     if (!state.isPlaying || !window.isEngineReady) { // isEngineReady is global/window for now
         stopPlayback();
         return;
     }
 
-    const text = state.sentences[state.currentSentenceIndex];
+    const text = state.readingSentences[state.currentSentenceIndex];
     if (!text || typeof text !== 'string') {
-        if (state.currentPageIndex < state.currentPages.length - 1) {
-            state.currentPageIndex++;
+        if (state.readingPageIndex < state.currentPages.length - 1) {
+            state.readingPageIndex++;
             state.currentSentenceIndex = 0;
-            await renderPage();
+            state.readingSentences = await getSentencesForPage(state.readingPageIndex);
+            
+            // If auto-scroll is on, force the view to follow the reader
+            if (state.autoScrollEnabled) {
+                state.viewPageIndex = state.readingPageIndex;
+                await renderPage();
+            } else if (state.viewPageIndex === state.readingPageIndex) {
+                // If we aren't following but happen to be viewing the same page, just refresh highlights
+                await renderPage();
+            }
             playNext();
         } else {
             stopPlayback();
@@ -77,10 +88,12 @@ export async function playNext() {
         return;
     }
 
-    // Update UI Highlight
-    state.sentenceElements.forEach((el, i) => el.className = `sentence ${i === state.currentSentenceIndex ? 'active-sentence' : ''}`);
-    const active = state.sentenceElements[state.currentSentenceIndex];
-    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Update UI Highlight (only if viewing the reading page)
+    if (state.viewPageIndex === state.readingPageIndex) {
+        state.sentenceElements.forEach((el, i) => el.className = `sentence ${i === state.currentSentenceIndex ? 'active-sentence' : ''}`);
+        const active = state.sentenceElements[state.currentSentenceIndex];
+        if (active && state.autoScrollEnabled) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
     const currentSentencePreview = document.getElementById('currentSentencePreview');
     if (currentSentencePreview) currentSentencePreview.textContent = stripHTML(text);
@@ -93,7 +106,7 @@ export async function playNext() {
     const voiceSelect = document.getElementById('voiceSelect');
     const speedRange = document.getElementById('speedRange');
 
-    const lookupKey = `${state.currentPageIndex}_${state.currentSentenceIndex}_${voiceSelect.value}_${speedRange.value}`;
+    const lookupKey = `${state.readingPageIndex}_${targetIndex}_${voiceSelect.value}_${speedRange.value}`;
 
     if (state.audioBufferCache.has(lookupKey)) {
         console.log(`[WebAudio] CACHE HIT - Playing cached buffer instantly`);
@@ -124,8 +137,14 @@ export async function playNext() {
         initAudioContext();
 
         const arrayBuffer = await blob.arrayBuffer();
-        const audioBuffer = await state.audioContext.decodeAudioData(arrayBuffer);
+        
+        // Safety check: Has the user jumped or stopped while we were synthesizing?
+        if (!state.isPlaying || state.currentSentenceIndex !== targetIndex) {
+            console.log(`[TTS] Discarding synthesis result - Index mismatch (${state.currentSentenceIndex} vs ${targetIndex})`);
+            return;
+        }
 
+        const audioBuffer = await state.audioContext.decodeAudioData(arrayBuffer);
         state.audioBufferCache.set(lookupKey, audioBuffer);
 
         if (state.audioBufferCache.size > state.MAX_AUDIO_CACHE) {
@@ -158,17 +177,26 @@ export function togglePlayback() {
 }
 
 export async function jumpToSentence(i) {
+    // 1. Stop current audio immediately and kill its listeners
     if (state.currentAudioSource) {
         try {
+            state.currentAudioSource.onended = null; 
             state.currentAudioSource.stop();
             state.currentAudioSource.disconnect();
         } catch (e) { }
         state.currentAudioSource = null;
     }
 
-    state.currentSentenceIndex = i;
-    await renderPage();
+    // 2. Clear existing jump timer to prevent overlapping jumps
+    if (state.jumpTimer) {
+        clearTimeout(state.jumpTimer);
+        state.jumpTimer = null;
+    }
 
+    state.currentSentenceIndex = i;
+    await renderPage(); // Update UI highlight and content
+
+    // Ensure state reflects that we are intended to be playing
     if (!state.isPlaying) {
         initAudioContext();
         state.isPlaying = true;
@@ -178,7 +206,13 @@ export async function jumpToSentence(i) {
             renderIcons();
         }
     }
-    playNext();
+
+    // 3. Buffer for 2 seconds then start playing
+    console.log(`[TTS] Buffering 2 seconds for jump to index ${i}...`);
+    state.jumpTimer = setTimeout(() => {
+        state.jumpTimer = null;
+        playNext();
+    }, 2000);
 }
 
 export async function saveProgress() {
@@ -200,7 +234,7 @@ export async function saveProgress() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...state.currentDoc,
-                    currentPage: state.currentPageIndex,
+                    currentPage: state.readingPageIndex,
                     lastSentenceIndex: state.currentSentenceIndex,
                     lastAccessed: Date.now()
                 })
@@ -217,20 +251,16 @@ export async function preCacheNextSentences() {
     const speedRange = document.getElementById('speedRange');
 
     for (let i = 1; i <= sentencesToPreCache; i++) {
-        let targetPageIndex = state.currentPageIndex;
+        let targetPageIndex = state.readingPageIndex;
         let targetSentenceIndex = state.currentSentenceIndex + i;
-        let targetSentences = state.sentences;
+        let targetSentences = state.readingSentences;
 
-        if (targetSentenceIndex >= state.sentences.length) {
-            if (state.currentPageIndex < state.currentPages.length - 1) {
-                targetPageIndex = state.currentPageIndex + 1;
+        if (targetSentenceIndex >= state.readingSentences.length) {
+            if (state.readingPageIndex < state.currentPages.length - 1) {
+                targetPageIndex = state.readingPageIndex + 1;
                 targetSentenceIndex = 0;
                 try {
-                    const nextPageText = state.currentPages[targetPageIndex];
-                    if (!nextPageText) continue;
-                    // Simplified parsing for pre-cache (reuse logic ideally, but just quick splitting here)
-                    const rawSentences = nextPageText.match(/[^.!?]+[.!?]+[\"\'\u201c\u2018\u201d\u2019]*(?:\s|$)|[^.!?]+$/g) || [nextPageText];
-                    targetSentences = rawSentences.map(s => s.trim()).filter(s => s);
+                    targetSentences = await getSentencesForPage(targetPageIndex);
                     if (targetSentences.length === 0) continue;
                 } catch (err) { continue; }
             } else { break; }

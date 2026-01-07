@@ -72,15 +72,20 @@ export async function selectDocument(item) {
 
     // Apply Smart Start if this is first time opening (currentPage is 0)
     if ((item.currentPage || 0) === 0 && state.smartStartPage > 0) {
-      state.currentPageIndex = state.smartStartPage;
+      state.readingPageIndex = state.smartStartPage;
+      state.viewPageIndex = state.smartStartPage;
       state.currentSentenceIndex = 0;
       showToast(
         `⚡ Skipped to start of content (Page ${state.smartStartPage + 1})`
       );
     } else {
-      state.currentPageIndex = item.currentPage || 0;
+      state.readingPageIndex = item.currentPage || 0;
+      state.viewPageIndex = item.currentPage || 0;
       state.currentSentenceIndex = item.lastSentenceIndex || 0;
     }
+
+    // Initialize reading sentences
+    state.readingSentences = await getSentencesForPage(state.readingPageIndex);
 
     // Update UI
     const docTitle = document.getElementById("docTitle");
@@ -129,60 +134,33 @@ export async function renderPage() {
   const currentSentencePreview = document.getElementById(
     "currentSentencePreview"
   );
+  const backToReadingBtn = document.getElementById("backToReadingBtn");
 
-  if (!state.currentPages || !state.currentPages[state.currentPageIndex]) {
+  if (!state.currentPages || !state.currentPages[state.viewPageIndex]) {
     if (textContent)
       textContent.innerHTML =
         '<div class="text-zinc-500 p-4">Error: Page not found</div>';
     return;
   }
 
-  let text = state.currentPages[state.currentPageIndex];
-
-  // Apply header/footer filter if enabled
-  if (state.headerFooterMode !== "off" && state.currentDoc) {
-    try {
-      const filterData = await fetchJSON(
-        `/api/library/content/${state.currentDoc.id}/page/${state.currentPageIndex}`
-      );
-      text = filterData.filtered_text;
-      console.log("Filtered text applied");
-    } catch (e) {
-      console.error("Filter fetch failed:", e);
+  // Update "Back to Reading" button visibility
+  if (backToReadingBtn) {
+    if (state.viewPageIndex !== state.readingPageIndex) {
+        backToReadingBtn.classList.remove('hidden');
+    } else {
+        backToReadingBtn.classList.add('hidden');
     }
   }
 
-  // Preprocessing (Join broken lines)
-  text = text
-    .replace(/\n\n/g, "<!PARAGRAPH!>")
-    .replace(/([^.!?:;。！？：；])\n/g, "$1 ")
-    .replace(/<!PARAGRAPH!>/g, "\n\n")
-    .replace(/  +/g, " ");
-
-  // Split sentences
-  // Protect abbreviations from bad segmentation
-  const abbreviations = ["Mr", "Mrs", "Ms", "Dr", "Prof", "St", "Rd", "Ave", "Capt", "Gen", "Sen", "Rep", "Gov", "Fig", "No", "Op", "vs", "etc", "e\\.g", "i\\.e", "Inc", "Ltd", "Co"];
-  const abbrRegex = new RegExp(`\\b(${abbreviations.join('|')})\\.(?=\\s)`, 'gi');
-  const protectedText = text.replace(abbrRegex, '$1<DOT>');
-
-  // Split sentences using Intl.Segmenter for better accuracy (handles abbreviations like Mr. Smith correctly)
-  state.sentences = [];
-  // Fallback to English if UI language not available, though Segmenter handles punctuation well generally
-  const segmenter = new Intl.Segmenter(state.uiLanguage || 'en', { granularity: 'sentence' });
-
-  for (const segmentItem of segmenter.segment(protectedText)) {
-    let s = segmentItem.segment.trim()
-      .replace(/<DOT>/g, '.') // Restore dots
-      .replace(/^[\"\'\u201c\u2018\u201d\u2019]+(?=[\"\'\u201c\u2018\u201d\u2019])/, '')
-      .replace(/[\"\'\u201c\u2018\u201d\u2019]+$/, (match) => match.length > 1 ? match[0] : match);
-    if (s) state.sentences.push(s);
-  }
+  state.viewSentences = await getSentencesForPage(state.viewPageIndex);
 
   const fragment = document.createDocumentFragment();
-  state.sentences.forEach((s, i) => {
+  const isReadingCurrentPage = state.viewPageIndex === state.readingPageIndex;
+
+  state.viewSentences.forEach((s, i) => {
     const span = document.createElement("span");
     span.className = `sentence ${
-      i === state.currentSentenceIndex ? "active-sentence" : ""
+      (isReadingCurrentPage && i === state.currentSentenceIndex) ? "active-sentence" : ""
     }`;
 
     // Fix broken DIM tags caused by sentence splitting
@@ -202,8 +180,11 @@ export async function renderPage() {
       span.textContent = cleanS;
     }
 
-    // Dispatch Custom Event for decoupled jump
+    // Clicking a line SYNCs reading to that spot (with buffer)
     span.onclick = () => {
+      state.readingPageIndex = state.viewPageIndex;
+      state.readingSentences = [...state.viewSentences];
+      state.autoScrollEnabled = true; // Re-enable auto-scroll on click
       window.dispatchEvent(new CustomEvent("jump-to-sentence", { detail: i }));
     };
     fragment.appendChild(span);
@@ -217,21 +198,27 @@ export async function renderPage() {
     );
   }
 
-  if (pageInput) pageInput.value = state.currentPageIndex + 1;
+  if (pageInput) pageInput.value = state.viewPageIndex + 1;
   if (pageTotal) pageTotal.textContent = state.currentPages.length;
-  if (scrollContainer) scrollContainer.scrollTop = 0;
+  
+  // Standard behavior: Scroll to top of page on change if autoScroll is enabled
+  if (scrollContainer && state.autoScrollEnabled) scrollContainer.scrollTop = 0;
 
-  const currentSentence = state.sentences[state.currentSentenceIndex];
+  const currentReadingSentence = state.readingSentences[state.currentSentenceIndex];
   if (currentSentencePreview) {
-    currentSentencePreview.textContent =
-      currentSentence && typeof currentSentence === "string"
-        ? stripHTML(currentSentence)
-        : "Ready";
+    currentReadingSentencePreviewText(currentReadingSentence, currentSentencePreview);
   }
 
   if (state.currentSearchQuery) {
     highlightSearchTerm(state.currentSearchQuery);
   }
+}
+
+function currentReadingSentencePreviewText(currentReadingSentence, currentSentencePreview) {
+  currentSentencePreview.textContent =
+    currentReadingSentence && typeof currentReadingSentence === "string"
+      ? stripHTML(currentReadingSentence)
+      : "Ready";
 }
 
 export async function extractTextFromPage(page) {
@@ -401,4 +388,51 @@ export async function processPdfBlob(blob, fileName) {
     }
   };
   reader.readAsArrayBuffer(blob);
+}
+
+export async function getSentencesForPage(pageIndex) {
+  if (!state.currentPages || !state.currentPages[pageIndex]) return [];
+
+  let text = state.currentPages[pageIndex];
+
+  // Apply header/footer filter if enabled
+  if (state.headerFooterMode !== "off" && state.currentDoc) {
+    try {
+      const filterData = await fetchJSON(
+        `/api/library/content/${state.currentDoc.id}/page/${pageIndex}`
+      );
+      text = filterData.filtered_text;
+    } catch (e) {
+      console.error("Filter fetch failed:", e);
+    }
+  }
+
+  // Preprocessing (Join broken lines)
+  text = text
+    .replace(/\n\n/g, "<!PARAGRAPH!>")
+    .replace(/([^.!?:;。！？：；])\n/g, "$1 ")
+    .replace(/<!PARAGRAPH!>/g, "\n\n")
+    .replace(/  +/g, " ");
+
+  // Split sentences
+  const abbreviations = ["Mr", "Mrs", "Ms", "Dr", "Prof", "St", "Rd", "Ave", "Capt", "Gen", "Sen", "Rep", "Gov", "Fig", "No", "Op", "vs", "etc", "e\\.g", "i\\.e", "Inc", "Ltd", "Co"];
+  const abbrRegex = new RegExp(`\\b(${abbreviations.join('|')})\\.(?=\\s)`, 'gi');
+  const protectedText = text.replace(abbrRegex, '$1<DOT>');
+
+  const sentences = [];
+  const segmenter = new Intl.Segmenter(state.uiLanguage || 'en', { granularity: 'sentence' });
+
+  for (const segmentItem of segmenter.segment(protectedText)) {
+    let s = segmentItem.segment.trim()
+      .replace(/<DOT>/g, '.') // Restore dots
+      .replace(/^[\"\'\u201c\u2018\u201d\u2019]+(?=[\"\'\u201c\u2018\u201d\u2019])/, '')
+      .replace(/[\"\'\u201c\u2018\u201d\u2019]+$/, (match) => match.length > 1 ? match[0] : match);
+    if (s) {
+        // Fix broken DIM tags
+        if (s.includes("[DIM]") && !s.includes("[/DIM]")) s += "[/DIM]";
+        if (!s.includes("[DIM]") && s.includes("[/DIM]")) s = "[DIM]" + s;
+        sentences.push(s);
+    }
+  }
+  return sentences;
 }
