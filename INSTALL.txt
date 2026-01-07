@@ -26,8 +26,8 @@ UNINSTALL / REMOVAL:
 
 To remove the application and its shortcuts:
 
-1. Delete the folder you extracted and installed it into.
-2. Delete the "LocalReader Pro" shortcuts from your Desktop and Start Menu.
+1. Run `uninstall.exe` in the installation directory or Delete the "LocalReader Pro" shortcuts from your Desktop and Start Menu.
+2. Delete the folder you extracted and installed it into.
 
 To completely remove the supporting software (Python and Libraries):
 

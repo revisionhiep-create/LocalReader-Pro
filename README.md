@@ -85,6 +85,14 @@
 - Run `uninstall.exe` in the installation directory
 - Removes all shortcuts (application files remain for manual deletion)
 
+To completely remove the supporting software (Python and Libraries):
+
+**Uninstall Python**: Go to Windows Settings > Apps > Installed Apps, search for "Python 3.12", and select Uninstall.
+
+**Remove Libraries**: If you haven't deleted the folder yet, open a terminal in the "dist" folder and run: `pip uninstall -r requirements.txt`
+
+**Clear Model Cache**: Many voices and AI models are stored in your user profile. You can delete the `.cache` folder in your user directory (usually `C:\Users\<YourName>\.cache\kokoro`) to free up additional space.
+
 **Installation Size:**
 
 - Installer: ~24 MB
