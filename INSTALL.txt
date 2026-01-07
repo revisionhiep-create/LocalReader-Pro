@@ -4,17 +4,17 @@
 
 HOW TO INSTALL:
 
-1. Extract this ZIP to any folder
-2. Navigate to the "dist" folder
+1. Extract this ZIP to any folder (this folder will be the installation home)
+2. Open the extracted folder and navigate to the "dist" folder
 3. Double-click "setup.exe"
 4. Follow the installer prompts
 5. Wait for installation to complete
 
-The installer will:
+THE INSTALLATION IS SELF-CONTAINED:
+Everything required for LocalReader Pro—including its dependencies and configuration—is stored within the folder you extracted. The installer will:
 - Check for Python 3.12+ (installs if missing)
-- Install all required dependencies
-- Create Desktop and Start Menu shortcuts
-- Set up the application
+- Install all required dependencies into the local folder
+- Create Desktop and Start Menu shortcuts for easy access
 
 After installation, launch from:
 - Desktop shortcut: "LocalReader Pro"
@@ -22,10 +22,18 @@ After installation, launch from:
 
 ========================================
 
-UNINSTALL:
+UNINSTALL / REMOVAL:
 
-Run "uninstall.exe" from the installation directory
-(Location shown at the end of installation)
+To remove the application and its shortcuts:
+
+1. Delete the folder you extracted and installed it into.
+2. Delete the "LocalReader Pro" shortcuts from your Desktop and Start Menu.
+
+To completely remove the supporting software (Python and Libraries):
+
+1. **Uninstall Python**: Go to Windows Settings > Apps > Installed Apps, search for "Python 3.12", and select Uninstall.
+2. **Remove Libraries**: If you haven't deleted the folder yet, open a terminal in the "dist" folder and run: `pip uninstall -r requirements.txt`
+3. **Clear Model Cache**: Many voices and AI models are stored in your user profile. You can delete the `.cache` folder in your user directory (usually `C:\Users\<YourName>\.cache\kokoro`) to free up additional space.
 
 ========================================
 
@@ -39,4 +47,5 @@ If you prefer manual installation without the installer:
 4. Run: python main.py
 
 ========================================
+
 
