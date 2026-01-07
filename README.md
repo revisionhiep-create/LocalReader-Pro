@@ -2,17 +2,17 @@
 
 **A modern, privacy-focused PDF/EPUB reader with AI-powered text-to-speech, multilingual support, and smart audio caching.**
 
-<p align="center">
-  <img src="docs/images/image1.png" alt="LocalReader Pro Main Interface" width="80%">
+<div align="center">
+  <img src="docs/images/image1.png" alt="LocalReader Pro Main Interface" width="85%">
   <br><br>
-  <img src="docs/images/image2.png" alt="LocalReader Pro Settings" width="80%">
-</p>
+  <img src="docs/images/image2.png" alt="LocalReader Pro Settings" width="85%">
+</div>
 
 ---
 
-## ✨ Key Features
+## 🔘 Key Features
 
-### 📚 Core Reading
+### 🔳 Core Reading
 
 - **Multi-Format Support:** PDF and EPUB files
 - **Multilingual UI:** Full interface translation (**English, French, Spanish, Chinese**)
@@ -21,7 +21,7 @@
 - **Auto-Save Progress:** Resume exactly where you left off
 - **Sentence-Level Control:** Click any sentence to start reading from there
 
-### 🎙️ Smart TTS Controls
+### 🔘 Smart TTS Controls
 
 - **Dynamic Voice Library:** Automatically loads voices for **English (US/UK), French, Spanish, Chinese, Japanese, Italian, and Portuguese**.
 - **Voice Settings Drawer:** Floating button for quick access to voice, speed, and filter controls
@@ -35,20 +35,20 @@
 - **Custom Pronunciation Rules:** Fix mispronunciations with RegEx support.
 - **Speed Control:** 0.5x to 3.0x playback speed.
 
-### 🧠 Smart Features
+### ⚙️ Smart Features
 
 - **Smart Start:** Auto-skip blank/cover pages on first open
 - **Header/Footer Filter:** Detect and remove/dim repeated page clutter
 - **Global Search:** Full-book search with instant navigation (Ctrl+F)
 - **SQLite Audio Cache:** 200MB LRU cache with automatic cleanup (Self-healing).
 
-### 🎵 MP3 Export
+### 📁 MP3 Export
 
 - **One-Click Export:** Convert entire document to MP3
 - **Background Processing:** UI stays responsive during export
 - **On-Demand FFMPEG:** Auto-downloads encoder (~100MB) on first export
 
-### ⏲️ Sleep Timer
+### 🔘 Sleep Timer
 
 - **Auto-Shutdown:** Automatically closes the application after a set duration.
 - **Visual Feedback:** Button displays remaining time in a neutral style when active.
@@ -56,7 +56,7 @@
 
 ---
 
-## 📦 Installation
+## 🔳 Installation
 
 ### Windows (Recommended)
 
@@ -146,7 +146,7 @@ python3.12 main.py
 
 ---
 
-## 🚀 First-Time Setup
+## 🔘 First-Time Setup
 
 After launching the application:
 
@@ -162,7 +162,7 @@ After launching the application:
 
    - Click **"Setup Voice Engine"** button in sidebar
    - Downloads the model matching your selected mode
-   - Wait for green status indicator (⚫ → 🟢)
+   - Wait for green status indicator (⚪ → 🔘)
    - **Tip:** You can download both models and switch anytime!
 
 3. **Upload Your First Book:**
@@ -185,7 +185,7 @@ After launching the application:
 
 ---
 
-## 🎯 Usage Guide
+## 🔘 Usage Guide
 
 ### Basic Reading
 
@@ -201,7 +201,7 @@ After launching the application:
 
 - Automatically activates on first open
 - Finds first page with >500 characters
-- Shows notification: "⚡ Skipped to start of content (Page X)"
+- Shows notification: "🔘 Skipped to start of content (Page X)"
 
 **Header/Footer Filter:**
 
@@ -280,7 +280,7 @@ After launching the application:
 
 ---
 
-## 📝 Keyboard Shortcuts
+## 🔳 Keyboard Shortcuts
 
 | Key                | Action            |
 | ------------------ | ----------------- |
@@ -372,7 +372,7 @@ LocalReader-Pro/
 
 ---
 
-## 🛡️ Privacy & Security
+## 🔘 Privacy & Security
 
 ### Data Storage
 
@@ -403,7 +403,7 @@ LocalReader-Pro/
 
 ---
 
-## 📄 License
+## 🔳 License
 
 ### LocalReader Pro
 
@@ -424,7 +424,7 @@ LocalReader-Pro/
 
 ---
 
-## 🙏 Credits
+## ⚪ Credits
 
 ### Core Technologies
 
@@ -440,7 +440,7 @@ LocalReader-Pro/
 
 ---
 
-## 📞 Support
+## 🔘 Support
 
 ### Found a Bug?
 
@@ -463,8 +463,8 @@ LocalReader-Pro/
 **Version:** 3.5.0 (The "Explorer" Update)
 **Engine:** Kokoro-82M (Dual-Mode: CPU/GPU)
 **Last Updated:** January 6, 2026
-**Status:** ✅ Stable Release
+**Status:** 🔘 Stable Release
 
 ---
 
-**Enjoy your reading! 📚✨**
+**Enjoy your reading! 🔳⚪**
