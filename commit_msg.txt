@@ -1,0 +1,9 @@
+Add Stop button and fix text resize (#4)
+
+- Added Stop button to player controls (resets to beginning)
+- Fixed text resize to affect actual content, not just HUD
+- Positioned Stop button between skip controls and bookmark
+- Applied font size changes to #textContent div
+- Persists font size across sessions
+
+Addresses issue #4 requests #1 and #2
