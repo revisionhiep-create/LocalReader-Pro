@@ -361,14 +361,26 @@
               >Ready</span
             >
             <div class="flex items-center gap-4 mt-1.5">
-              <button id="skipBack" class="text-zinc-500 hover:text-white p-1">
+              <button
+                id="skipBack"
+                class="text-zinc-500 hover:text-white p-1"
+                title="Skip Back"
+              >
                 <i data-lucide="skip-back" class="w-5 h-5"></i>
               </button>
               <button
                 id="skipForward"
                 class="text-zinc-500 hover:text-white p-1"
+                title="Skip Forward"
               >
                 <i data-lucide="skip-forward" class="w-5 h-5"></i>
+              </button>
+              <button
+                id="stopBtn"
+                class="text-zinc-500 hover:text-red-400 p-1 transition-colors"
+                title="Stop Playback"
+              >
+                <i data-lucide="square" class="w-5 h-5 fill-current"></i>
               </button>
               <div class="h-4 w-px bg-zinc-800 mx-1"></div>
               <span

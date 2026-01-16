@@ -43,6 +43,12 @@ async function init() {
                 preview.style.fontSize = `${settings.font_size}px`;
                 preview.style.lineHeight = (parseInt(settings.font_size) * 1.5) + 'px';
             }
+            // Apply to actual text content
+            const textContent = document.getElementById('textContent');
+            if (textContent) {
+                textContent.style.fontSize = `${settings.font_size}px`;
+                textContent.style.lineHeight = (parseInt(settings.font_size) * 1.6) + 'px';
+            }
         }
         const headerSelect = document.getElementById('headerFooterMode');
         if (headerSelect) headerSelect.value = state.headerFooterMode;
@@ -97,6 +103,13 @@ document.addEventListener('DOMContentLoaded', init);
 
 // Playback
 document.getElementById('playBtn').onclick = togglePlayback;
+document.getElementById('stopBtn').onclick = () => {
+    stopPlayback();
+    // Reset to beginning
+    if (state.readingSentences.length > 0) {
+        jumpToSentence(0);
+    }
+};
 document.getElementById('skipBack').onclick = () => { 
     if (state.currentSentenceIndex > 0) jumpToSentence(state.currentSentenceIndex - 1); 
 };
@@ -230,9 +243,22 @@ document.getElementById('speedRange').onchange = saveSettings;
 document.getElementById('speedRange').oninput = (e) => document.getElementById('speedVal').textContent = parseFloat(e.target.value).toFixed(2);
 document.getElementById('fontSizeSlider').onchange = saveSettings;
 document.getElementById('fontSizeSlider').oninput = (e) => {
-    document.getElementById('textSizeVal').textContent = e.target.value;
+    const newSize = e.target.value;
+    document.getElementById('textSizeVal').textContent = newSize;
+    
+    // Update HUD preview
     const preview = document.getElementById('currentSentencePreview');
-    if (preview) { preview.style.fontSize = `${e.target.value}px`; preview.style.lineHeight = (parseInt(e.target.value) * 1.5) + 'px'; }
+    if (preview) { 
+        preview.style.fontSize = `${newSize}px`; 
+        preview.style.lineHeight = (parseInt(newSize) * 1.5) + 'px'; 
+    }
+    
+    // Update actual text content
+    const textContent = document.getElementById('textContent');
+    if (textContent) {
+        textContent.style.fontSize = `${newSize}px`;
+        textContent.style.lineHeight = (parseInt(newSize) * 1.6) + 'px';
+    }
 };
 document.getElementById('voiceSelect').onchange = async () => { 
     stopPlayback(); 
