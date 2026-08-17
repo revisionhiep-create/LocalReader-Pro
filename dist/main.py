@@ -13,7 +13,8 @@ base_dir = Path(__file__).parent.absolute()
 sys.path.insert(0, str(base_dir))
 
 # --- 2. LOCAL FFMPEG SETUP ---
-# Point system PATH to our local /bin folder so pydub finds ffmpeg.exe
+# Point system PATH at our local /bin folder first, so a bundled ffmpeg wins
+# over any system copy. Only Windows ships binaries here.
 bin_path = base_dir / "bin"
 
 if bin_path.exists():
@@ -21,8 +22,10 @@ if bin_path.exists():
     os.environ["PATH"] = str(bin_path) + os.pathsep + os.environ["PATH"]
     print(f"[OK] Local FFMPEG linked: {bin_path}")
 else:
-    print(f"[WARNING] Local 'bin' folder not found at {bin_path}")
-    print(f"          FFMPEG will need to be downloaded on first export.")
+    # A missing bin/ only matters when nothing else supplies ffmpeg. On
+    # macOS/Linux it normally comes from the system package manager, so don't
+    # warn about a download that isn't needed -- server.py reports what it found.
+    print(f"[INFO] No local 'bin' folder; will use system FFMPEG if available.")
 
 # --- 3. IMPORT APP ---
 # Now when pydub loads, it will find our local ffmpeg first

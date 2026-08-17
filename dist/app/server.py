@@ -44,8 +44,26 @@ async def lifespan(app: FastAPI):
     )
     safe_init_json(library_file, [])
 
-    # 3. Check/Install FFMPEG (Async check could go here)
-    # We leave that for the frontend to query via /api/ffmpeg/status
+    # 3. Detect FFMPEG once at startup. ffmpeg_status defaults to
+    # is_installed=False and used to be flipped only by the installer, so an
+    # already-present ffmpeg (bundled in bin/ or system-managed) was reported
+    # missing and the UI kept offering a download it did not need.
+    try:
+        from .logic.dependency_manager import (
+            FFMPEGInstaller,
+            configure_pydub,
+            get_ffmpeg_path,
+        )
+
+        if FFMPEGInstaller().check_installed():
+            configure_pydub()
+            state_module.ffmpeg_status["is_installed"] = True
+            state_module.ffmpeg_status["message"] = "Ready"
+            print(f"[OK] FFMPEG found: {get_ffmpeg_path()}")
+        else:
+            print("[INFO] FFMPEG not found; MP3 export unavailable until installed.")
+    except Exception as e:
+        print(f"[WARNING] FFMPEG detection failed: {e}")
 
     # 4. Clean temp content
     try:

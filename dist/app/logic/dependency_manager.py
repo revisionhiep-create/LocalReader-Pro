@@ -19,10 +19,15 @@ else:
     BASE_DIR = Path(__file__).parent.parent.parent
 
 BIN_DIR = BASE_DIR / "bin"
-FFMPEG_EXE = BIN_DIR / "ffmpeg.exe"
-FFPROBE_EXE = BIN_DIR / "ffprobe.exe"
 
-# Stable FFMPEG build from Gyan.dev
+# Only Windows binaries carry a .exe suffix. Keep these constant names -- other
+# modules import them -- but resolve the filename per platform.
+IS_WINDOWS = sys.platform == "win32"
+_SUFFIX = ".exe" if IS_WINDOWS else ""
+FFMPEG_EXE = BIN_DIR / f"ffmpeg{_SUFFIX}"
+FFPROBE_EXE = BIN_DIR / f"ffprobe{_SUFFIX}"
+
+# Stable FFMPEG build from Gyan.dev. Windows-only build -- see install().
 FFMPEG_DOWNLOAD_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
 
 class FFMPEGInstaller:
@@ -37,8 +42,8 @@ class FFMPEGInstaller:
         self.is_cancelled = False
     
     def check_installed(self) -> bool:
-        """Check if FFMPEG binaries are already installed"""
-        return FFMPEG_EXE.exists() and FFPROBE_EXE.exists()
+        """True if usable ffmpeg AND ffprobe exist, bundled in bin/ or on PATH."""
+        return bool(get_ffmpeg_path() and get_ffprobe_path())
     
     def cancel(self):
         """Cancel the download process"""
@@ -51,6 +56,17 @@ class FFMPEGInstaller:
         Returns:
             (success: bool, error_message: Optional[str])
         """
+        # FFMPEG_DOWNLOAD_URL is a Windows build: unpacking it on macOS/Linux
+        # yields .exe files that cannot run. Use the platform's own ffmpeg there.
+        if not IS_WINDOWS:
+            if self.check_installed():
+                self._update_progress(1, 1, "Using system FFMPEG")
+                return True, None
+            return False, (
+                "FFmpeg was not found on this system. Install it and restart, e.g. "
+                "'brew install ffmpeg' on macOS or your package manager on Linux."
+            )
+
         try:
             # 1. Create bin directory
             BIN_DIR.mkdir(exist_ok=True)
@@ -126,23 +142,23 @@ class FFMPEGInstaller:
             except Exception as e:
                 print(f"Progress callback error: {e}")
 
+def _resolve(bundled: Path, name: str) -> Optional[str]:
+    """
+    Prefer the copy in bin/, then fall back to whatever is on PATH so a
+    system-managed install (Homebrew, apt, winget) works without downloading.
+    Returns None if neither exists.
+    """
+    if bundled.exists():
+        return str(bundled)
+    return shutil.which(name)
+
 def get_ffmpeg_path() -> Optional[str]:
-    """
-    Get the path to the local FFMPEG executable.
-    Returns None if not installed.
-    """
-    if FFMPEG_EXE.exists():
-        return str(FFMPEG_EXE)
-    return None
+    """Path to a usable ffmpeg, or None if not installed."""
+    return _resolve(FFMPEG_EXE, "ffmpeg")
 
 def get_ffprobe_path() -> Optional[str]:
-    """
-    Get the path to the local FFPROBE executable.
-    Returns None if not installed.
-    """
-    if FFPROBE_EXE.exists():
-        return str(FFPROBE_EXE)
-    return None
+    """Path to a usable ffprobe, or None if not installed."""
+    return _resolve(FFPROBE_EXE, "ffprobe")
 
 # Configure pydub to use local FFMPEG
 def configure_pydub():
