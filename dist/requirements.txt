@@ -15,4 +15,8 @@ xhtml2pdf
 beautifulsoup4
 lxml
 pydub
-
+psutil
+# pydub imports the stdlib audioop module, which PEP 594 removed in Python 3.13.
+# audioop-lts is the drop-in replacement, and it requires 3.13+, so it must stay
+# behind a marker or it breaks installs on the 3.10-3.12 range the README supports.
+audioop-lts; python_version >= "3.13"
