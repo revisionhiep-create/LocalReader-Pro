@@ -186,12 +186,13 @@ async def export_audio(request: ExportRequest, background_tasks: BackgroundTasks
                     lang = get_language_from_voice(request.voice)
 
                     # Use state_module.kokoro
-                    samples, sample_rate = state_module.kokoro.create(
-                        processed_text,
-                        voice=request.voice,
-                        speed=float(request.speed),
-                        lang=lang,
-                    )
+                    with state_module.engine_lock:
+                        samples, sample_rate = state_module.kokoro.create(
+                            processed_text,
+                            voice=request.voice,
+                            speed=float(request.speed),
+                            lang=lang,
+                        )
 
                     buffer = io.BytesIO()
                     sf.write(

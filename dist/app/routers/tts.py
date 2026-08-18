@@ -156,25 +156,23 @@ def synthesize_with_pauses(
     audio_map = {}
 
     if tts_tasks and state_module.kokoro:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            future_to_idx = {
-                executor.submit(
-                    state_module.kokoro.create,
-                    t["text"],
-                    voice=voice,
-                    speed=speed,
-                    lang=lang,
-                ): t["index"]
-                for t in tts_tasks
-            }
-            for future in concurrent.futures.as_completed(future_to_idx):
-                idx = future_to_idx[future]
-                try:
-                    samples, _ = future.result()
-                    audio_map[idx] = samples.flatten()
-                except Exception as e:
-                    print(f"Segment {idx} failed: {e}")
-                    audio_map[idx] = None
+        # Synthesized one at a time on purpose. This previously ran on a
+        # ThreadPoolExecutor(max_workers=4), but espeak-ng phonemization is not
+        # thread-safe (see state.engine_lock), so the chunks came back holding
+        # each other's words and the assembled sentence was scrambled. The
+        # executor also never bought much: onnxruntime already parallelizes a
+        # single inference across cores.
+        for t in tts_tasks:
+            idx = t["index"]
+            try:
+                with state_module.engine_lock:
+                    samples, _ = state_module.kokoro.create(
+                        t["text"], voice=voice, speed=speed, lang=lang
+                    )
+                audio_map[idx] = samples.flatten()
+            except Exception as e:
+                print(f"Segment {idx} failed: {e}")
+                audio_map[idx] = None
 
     final_segments = []
     for item in plan:
@@ -359,22 +357,24 @@ async def synthesize(request: SynthesisRequest):
                 # GemGem-style pre-chunking for direct synthesis path
                 sub_chunks = graceful_chunk_for_tts(text)
                 if len(sub_chunks) == 1:
-                    samples, sample_rate = state_module.kokoro.create(
-                        text,
-                        voice=selected_voice,
-                        speed=float(request.speed or 1.0),
-                        lang=lang,
-                    )
-                else:
-                    chunk_audios = []
-                    sample_rate = SAMPLE_RATE
-                    for chunk in sub_chunks:
-                        chunk_samples, sr = state_module.kokoro.create(
-                            chunk,
+                    with state_module.engine_lock:
+                        samples, sample_rate = state_module.kokoro.create(
+                            text,
                             voice=selected_voice,
                             speed=float(request.speed or 1.0),
                             lang=lang,
                         )
+                else:
+                    chunk_audios = []
+                    sample_rate = SAMPLE_RATE
+                    for chunk in sub_chunks:
+                        with state_module.engine_lock:
+                            chunk_samples, sr = state_module.kokoro.create(
+                                chunk,
+                                voice=selected_voice,
+                                speed=float(request.speed or 1.0),
+                                lang=lang,
+                            )
                         chunk_audios.append(chunk_samples.flatten())
                         sample_rate = sr
                     samples = safe_concat(chunk_audios)
