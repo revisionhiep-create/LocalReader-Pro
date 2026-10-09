@@ -562,7 +562,9 @@ document.getElementById("searchInput").oninput = (e) => {
         result.matches.forEach((match) => {
           const div = document.createElement("div");
           div.className = "search-result-item";
-          div.innerHTML = `<div class="flex justify-between mb-2"><span class="text-xs font-bold text-blue-400">Page ${result.page_index + 1}</span></div><div class="search-result-snippet">${match.snippet}</div>`;
+          div.innerHTML = `<div class="flex justify-between mb-2"><span class="text-xs font-bold text-blue-400">Page ${result.page_index + 1}</span></div><div class="search-result-snippet"></div>`;
+          // The snippet is raw document text: set as text, never as HTML.
+          div.querySelector(".search-result-snippet").textContent = match.snippet;
           div.onclick = async () => {
             state.currentSearchQuery = data.query;
             state.viewPageIndex = result.page_index;

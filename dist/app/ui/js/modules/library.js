@@ -38,9 +38,7 @@ export async function loadLibrary() {
                     }">
                         <i data-lucide="file" class="w-4 h-4 mt-0.5 shrink-0"></i>
                         <div class="min-w-0">
-                            <p class="text-xs font-bold leading-tight break-words">${
-                              item.fileName
-                            }</p>
+                            <p class="text-xs font-bold leading-tight break-words" data-role="file-name"></p>
                             <p class="text-[10px] opacity-60 mt-1">Page ${
                               (item.currentPage || 0) + 1
                             }/${item.totalPages}</p>
@@ -52,6 +50,8 @@ export async function loadLibrary() {
                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                     </button>
                 </div>`;
+        // Set as text: a file name can contain markup.
+        div.querySelector('[data-role="file-name"]').textContent = item.fileName;
         fragment.appendChild(div);
       });
     libraryPanel.appendChild(fragment);
@@ -171,11 +171,7 @@ export async function renderPage() {
       cleanS = "[DIM]" + cleanS;
 
     if (cleanS.includes("[DIM]")) {
-      const dimRegex = /\[DIM\](.*?)\[\/DIM\]/g;
-      span.innerHTML = cleanS.replace(
-        dimRegex,
-        '<span class="dimmed-text">$1</span>'
-      );
+      appendDimmedText(span, cleanS);
     } else {
       span.textContent = cleanS;
     }
@@ -212,6 +208,22 @@ export async function renderPage() {
   if (state.currentSearchQuery) {
     highlightSearchTerm(state.currentSearchQuery);
   }
+}
+
+// Render [DIM]...[/DIM] sections as dimmed spans. Built from text nodes, never
+// HTML: the sentence is document text, so markup in a document would otherwise
+// run inside the app, where it can call every route of the app's local API.
+function appendDimmedText(parent, text) {
+  let last = 0;
+  for (const m of text.matchAll(/\[DIM\](.*?)\[\/DIM\]/g)) {
+    if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+    const dim = document.createElement("span");
+    dim.className = "dimmed-text";
+    dim.textContent = m[1];
+    parent.appendChild(dim);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
 }
 
 function currentReadingSentencePreviewText(currentReadingSentence, currentSentencePreview) {
